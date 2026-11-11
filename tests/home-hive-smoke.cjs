@@ -22,6 +22,20 @@ try {
  await page.evaluate(()=>mapSetView('dm'));
  src=await page.locator('.map-custom-image').getAttribute('src');
  assert(src===data.dm,'DM view exposes wrong artwork');
+
+// Regression: previously stored custom image must not override official Home Hive player/DM art.
+ await page.evaluate(()=>{
+   currentMap().imageData='data:image/png;base64,aGVsbG8=';
+   save();render();
+ });
+ await page.evaluate(()=>mapSetView('player'));
+ assert(await page.locator('.map-custom-image').getAttribute('src')===data.player,'Existing custom image overrides Home Hive player image');
+ assert((await page.locator('.map-view-indicator').innerText()).includes('PLAYER VIEW'),'Player label missing');
+ await page.evaluate(()=>mapSetView('dm'));
+ assert(await page.locator('.map-custom-image').getAttribute('src')===data.dm,'Existing custom image overrides Home Hive DM image');
+ assert((await page.locator('.map-view-indicator').innerText()).includes('DM VIEW'),'DM label missing');
+ assert(await page.evaluate(()=>currentMap().imageData==='data:image/png;base64,aGVsbG8='),'Existing custom image data was deleted');
+ await page.evaluate(()=>{currentMap().imageData=undefined;save();render()});
  await page.evaluate(()=>{mapAddCustom=mapAddCustom; const m=currentMap();m.tokens.push({id:'test-monster',kind:'monster',name:'Test Mite',x:4,y:5});mapState().selected='test-monster';save();render()});
  assert(await page.locator('[data-token="test-monster"]').count()===1,'Token not displayed');
  await page.reload();await page.evaluate(()=>goto('maps'));
