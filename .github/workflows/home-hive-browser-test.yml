@@ -1,7 +1,7 @@
 name: Home Hive browser smoke test
 on:
   push:
-    branches: [feature/home-hive-official-map]
+    branches: [feature/home-hive-official-map, fix/home-hive-view-distinction]
   workflow_dispatch:
 jobs:
   browser-test:
