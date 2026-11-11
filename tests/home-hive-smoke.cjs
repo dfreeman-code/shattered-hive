@@ -23,6 +23,30 @@ try {
  src=await page.locator('.map-custom-image').getAttribute('src');
  assert(src===data.dm,'DM view exposes wrong artwork');
 
+ assert((await page.locator('.map-view-settings').count())===1,'Map view controls missing beside map');
+ assert((await page.locator('.map-share-label input[type="checkbox"]').count())===1,'Share checkbox missing from right sidebar');
+ assert((await page.locator('.map-dm-key').count())===1,'DM marker key missing');
+ // The actual image pixels must be visibly distinct, not merely different filenames.
+ const distinct=await page.evaluate(async()=>{
+   const imageData=async(url)=>{
+     const i=new Image();i.src=url;await i.decode();
+     const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;
+     const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(i,0,0);
+     return {width:i.naturalWidth,height:i.naturalHeight,pixels:ctx.getImageData(0,0,c.width,c.height).data};
+   };
+   const a=await imageData(mapAssetUrl(currentMap(),'dm'));
+   const b=await imageData(mapAssetUrl(currentMap(),'player'));
+   let changed=0;
+   for(let y=0;y<Math.min(a.height,b.height);y+=8)for(let x=0;x<Math.min(a.width,b.width);x+=8){
+     const j=(y*a.width+x)*4;
+     if(Math.abs(a.pixels[j]-b.pixels[j])+Math.abs(a.pixels[j+1]-b.pixels[j+1])+Math.abs(a.pixels[j+2]-b.pixels[j+2])>70)changed++;
+   }
+   return {changed,width:a.width,height:a.height};
+ });
+ assert(distinct.width===1200&&distinct.height===1200,'Map image resolution changed');
+ assert(distinct.changed>80,'DM and player image pixels are unexpectedly identical');
+
+
 // Regression: previously stored custom image must not override official Home Hive player/DM art.
  await page.evaluate(()=>{
    currentMap().imageData='data:image/png;base64,aGVsbG8=';
