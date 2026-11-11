@@ -1,0 +1,20 @@
+name: Home Hive browser smoke test
+on:
+  push:
+    branches: [feature/home-hive-official-map]
+  workflow_dispatch:
+jobs:
+  browser-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save playwright@1.57.0
+      - run: npx playwright install --with-deps chromium
+      - name: Start local test server
+        run: python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/home-hive-server.log 2>&1 &
+      - name: Browser smoke test
+        run: node tests/home-hive-smoke.cjs

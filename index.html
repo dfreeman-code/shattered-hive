@@ -223,9 +223,34 @@ function mapRows(m){return Number.isInteger(m?.rows)&&m.rows>=4&&m.rows<=100?m.r
 function mapIndex(m,x,y){return y*mapCols(m)+x}
 function mapAvailable(m){return m.playerShared===true}
 function mapPlayerScenes(){return mapState().scenes.filter(mapAvailable)}
-function mapAssetUrl(m,mode){return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'gridless')+'.svg'}
+function mapAssetUrl(m,mode){if(m.id==='evergarden-home-hive')return 'assets/maps/home_hive_'+(mode==='dm'?'dm_annotated':'player_gridless')+'.png';return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'gridless')+'.svg'}
 
-function mapState(){if(!db.maps||!Array.isArray(db.maps.scenes))db.maps={scenes:clone(MAP_START),active:'map-dewdrop',selected:null,showGrid:true,history:[]};if(!Array.isArray(db.maps.history))db.maps.history=[];if(!db.maps.viewMode)db.maps.viewMode='dm';if(!db.maps.fogTool)db.maps.fogTool='off';if(!db.maps.scenes.length)db.maps.scenes=clone(MAP_START);if(!db.maps.evergardenSeeded){for(const preset of EVERGARDEN_SCENES)if(!db.maps.scenes.some(m=>m.id===preset.id))db.maps.scenes.push(clone(preset));db.maps.evergardenSeeded=true;}if(!db.maps.scenes.some(m=>m.id===db.maps.active))db.maps.active=db.maps.scenes[0].id;return db.maps}
+function mapState(){
+ if(!db.maps||!Array.isArray(db.maps.scenes))db.maps={scenes:clone(MAP_START),active:'map-dewdrop',selected:null,showGrid:true,history:[]};
+ const ms=db.maps;
+ if(!Array.isArray(ms.history))ms.history=[];
+ if(!ms.viewMode)ms.viewMode='dm';
+ if(!ms.fogTool)ms.fogTool='off';
+ if(!Array.isArray(ms.archivedScenes))ms.archivedScenes=[];
+ // One-time, reversible retirement. Preserve every prior map (including tokens,
+ // custom art, fog and metadata) without deleting any character or encounter data.
+ if(!ms.homeHiveOfficialV1){
+  const all=Array.isArray(ms.scenes)?ms.scenes:[];
+  const home=all.find(m=>m.id==='evergarden-home-hive')||clone(EVERGARDEN_SCENES[0]);
+  home.cols=30;home.rows=30;home.asset='home-hive';
+  home.name='Home Hive';
+  home.desc='Official Evergarden home village — Council Acorn, market, defenses and root hollow';
+  home.playerShared=true;
+  for(const old of all)if(old.id!==home.id&&!ms.archivedScenes.some(a=>a.id===old.id))ms.archivedScenes.push(old);
+  ms.scenes=[home];ms.active=home.id;ms.selected=null;ms.fogTool='off';
+  ms.homeHiveOfficialV1=true;
+  ms.evergardenSeeded=true;
+  try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){console.warn('Home Hive map migration could not be saved; export a backup',e)}
+ }
+ if(!ms.scenes.length)ms.scenes=[clone(EVERGARDEN_SCENES[0])];
+ if(!ms.scenes.some(m=>m.id===ms.active))ms.active=ms.scenes[0].id;
+ return ms;
+}
 function currentMap(){let a=mapState();return a.scenes.find(m=>m.id===a.active)}
 function findTokenRecord(t){return t.kind==='pc'?db.pcs.find(x=>x.id===t.ref):t.kind==='npc'?db.npcs.find(x=>x.id===t.ref):null}
 function tokenLabel(t){return findTokenRecord(t)?.name||t.name||'Unknown character'}
@@ -233,7 +258,7 @@ function tokenTheme(t){return t.kind==='pc'?'pc':t.kind==='npc'?'npc':'monster'}
 function mapFog(m){if(!Array.isArray(m.revealed))m.revealed=Array.from({length:mapRows(m)*mapCols(m)},(_,i)=>i);return m.revealed}
 function mapVisibleToken(t,m,mode){return mode!=='player'||(t.kind==='pc'||(t.showToPlayers===true))&&mapFog(m).includes(mapIndex(m,t.x,t.y))}
 function mapFogTiles(m){let visible=new Set(mapFog(m));return Array.from({length:mapCols(m)*mapRows(m)},(_,i)=>`<div data-fog-cell="${i}" class="${visible.has(i)?'fog-clear':'fog-cell'}"></div>`).join('')}
-function mapCustomBackground(m,mode='dm'){return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
+function mapCustomBackground(m,mode='dm'){return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/home-hive-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
 function mapArtwork(theme){let deco='';
  if(theme==='village')deco=`
   <defs>
