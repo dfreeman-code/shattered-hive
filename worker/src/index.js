@@ -23,7 +23,7 @@ export default {
   if(!env.OPENAI_API_KEY||!env.DM_ACCESS_TOKEN)return json({error:'Backend secrets not configured'},503);
   const authorization=request.headers.get('Authorization')||'';
   if(!secureEqual(authorization,'Bearer '+env.DM_ACCESS_TOKEN))return json({error:'Invalid DM access token'},401);
-  if(!/^application\\/json(?:;|$)/i.test(request.headers.get('content-type')||''))return json({error:'JSON required'},415);
+  if(!/^application\/json(?:;|$)/i.test(request.headers.get('content-type')||''))return json({error:'JSON required'},415);
   const declared=Number(request.headers.get('content-length')||0);
   if(declared>50000)return json({error:'Request too large'},413);
   let input;
