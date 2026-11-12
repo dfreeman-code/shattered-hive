@@ -1,0 +1,14 @@
+/* Phase 1 Assisted DM panel: scoped styles, no changes to existing map or app layouts. */
+.dm-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px 14px;border-radius:10px;background:#fff1d4;border:1px solid #e8d29e;margin:14px 0}
+.dm-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:16px;align-items:start;margin-top:17px}
+.dm-panel{min-width:0}.dm-panel h3{margin:0 0 8px}.dm-quick{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
+.dm-quick button{background:#e4ebd9;color:#244332;border:1px solid #b8cbb4;border-radius:8px;padding:7px 10px;font-weight:600}
+.dm-compose{min-height:160px}.dm-output{min-height:90px;padding:12px;border-radius:9px;border:1px dashed #c2cdb9;background:#f7f7ef;white-space:pre-wrap;overflow-wrap:anywhere}
+.dm-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.dm-count{padding:10px;background:#eaf0dc;border-radius:9px}.dm-count b{display:block;font-size:25px}
+.dm-tag{display:inline-block;border-radius:999px;padding:3px 9px;margin:3px 4px 3px 0;font-size:12px;font-weight:700;background:#e9edde}
+.dm-tag.warn{background:#fff1d4;color:#815d28}.dm-tag.good{background:#e1efe2;color:#285739}
+.dm-history{display:grid;gap:10px;max-height:320px;overflow:auto;margin:12px 0}.dm-history article{border:1px solid #d9ddcc;border-radius:9px;padding:10px;background:#fffcf5}
+.dm-history pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.dm-small{font-size:13px;color:#6c786b}
+@media(max-width:850px){.dm-layout{grid-template-columns:1fr}}
