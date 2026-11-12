@@ -22,6 +22,24 @@ async function ready(url) {
   page.on('pageerror',e=>errors.push(e.message));
   page.on('dialog',d=>d.accept());
   await page.goto('http://127.0.0.1:8765/index.html');
+  // The old Aurelia/Mycora story should be archived and the planned Vesper story activated.
+  let migrated=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  assert.equal(migrated.storyMigrationVersion,1);
+  assert.equal(migrated.storyArchives.length,1);
+  assert.equal(migrated.storyArchives[0].records.npcs.length,10);
+  assert.equal(migrated.storyArchives[0].records.quests.length,10);
+  assert.equal(migrated.storyArchives[0].records.sessions.length,1);
+  assert.equal(migrated.quests.find(x=>x.id==='vesper-adventure-1').status,'Available');
+  assert.equal(migrated.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.equal(migrated.campaign.session,0);
+  assert.match(migrated.campaign.description,/Vesper/);
+  assert.ok(!migrated.quests.some(x=>x.id==='q1'),'Old starter quest must not appear active');
+  assert.ok(!migrated.npcs.some(x=>x.id==='n7'),'Old villain must not appear active');
+  await page.getByRole('button',{name:/Story Archive/}).click();
+  assert.match(await page.locator('#app').innerText(),/Queen Aurelia & Mycora/);
+  const [archiveDownload]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Export archived story'}).click()]);
+  const archiveExport=JSON.parse(await fs.readFile(await archiveDownload.path(),'utf8'));
+  assert.equal(archiveExport.archive.records.npcs.length,10);
   await page.getByRole('button',{name:/Player Decisions/}).click();
   assert.match(await page.locator('#app').innerText(),/King Vesper, the Hollow King/);
   let state=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1'))||null);
