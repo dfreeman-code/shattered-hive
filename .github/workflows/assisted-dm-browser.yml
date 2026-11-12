@@ -1,0 +1,25 @@
+name: Assisted DM Phase 1 browser tests
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'assets/ai-dm.js'
+      - 'assets/ai-dm.css'
+      - 'tests/assisted-dm.cjs'
+      - '.github/workflows/assisted-dm-browser.yml'
+  workflow_dispatch:
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run assisted DM browser tests
+        run: node tests/assisted-dm.cjs
