@@ -1,1 +1,5 @@
-{"name":"shattered-hive-ai-worker","private":true,"type":"module"}\n
+{
+  "name": "shattered-hive-ai-worker",
+  "private": true,
+  "type": "module"
+}
