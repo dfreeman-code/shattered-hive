@@ -1,0 +1,29 @@
+name: Assisted DM live AI tests
+on:
+  pull_request:
+    paths:
+      - 'assets/ai-dm.js'
+      - 'worker/**'
+      - 'tests/ai-dm-live.cjs'
+      - 'tests/worker.test.mjs'
+      - '.github/workflows/ai-dm-live.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Backend tests (mock AI; no secrets)
+        run: node --test tests/worker.test.mjs
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Live AI frontend integration smoke test
+        run: node tests/ai-dm-live.cjs
+      - name: Existing Player Decisions regression suite
+        run: node tests/player-decisions.cjs
