@@ -13,7 +13,7 @@ async function ready(url){for(let n=0;n<40;n++){try{await new Promise((ok,bad)=>
   await page.goto('http://127.0.0.1:8766/index.html');
   const original=await page.evaluate(()=>JSON.stringify(localStorage.getItem('shattered-hive-v1')));
   await page.getByRole('button',{name:/AI Dungeon Master/}).click();
-  assert.match(await page.locator('#app').innerText(),/AI backend not connected/);
+  assert.match(await page.locator('#app').innerText(),/Assisted DM — private AI connection/);
   assert.match(await page.locator('#app').innerText(),/Vesper storyline/);
   assert.equal(await page.getByRole('button',{name:'Copy request + DM context'}).count(),1);
   await page.getByRole('button',{name:'Analyze Player Decisions'}).click();

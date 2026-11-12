@@ -1,0 +1,7 @@
+name = "shattered-hive-ai-dm"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# Never add API keys or access tokens to this configuration.
+[vars]
+OPENAI_MODEL = "gpt-6-luna"

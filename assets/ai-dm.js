@@ -8,7 +8,11 @@ const DM_ACTIONS=Object.freeze([
  ['Analyze Player Decisions','Identify actual confirmed choices and their recorded consequences. Treat Not decided prompts as hypothetical, never as events that occurred.'],
  ['Generate Session Recap','Summarize only sessions explicitly marked played or completed, and recorded confirmed decisions. If no session has occurred, say so.']
 ]);
-const dmSessionDrafts=[]; // Deliberately ephemeral: no changes to campaign save format.
+const dmSessionDrafts=[];
+const dmChat=[];
+let dmWorkerUrl='';
+let dmAccessToken='';
+let dmBusy=false; // Deliberately ephemeral: no changes to campaign save format.
 function dmArray(k){return Array.isArray(db[k])?db[k]:[]}
 function dmConfirmed(d){return d&&['Decided','Revisited'].includes(d.status)}
 function dmPlayed(s){return s&&['Played','Completed'].includes(s.status)}
@@ -27,17 +31,25 @@ function dmSummary(){
 function dmPage(){
  const c=dmSummary();
  return `<div class="headrow"><div><h2>✧ AI Dungeon Master</h2><p class="muted">Assisted mode · You decide what becomes campaign canon.</p></div><button class="btn secondary" type="button" onclick="goto('settings')">Export campaign backup</button></div>
- <div class="dm-status" role="status"><b>AI backend not connected.</b><span>This Phase 1 workspace prepares DM prompts from your current browser's campaign data. It does not generate AI responses, send data to a server, or edit records.</span></div>
+ <div class="dm-status" role="status"><b>Assisted DM — private AI connection.</b><span>Only Ask AI sends your DM-only campaign context to the configured private Worker. AI responses cannot edit records.</span></div>
  <div class="dm-layout">
   <section class="card dm-panel" aria-label="DM assistant workspace">
-   <h3>Prepare a DM request</h3><p class="dm-small">Choose a quick action or write your own request. Copy it with your current campaign context to use in a trusted AI chat until a secure backend is connected.</p>
+   <h3>Private AI connection</h3>
+   <div class="field"><label for="dmWorkerUrl">Worker HTTPS URL</label><input id="dmWorkerUrl" type="url" autocomplete="off" spellcheck="false" placeholder="https://your-worker.workers.dev" value="${esc(dmWorkerUrl)}"></div>
+   <div class="field"><label for="dmAccessToken">DM access token (not an OpenAI API key)</label><input id="dmAccessToken" type="password" autocomplete="off" placeholder="Worker access token" value="${esc(dmAccessToken)}"></div>
+   <p class="dm-small">Connection settings live in this tab's memory. Deploy the private Worker and add server-side secrets before asking the AI.</p>
+   <h3>Prepare a DM request</h3><p class="dm-small">Choose a quick action or write your own. Ask AI sends your DM-only context only when clicked.</p>
    <div class="dm-quick" aria-label="Quick actions">${DM_ACTIONS.map(([label],i)=>`<button type="button" onclick="dmQuick(${i})">${esc(label)}</button>`).join('')}</div>
    <label for="dmPrompt">Your DM request</label><textarea id="dmPrompt" class="dm-compose" maxlength="6000" placeholder="What should we prepare for the next session?"></textarea>
    <div class="actions" style="justify-content:flex-start;margin-top:10px">
-    <button class="btn" type="button" onclick="dmCopyRequest()">Copy request + DM context</button>
+    <button id="dmAsk" class="btn" type="button" onclick="dmAsk()">Ask AI</button>
+    <button class="btn secondary" type="button" onclick="dmCopyRequest()">Copy request + DM context</button>
     <button class="btn secondary" type="button" onclick="dmSaveDraft()">Keep draft this session</button>
    </div>
    <p class="dm-small">Copying includes DM-only secrets and confirmed player choices. Paste only into a private conversation you trust. Nothing is sent automatically.</p>
+   <h3 style="margin-top:22px">AI conversation — this tab only</h3><p class="dm-small">Responses are proposals, never approved campaign changes. Review each suggestion and enter accepted updates through the existing editor screens.</p>
+   <div id="dmChat" class="dm-history" aria-live="polite">${dmChatMarkup()}</div><p id="dmAiError" class="dm-small" role="alert"></p>
+   <button class="btn secondary small" type="button" onclick="dmClearChat()">Clear chat</button>
    <h3 style="margin-top:22px">Session-only drafts</h3>
    <div id="dmHistory" class="dm-history">${dmDraftMarkup()}</div>
   </section>
@@ -64,3 +76,35 @@ function dmDraftMarkup(){return dmSessionDrafts.length?dmSessionDrafts.map((x,i)
 function dmSaveDraft(){const el=document.getElementById('dmPrompt');const q=el?.value.trim();if(!q){toast('Write a request first');return}dmSessionDrafts.push(q);document.getElementById('dmHistory').innerHTML=dmDraftMarkup();toast('Draft kept in this tab only')}
 function dmRequestPayload(){const q=document.getElementById('dmPrompt')?.value.trim();if(!q)return null;return 'THE SHATTERED HIVE — PRIVATE DM CONTEXT\nRole: Assisted Dungeon Master. Never rewrite established canon or claim planned decisions happened. Separate facts, interpretations and proposals. No changes may be committed without DM approval. The campaign may not have begun.\n\nCAMPAIGN CONTEXT (DM-ONLY; excludes archived legacy stories):\n'+JSON.stringify(dmSnapshot(),null,2)+'\n\nREQUEST:\n'+q}
 async function dmCopyRequest(){const payload=dmRequestPayload();if(!payload){toast('Write a request first');return}try{await navigator.clipboard.writeText(payload);toast('DM request and context copied')}catch(e){toast('Clipboard unavailable. Check browser permissions and use HTTPS.')} }
+
+function dmChatMarkup(){return dmChat.length?dmChat.map(x=>`<article><b>${x.role==='assistant'?'AI suggestion — unapproved':'DM request'}</b><pre>${esc(x.text)}</pre></article>`).join(''):'<p class="dm-small">No AI messages yet. Nothing has been sent.</p>'}
+function dmRenderChat(){const target=document.getElementById('dmChat');if(target){target.innerHTML=dmChatMarkup();target.scrollTop=target.scrollHeight}}
+function dmClearChat(){dmChat.length=0;dmRenderChat();toast('Chat cleared for this tab')}
+async function dmAsk(){
+ if(dmBusy)return;
+ const prompt=document.getElementById('dmPrompt')?.value.trim();
+ const rawUrl=document.getElementById('dmWorkerUrl')?.value.trim();
+ const token=document.getElementById('dmAccessToken')?.value.trim();
+ if(!prompt){toast('Write a DM request first');return}
+ let url;
+ try{url=new URL(rawUrl);if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw Error('Invalid URL')}
+ catch{toast('Enter your deployed Worker HTTPS URL');return}
+ if(!token){toast('Enter your private DM access token');return}
+ dmWorkerUrl=url.origin;dmAccessToken=token;
+ dmBusy=true;
+ const button=document.getElementById('dmAsk');
+ if(button){button.disabled=true;button.textContent='Asking AI…'}
+ const prior=dmChat.slice(-6).map(x=>({role:x.role,text:x.text}));
+ try{
+  const response=await fetch(url.origin+'/chat',{method:'POST',mode:'cors',
+   headers:{'content-type':'application/json','authorization':'Bearer '+token},
+   body:JSON.stringify({prompt,context:dmSnapshot(),history:prior}),
+   signal:AbortSignal.timeout(35000)});
+  let data;try{data=await response.json()}catch{throw Error('Invalid response from Worker')}
+  if(!response.ok)throw Error(data.error||'AI request failed');
+  if(typeof data.answer!=='string'||!data.answer.trim()||data.writes!==false)throw Error('Unexpected AI response');
+  dmChat.push({role:'user',text:prompt},{role:'assistant',text:data.answer});
+  dmRenderChat();const error=document.getElementById('dmAiError');if(error)error.textContent='';toast('AI suggestion received — no data changed');
+ }catch(e){toast('AI connection failed');const status=document.getElementById('dmAiError');if(status)status.textContent='Request failed: '+String(e.message||e).slice(0,200)}
+ finally{dmBusy=false;if(button){button.disabled=false;button.textContent='Ask AI'}}
+}
