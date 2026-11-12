@@ -72,6 +72,48 @@ try {
  assert(await page.evaluate(()=>currentMap().revealed.length===0),'Fog hide failed');
  await page.evaluate(()=>{mapFogAll(true)});
  assert(await page.evaluate(()=>currentMap().revealed.length===900),'Fog reveal did not cover 900 cells');
+ // Character-linked PC token style regression.
+ await page.evaluate(()=>{
+   db.pcs.push({id:'test-hero-appearance',name:'Vismund Test Hero',species:'Spiderkin',class:'Wizard',status:'Active'});
+   save();render();
+   const roster=document.querySelector('#map-roster');
+   roster.value='pc:test-hero-appearance';
+   mapAddRecord();
+ });
+ let pc=await page.evaluate(()=>currentMap().tokens.find(t=>t.ref==='test-hero-appearance'));
+ assert(!!pc,'PC token creation failed');
+ const oldPosition={x:pc.x,y:pc.y};
+ let token=page.locator('[data-token="'+pc.id+'"]');
+ assert(await token.count()===1,'PC token not present on map');
+ await page.evaluate(()=>{
+   edit('pcs','test-hero-appearance');
+   const form=document.getElementById('editForm');
+   form.querySelector('[name="tokenColor"]').value='Ruby';
+   form.querySelector('[name="tokenSymbol"]').value='🕷';
+   form.querySelector('[name="tokenRing"]').value='Gold';
+   form.querySelector('[name="tokenNameplate"]').value='Hide';
+   form.requestSubmit();
+ });
+ assert(await page.evaluate(()=>db.pcs.find(x=>x.id==='test-hero-appearance').tokenColor==='Ruby'),'PC token style not saved with character');
+ await page.evaluate(()=>goto('maps'));
+ token=page.locator('[data-token="'+pc.id+'"]');
+ assert((await token.getAttribute('style')).includes('#ac394a'),'PC token color did not follow saved record');
+ assert((await token.getAttribute('style')).includes('#f1cb71'),'PC token ring did not follow saved record');
+ assert((await token.locator('.token-symbol').innerText()).includes('🕷'),'PC token symbol did not update');
+ assert(await token.locator('.token-text').count()===0,'PC name label should be hidden');
+ assert(await page.evaluate((id)=>{const t=currentMap().tokens.find(x=>x.id===id);return t.x===2&&t.y===2},pc.id)===true,'Existing PC token position changed unexpectedly');
+ await page.reload();
+ await page.evaluate(()=>goto('maps'));
+ token=page.locator('[data-token="'+pc.id+'"]');
+ assert((await token.getAttribute('style')).includes('#ac394a'),'PC appearance not persisted after refresh');
+ assert((await token.locator('.token-symbol').innerText()).includes('🕷'),'PC symbol not persisted');
+ await page.evaluate(()=>mapSetView('player'));
+ assert(await page.locator('[data-token="'+pc.id+'"]').count()===1,'PC style missing in player view');
+ await page.evaluate(()=>mapSetView('dm'));
+ // Other token types must retain legacy appearance.
+ await page.evaluate(()=>{currentMap().tokens.push({id:'test-neutral-npc',kind:'npc',name:'Guard',x:6,y:7});save();render()});
+ assert(!(await page.locator('[data-token="test-neutral-npc"]').getAttribute('style')).includes('background-color'),'NPC appearance unintentionally changed');
+
  // Create a custom scene, verify refresh and retention of the Home Hive.
  await page.evaluate(()=>{mapState().scenes.push({id:'test-custom',name:'Test Custom',theme:'blank',tokens:[]});save()});
  await page.reload();
