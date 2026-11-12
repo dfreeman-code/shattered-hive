@@ -19,8 +19,8 @@ async function check(label, fn) {
  await check('25 unique grouped navigation destinations',async()=>{
   const data=await page.evaluate(()=>({expected:Object.keys(sections),groups:Object.values(NAV_GROUPS).flat(),buttons:[...document.querySelectorAll('#nav button')].map(b=>b.textContent.trim())}));
   assert.equal(data.expected.length,25);assert.deepEqual([...data.groups].sort(),[...data.expected].sort());assert.equal(data.buttons.length,25);
-  for(const key of data.expected){
-   await page.locator('#nav button').filter({hasText:(await page.evaluate(k=>sections[k],key)).replace(/^[^ ]+ /,'')}).first().click();
+  for(const key of data.groups){
+   await page.locator('#nav button').nth(data.groups.indexOf(key)).click();
    assert.equal(await page.evaluate(()=>page),key);
    assert.equal(await page.locator('#nav button.active').count(),1);
   }
@@ -46,7 +46,8 @@ async function check(label, fn) {
  });
  await check('Combat tracker init, damage, next turn',async()=>{
   await page.evaluate(()=>goto('combat'));
-  await page.locator('#combatPcSelect').selectOption({label:/QA TEST Beetlekin Updated/});
+  const combatPcId=await page.evaluate(()=>db.pcs.find(x=>x.name==='QA TEST Beetlekin Updated').id);
+  await page.locator('#combatPcSelect').selectOption(combatPcId);
   await page.locator('button').filter({hasText:'+ Add PC'}).last().click();
   assert.ok((await page.evaluate(()=>combatState().participants.length))>=1);
   await page.evaluate(()=>combatSort());
