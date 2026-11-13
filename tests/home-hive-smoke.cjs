@@ -161,7 +161,7 @@ try {
  await page.getByRole('button',{name:'＋ Place DM marker'}).click();
  await page.locator('#dm-marker-notes').fill('TEST PRIVATE: frozen ice hazard');
  await page.locator('#dm-marker-notes').dispatchEvent('change');
- assert(await page.evaluate(()=>currentMap().dmMarkers.length===1),'Frozen Berry marker did not save');
+ assert(await page.evaluate(()=>currentMap().dmMarkers.length===5),'Frozen Berry marker did not save alongside four approved guide markers');
  await page.evaluate(()=>mapSetView('player'));
  assert(await page.locator('.map-dm-marker').count()===0,'Frozen Berry private marker revealed in Player View');
  await page.evaluate(()=>mapSetView('dm'));
