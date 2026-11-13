@@ -93,6 +93,7 @@ const assert = require('node:assert/strict');
     await page.getByRole('button',{name:'Load recovery history'}).click();
     await page.getByText('Revision 1',{exact:false}).first().waitFor({timeout:15000});
     check('Recovery history displays the uploaded revision',await panel.getByText('Revision 1',{exact:false}).count()>0);
+    await page.waitForFunction(() => document.querySelector('#cloud-header-status')?.textContent === 'Cloud: synced');
     // On the mock server simulate another device adding a newer revision,
     // then verify this browser fetches the new snapshot safely.
     const updated=structuredClone(payload);
@@ -114,6 +115,7 @@ const assert = require('node:assert/strict');
     await page.locator('#cloud-sync-panel').waitFor({state:'visible'});
     await page.getByRole('button',{name:'Load recovery history'}).click();
     await page.getByText('Revision 2',{exact:false}).first().waitFor({timeout:15000});
+    await page.waitForFunction(() => document.querySelector('#cloud-header-status')?.textContent === 'Cloud: synced');
     // Restore older revision, verify another JSON backup is offered and
     // the restore is written as a NEW revision.
     page.once('dialog',d=>d.accept());
