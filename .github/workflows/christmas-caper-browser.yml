@@ -1,0 +1,23 @@
+name: Christmas Caper DM workflow browser checks
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/christmas-caper-workflow.cjs'
+      - '.github/workflows/christmas-caper-browser.yml'
+  workflow_dispatch:
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Test pre-campaign DM workflow
+        run: node tests/christmas-caper-workflow.cjs
