@@ -18,7 +18,7 @@ async function ready(url){
   const context=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:900}});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  page.on('dialog',dialog=>dialog.accept());
+  page.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
   await page.goto('http://127.0.0.1:8767/index.html');
   const read=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
   const initial=await read();
