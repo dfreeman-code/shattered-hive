@@ -40,21 +40,6 @@ const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
    await safe.getByRole('button',{name:'Close player board'}).click();
    assert.equal(await safe.count(),0);
    console.log('PASS player-safe presentation board hides DM details and exits cleanly');
-   // Quick hero view should be read-only and not leak secrets.
-   if(before.pcs.length){
-     const first=p.locator('.cc-hero-detail').first();
-     if(await first.count()){
-       await first.click();
-       const quick=p.locator('#cc-quick-hero');
-       await quick.waitFor({state:'visible'});
-       const quickText=await quick.innerText();
-       assert.ok(!quickText.includes('Personal secrets'));
-       assert.ok(!quickText.includes('SECRET:'));
-       await quick.getByRole('button',{name:'Close'}).click();
-       assert.deepEqual((await snapshot()).pcs,before.pcs);
-       console.log('PASS quick hero panel is read-only');
-     }
-   }
    assert.ok(await p.getByRole('button',{name:'Open Battle Map'}).count());
    assert.ok(await p.getByRole('button',{name:'Full Combat Tracker'}).count());
    console.log('PASS map and combat navigation available');
@@ -111,6 +96,38 @@ const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
    await p.getByRole('button',{name:'Full Combat Tracker'}).click();
    assert.ok((await p.locator('#app').innerText()).includes('Spore'));
    console.log('PASS full combat tracker shows same encounter');
+   // Guaranteed fixture test: disposable hero with a secret and an unshared map.
+   const fixture=await open(1280);
+   await fixture.evaluate(()=>{
+      const data=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+      data.pcs=[{id:'test-hero-fixture',name:'Pip',species:'Beetlekin',class:'Paladin',
+        level:2,ac:15,hp:11,maxHp:15,status:'Active',secret:'SECRET: never show this'}];
+      if(!data.maps||!Array.isArray(data.maps.scenes))throw Error('Maps not initialized');
+      const scene=data.maps.scenes.find(x=>x.id===data.maps.active);
+      if(!scene)throw Error('Map not available');
+      scene.name='Unshared Secret DM Map';
+      scene.playerShared=false;
+      localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
+   });
+   await fixture.reload({waitUntil:'domcontentloaded'});
+   await fixture.getByRole('button',{name:/Session Command Center/}).click();
+   await fixture.getByRole('button',{name:'Quick view'}).click();
+   const quick=fixture.locator('#cc-quick-hero');
+   assert.ok(await quick.getByText('Pip',{exact:true}).count());
+   assert.ok((await quick.innerText()).includes('11 / 15'));
+   assert.ok(!(await quick.innerText()).includes('SECRET:'));
+   await quick.getByRole('button',{name:'Close'}).click();
+   assert.equal(await quick.count(),0);
+   const checkHero=await fixture.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')).pcs[0]);
+   assert.equal(checkHero.secret,'SECRET: never show this');
+   console.log('PASS disposable hero quick view is accurate and never reveals secrets or writes changes');
+   await fixture.getByRole('button',{name:'Player-safe board'}).click();
+   const playerBoard=await fixture.locator('#cc-player-board').innerText();
+   assert.ok(playerBoard.includes('Pip'));
+   assert.ok(!playerBoard.includes('Unshared Secret DM Map'));
+   assert.ok(!playerBoard.includes('SECRET:'));
+   await fixture.getByRole('button',{name:'Close player board'}).click();
+   console.log('PASS unshared map name and character secrets are excluded from player board');
    const mobile=await open(390,844);
    await mobile.getByRole('button',{name:/Session Command Center/}).click();
    const m=await mobile.evaluate(()=>{
