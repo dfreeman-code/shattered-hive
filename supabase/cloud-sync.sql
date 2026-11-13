@@ -9,7 +9,7 @@ create table if not exists public.shattered_hive_cloud_saves (
 
 alter table public.shattered_hive_cloud_saves enable row level security;
 revoke all on public.shattered_hive_cloud_saves from public, anon;
-grant select, insert, update on public.shattered_hive_cloud_saves to authenticated;
+grant select on public.shattered_hive_cloud_saves to authenticated;
 
 drop policy if exists "Cloud owner can read" on public.shattered_hive_cloud_saves;
 drop policy if exists "Cloud owner can insert" on public.shattered_hive_cloud_saves;
@@ -25,12 +25,14 @@ create policy "Cloud owner can update"
   using (owner_id = (select auth.uid()))
   with check (owner_id = (select auth.uid()));
 
--- Only the logged-in user's row is accessed. SECURITY INVOKER means that RLS
--- and grants still apply; even if this function is exposed it cannot bypass them.
+-- SECURITY DEFINER is required because authenticated clients have SELECT only.
+-- The RPC is restricted to the authenticated role and every operation is scoped
+-- to auth.uid(). The function never accepts an owner_id from the caller.
+-- Do not grant INSERT/UPDATE on this table directly: that would bypass CAS.
 create or replace function public.shattered_hive_store(
   expected_revision bigint, document jsonb
 ) returns bigint
-language plpgsql security invoker set search_path = ''
+language plpgsql security definer set search_path = ''
 as $$
 declare
   caller uuid := auth.uid();
