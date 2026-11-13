@@ -11,7 +11,7 @@ try {
  await page.evaluate(()=>goto('maps'));
  await page.waitForSelector('#map-board');
  let data=await page.evaluate(()=>({scenes:mapState().scenes.map(m=>m.id),active:mapState().active,archived:mapState().archivedScenes.length,cols:mapCols(currentMap()),rows:mapRows(currentMap()),player:mapAssetUrl(currentMap(),'player'),dm:mapAssetUrl(currentMap(),'dm')}));
- assert(data.scenes.length===1&&data.active==='evergarden-home-hive','Only official Home Hive should be active');
+ assert(data.scenes.length===5&&data.scenes.includes('evergarden-home-hive')&&data.active==='evergarden-home-hive','Home Hive and four Christmas maps should exist, with Home Hive active');
  assert(data.archived>=6,'Old scenes should be preserved in archive');
  assert(data.cols===30&&data.rows===30,'Home Hive grid must be 30x30');
  const checkImage=async(url)=>{const r=await page.request.get('http://127.0.0.1:8000/'+url);assert(r.ok()&&/image\/png/.test(r.headers()['content-type']),url+' image missing');};
