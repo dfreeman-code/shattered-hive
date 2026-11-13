@@ -72,6 +72,21 @@ try {
  assert(await page.evaluate(()=>currentMap().revealed.length===0),'Fog hide failed');
  await page.evaluate(()=>{mapFogAll(true)});
  assert(await page.evaluate(()=>currentMap().revealed.length===900),'Fog reveal did not cover 900 cells');
+ // Verify all eight official Christmas PNGs load as real images, not fallback SVGs.
+ for(const sceneId of ['caper-tree-base','caper-gift-maze','caper-tinsel-crossing','caper-starlight-shrine']){
+   for(const mode of ['dm','player']){
+     await page.evaluate(({sceneId,mode})=>{const ms=mapState();ms.active=sceneId;ms.viewMode=mode;render()},{sceneId,mode});
+     const info=await page.locator('#map-board .map-custom-image').evaluate(async img=>{
+       if(!img.complete)await new Promise((resolve,reject)=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',reject,{once:true})});
+       return {src:img.getAttribute('src'),width:img.naturalWidth,height:img.naturalHeight};
+     });
+     assert(info.src==='assets/maps/'+sceneId+'-'+(mode==='dm'?'dm':'player')+'.png',sceneId+' '+mode+' did not select the correct PNG');
+     assert(info.width===1200&&info.height===1200,sceneId+' '+mode+' PNG missing or incorrect size');
+     assert(await page.evaluate(()=>mapCols(currentMap())===30&&mapRows(currentMap())===30),sceneId+' lost 30x30 grid');
+   }
+ }
+ await page.evaluate(()=>{mapState().active='evergarden-home-hive';mapState().viewMode='dm';save();render()});
+
  // Character-linked PC token style regression.
  await page.evaluate(()=>{
    db.pcs.push({id:'test-hero-appearance',name:'Vismund Test Hero',species:'Spiderkin',class:'Wizard',status:'Active'});
