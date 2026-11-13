@@ -1,0 +1,41 @@
+name: Cloud Sync 2.0 browser smoke test
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'assets/cloud-sync.js'
+      - 'assets/cloud-config.js'
+      - 'tests/cloud-sync-v2.smoke.cjs'
+      - '.github/workflows/cloud-sync-v2-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright browser
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Serve branch app locally
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/hive-http.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ >/dev/null && break; sleep 1; done
+      - name: Run isolated browser smoke tests
+        run: node tests/cloud-sync-v2.smoke.cjs
+      - name: Upload screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-sync-v2-smoke-debug
+          path: /tmp/shattered-hive-cloud-sync-v2.png
+          if-no-files-found: ignore
