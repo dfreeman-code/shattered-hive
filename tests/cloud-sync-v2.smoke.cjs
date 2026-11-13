@@ -122,7 +122,13 @@ const assert = require('node:assert/strict');
     await row.getByRole('button',{name:'Restore'}).click();
     const downloaded=await restoreBackup;
     check('Restore exports current local JSON backup',downloaded.suggestedFilename().endsWith('.json'));
-    await page.getByText('restored as NEW revision 3',{exact:false}).first().waitFor({timeout:15000});
+    // Restoring the campaign can also re-render the view away from Settings.
+    // Verify the persisted cloud revision and actual restored campaign instead.
+    await page.waitForFunction(() => {
+      const meta=JSON.parse(localStorage.getItem('shattered-hive-cloud-sync-meta-v1') || 'null');
+      const save=JSON.parse(localStorage.getItem('shattered-hive-v1') || 'null');
+      return meta?.revision===3 && !save?.pcs?.some(x=>x.name==='Smoke Hero');
+    },null,{timeout:15000});
     const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
     check('Restoration creates a fresh revision',revision===3);
     check('Restoration recovers old characters',!restored.pcs.some(x=>x.name==='Smoke Hero'));
