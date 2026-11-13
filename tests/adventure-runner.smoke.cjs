@@ -19,7 +19,7 @@ const scene=(i,extras={})=>({id:'a1-scene-'+String(i+1).padStart(2,'0'),title:ti
    await p.getByRole('button',{name:/Adventure Runner/}).click();
    await p.getByRole('heading',{name:'Adventure Runner'}).waitFor();
    assert.equal(await p.locator('.ar-scene').count(),10);
-   assert.equal((await p.locator('.ar-editor textarea').allInputValues()).filter(Boolean).length,0);
+   assert.equal((await p.locator('.ar-editor textarea').evaluateAll(nodes=>nodes.map(n=>n.value))).filter(Boolean).length,0);
    let after=await get();
    for(const field of ['pcs','npcs','quests','sessions','decisions','maps']){
      assert.deepEqual(after[field],original[field],field+' should not change while previewing');
