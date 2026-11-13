@@ -173,6 +173,23 @@ try {
  assert(await page.locator('.map-marker-editor').count()===1,'Glass Doors marker editor missing');
  await page.evaluate(()=>{mapState().active='evergarden-home-hive';mapState().viewMode='dm';save();render()});
 
+
+ // Christmas guide migration: stable ids, all seven maps and links to approved runner text.
+ const guideInfo=await page.evaluate(()=>CHRISTMAS_DM_GUIDES.map(g=>({id:g.id,expected:g.marks.length,actual:mapState().scenes.find(x=>x.id===g.id)?.dmMarkers?.filter(m=>m.id.startsWith('caper-guide-')).length})));
+ assert(guideInfo.length===7&&guideInfo.every(g=>g.expected===g.actual),'DM guide markers were not seeded across all seven maps');
+ await page.evaluate(()=>{
+  db.adventureScriptDraft={adventureId:'vesper-adventure-1',scenes:{'a1-scene-04':{encounters:'CANON TEST: prescribed berry encounter only.'}}};
+  mapState().active='caper-frozen-berry';mapState().viewMode='dm';mapState().selectedDmMarker='caper-guide-caper-frozen-berry-1';save();render();
+ });
+ assert((await page.locator('.dm-guide-excerpt').innerText()).includes('CANON TEST: prescribed berry encounter only.'),'Marker did not reflect approved Adventure Runner text');
+ await page.evaluate(()=>mapSetView('player'));
+ assert(!(await page.locator('#app').innerText()).includes('CANON TEST'),'Approved DM script leaked in player view');
+ await page.evaluate(()=>mapSetView('dm'));
+ await page.getByRole('button',{name:'Open original scene'}).click();
+ assert(await page.evaluate(()=>page==='runner'&&adventurePreviewIndex===3),'Linked marker did not open Scene 4 script');
+ await page.evaluate(()=>{goto('maps');mapSwitch('evergarden-home-hive')});
+ const originalGuides=await page.evaluate(()=>currentMap().dmMarkers.length);
+
  // DM-only interactive marker regressions: creation, edit, movement, persistence and player privacy.
  await page.evaluate(()=>{goto('maps');mapSwitch('evergarden-home-hive')});
  assert(await page.locator('.map-marker-editor').count()===1,'DM marker editor missing');
@@ -200,7 +217,7 @@ try {
  assert(await page.locator('[data-dm-marker="'+markerId+'"]').count()===1,'DM marker did not return in DM View');
  await page.evaluate(id=>{mapState().selectedDmMarker=id;render()},markerId);
  await page.getByRole('button',{name:'Delete selected marker'}).click();
- assert(await page.evaluate(()=>currentMap().dmMarkers.length===0),'Marker delete did not work');
+ assert(await page.evaluate(()=>currentMap().dmMarkers.length)===originalGuides,'Marker delete did not work or deleted existing guide markers');
 
  // Create a custom scene, verify refresh and retention of the Home Hive.
  await page.evaluate(()=>{mapState().scenes.push({id:'test-custom',name:'Test Custom',theme:'blank',tokens:[]});save()});
