@@ -17,13 +17,6 @@ drop policy if exists "Cloud owner can update" on public.shattered_hive_cloud_sa
 create policy "Cloud owner can read"
   on public.shattered_hive_cloud_saves for select to authenticated
   using (owner_id = (select auth.uid()));
-create policy "Cloud owner can insert"
-  on public.shattered_hive_cloud_saves for insert to authenticated
-  with check (owner_id = (select auth.uid()));
-create policy "Cloud owner can update"
-  on public.shattered_hive_cloud_saves for update to authenticated
-  using (owner_id = (select auth.uid()))
-  with check (owner_id = (select auth.uid()));
 
 -- SECURITY DEFINER is required because authenticated clients have SELECT only.
 -- The RPC is restricted to the authenticated role and every operation is scoped
