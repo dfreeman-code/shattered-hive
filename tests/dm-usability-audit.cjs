@@ -35,9 +35,8 @@ async function ready(url){
   await page.locator('#ar-readAloud').fill('UNSAVED TEST DRAFT - DO NOT STORE');
   await page.locator('.ar-scene').nth(1).click();
   await page.locator('.ar-scene').first().click();
-  if(await page.locator('#ar-readAloud').inputValue()!=='UNSAVED TEST DRAFT - DO NOT STORE'){
-   warnings.push('UNSAVED_SCENE_LOST: Editing a field then moving to another scene silently discards unsaved text.');
-  }
+  assert.equal(await page.locator('#ar-readAloud').inputValue(),'UNSAVED TEST DRAFT - DO NOT STORE','Unsaved text must be automatically preserved when changing scenes');
+  assert.equal((await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')))).adventureScriptDraft.scenes['a1-scene-01'].readAloud,'UNSAVED TEST DRAFT - DO NOT STORE');
   // Saved text must persist through navigation and reload.
   await page.locator('#ar-readAloud').fill('SAVED TEST DRAFT');
   await page.getByRole('button',{name:'Save scene draft'}).click();
@@ -50,9 +49,12 @@ async function ready(url){
   // Command Center, battle map, music, and combat reachable.
   await page.getByRole('button',{name:/Session Command Center/}).click();
   assert.ok(await page.locator('#cc-notes').isVisible());
-  if(!(await page.locator('#app').innerText()).includes('Adventure Runner')){
-   warnings.push('NO_DIRECT_RUNNER_LINK: Command Center lacks an obvious direct Adventure Runner shortcut.');
-  }
+  await page.getByRole('button',{name:'Open Adventure Runner'}).click();
+  assert.ok(await page.locator('#ar-readAloud').isVisible(),'Command Center button must open the Adventure Runner');
+  await page.locator('#ar-dmNotes').fill('NAVIGATION TEST NOTES');
+  await page.getByRole('button',{name:'Back to Command Center'}).click();
+  await page.getByRole('button',{name:'Open Adventure Runner'}).click();
+  assert.equal(await page.locator('#ar-dmNotes').inputValue(),'NAVIGATION TEST NOTES','Leaving the runner via Command Center button preserves text');
   await page.getByRole('button',{name:/Music & Ambience/}).first().click();
   assert.ok((await page.locator('#app').innerText()).length>30);
   await page.getByRole('button',{name:/Battle Maps/}).first().click();
