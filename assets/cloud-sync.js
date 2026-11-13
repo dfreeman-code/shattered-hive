@@ -240,6 +240,10 @@
         // Fetch the larger payload only after discovering a newer revision.
         remote = await readCloud();
         validateDocument(remote.payload);
+        if (changedWhileBusy || fingerprint(getLocal()) !== localHash) {
+          linked = false; blocked = true;
+          return notify('Local edits arrived while retrieving a newer cloud campaign. Nothing was replaced. Export a JSON backup and resolve the conflict.');
+        }
         linked = false; blocked = true;
         revision = Number(remote.revision);
         bridge.replaceData(remote.payload);
