@@ -28,6 +28,33 @@ const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
    assert.deepEqual(nav.quests,before.quests,'Navigation cannot activate pending quests');
    assert.deepEqual(nav.sessions,before.sessions,'Navigation cannot mark sessions Played');
    console.log('PASS command center opens without changing PCs, quests or sessions');
+   // New UI-only player board must not expose DM scratchpad or campaign secrets.
+   await p.getByRole('button',{name:'Player-safe board'}).click();
+   const safe=p.locator('#cc-player-board');
+   await safe.waitFor({state:'visible'});
+   assert.equal(await safe.getByRole('heading',{name:/The Heroes/}).count(),1);
+   const text=await safe.innerText();
+   assert.ok(!text.includes('Test note: protect Vesper mystery'));
+   assert.ok(!text.includes('SECRET:'));
+   assert.ok(await p.locator('.shell').evaluate(el=>getComputedStyle(el).display==='none'));
+   await safe.getByRole('button',{name:'Close player board'}).click();
+   assert.equal(await safe.count(),0);
+   console.log('PASS player-safe presentation board hides DM details and exits cleanly');
+   // Quick hero view should be read-only and not leak secrets.
+   if(before.pcs.length){
+     const first=p.locator('.cc-hero-detail').first();
+     if(await first.count()){
+       await first.click();
+       const quick=p.locator('#cc-quick-hero');
+       await quick.waitFor({state:'visible'});
+       const quickText=await quick.innerText();
+       assert.ok(!quickText.includes('Personal secrets'));
+       assert.ok(!quickText.includes('SECRET:'));
+       await quick.getByRole('button',{name:'Close'}).click();
+       assert.deepEqual((await snapshot()).pcs,before.pcs);
+       console.log('PASS quick hero panel is read-only');
+     }
+   }
    assert.ok(await p.getByRole('button',{name:'Open Battle Map'}).count());
    assert.ok(await p.getByRole('button',{name:'Full Combat Tracker'}).count());
    console.log('PASS map and combat navigation available');
@@ -71,6 +98,16 @@ const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
    assert.equal(combat.turn,1);
    assert.equal(combat.history[0].text,'Turn: Spore (round 1)');
    console.log('PASS turn controls operate original combat state and history');
+   // Test one-click damage/healing preserves original HP clamp and combat audit log.
+   await p.getByRole('button',{name:'Damage Glim 1 HP'}).click();
+   let adjusted=(await snapshot()).combat;
+   assert.equal(adjusted.participants[0].hp,9);
+   assert.ok(adjusted.history[0].text.includes('damage'));
+   await p.getByRole('button',{name:'Heal Glim 1 HP'}).click();
+   adjusted=(await snapshot()).combat;
+   assert.equal(adjusted.participants[0].hp,10);
+   assert.deepEqual((await snapshot()).pcs,before.pcs);
+   console.log('PASS one-click combat HP actions log changes without updating character sheets');
    await p.getByRole('button',{name:'Full Combat Tracker'}).click();
    assert.ok((await p.locator('#app').innerText()).includes('Spore'));
    console.log('PASS full combat tracker shows same encounter');
@@ -81,6 +118,12 @@ const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
       return {viewport:window.innerWidth,right:r.right,left:r.left,columns:getComputedStyle(e).gridTemplateColumns};
    });
    assert.ok(m.left>=-1&&m.right<=m.viewport+2,JSON.stringify(m));
+   const mobileButton=mobile.getByRole('button',{name:'Player-safe board'});
+   await mobileButton.click();
+   assert.ok(await mobile.locator('#cc-player-board').isVisible());
+   await mobile.getByRole('button',{name:'Close player board'}).click();
+   console.log('PASS player board works on mobile viewport');
+
    console.log('PASS command center fits mobile 390px viewport');
    assert.deepEqual(errors,[]);
    console.log('PASS no uncaught browser errors');
