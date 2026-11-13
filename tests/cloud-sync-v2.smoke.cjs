@@ -102,9 +102,16 @@ const assert = require('node:assert/strict');
     history.push({revision,payload:structuredClone(payload),created_at:new Date().toISOString(),
       pc_count:payload.pcs.length,npc_count:payload.npcs.length,map_count:0});
     await page.getByRole('button',{name:'Check for cloud updates'}).click();
-    await page.getByText('Cloud checked: this browser is up to date.',{exact:false}).first().waitFor({timeout:15000});
+    await page.waitForFunction(() => {
+      const d=JSON.parse(localStorage.getItem('shattered-hive-v1') || 'null');
+      return d?.pcs?.some(x=>x.name==='Smoke Hero');
+    },null,{timeout:15000});
     const localState=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
     check('New remote character arrives locally',localState?.pcs?.some(x=>x.name==='Smoke Hero'));
+    // Campaign replacement re-renders the view, which may leave Settings.
+    // Return to Settings before loading recovery history.
+    await page.locator('#cloud-header-status').click();
+    await page.locator('#cloud-sync-panel').waitFor({state:'visible'});
     await page.getByRole('button',{name:'Load recovery history'}).click();
     await page.getByText('Revision 2',{exact:false}).first().waitFor({timeout:15000});
     // Restore older revision, verify another JSON backup is offered and
