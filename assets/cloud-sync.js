@@ -233,7 +233,7 @@
     else if (!remoteAvailable) buttons = '<p><b>' + account + '</b></p>' +
       '<button class="btn small" type="button" onclick="SHCloud.uploadFirst()">Upload this browser to cloud (first time)</button> ' + buttons;
     else buttons = '<p><b>' + account + '</b> · Cloud revision ' + revision + '</p>' +
-      (!linked ? '<button class="btn small" type="button" onclick="SHCloud.download()">Download cloud to this browser</button> ' : '') + buttons;
+      (!linked ? '<button class="btn small" type="button" onclick="SHCloud.download()">Download cloud to this browser</button> ' : '<button class="btn small" type="button" onclick="SHCloud.uploadPending()">Sync changes now</button> ') + buttons;
     return '<div id="cloud-sync-panel">' + buttons + '<p id="cloud-sync-status" class="muted" role="status" aria-live="polite">' +
       escapeHtml(status) + '</p><p class="muted">Every device must use the same email account. Cloud data is private to that account. Local JSON backups remain recommended.</p></div>';
   }
@@ -265,7 +265,7 @@
   window.SHCloud = {
     boot:boot, settingsHtml:settingsHtml, sendLink:sendLink,
     suspendForReplacement:suspendForReplacement,
-    uploadFirst:function(){upload(true);}, download:download, refresh:refresh,
+    uploadFirst:function(){upload(true);}, uploadPending:function(){if(timer){clearTimeout(timer);timer=null;}upload(false);}, download:download, refresh:refresh,
     signOut:signOut, queueSave:queueSave,
     isLinked:function(){return !!linked && !blocked;}
   };
