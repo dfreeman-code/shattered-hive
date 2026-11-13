@@ -7,6 +7,7 @@ on:
       - 'assets/cloud-sync.js'
       - 'assets/cloud-config.js'
       - 'tests/cloud-sync-v2.smoke.cjs'
+      - 'tests/cloud-sync-v2.api.cjs'
       - '.github/workflows/cloud-sync-v2-smoke.yml'
   workflow_dispatch:
 
@@ -32,6 +33,8 @@ jobs:
           for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ >/dev/null && break; sleep 1; done
       - name: Run isolated browser smoke tests
         run: node tests/cloud-sync-v2.smoke.cjs
+      - name: Confirm real Supabase anonymous API cannot read private campaigns
+        run: node tests/cloud-sync-v2.api.cjs
       - name: Upload screenshot on failure
         if: failure()
         uses: actions/upload-artifact@v4
