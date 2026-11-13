@@ -14,10 +14,12 @@ async function main(){
  for(const table of ['shattered_hive_save_history','shattered_hive_cloud_saves']){
   const endpoint=cfg.url+'/rest/v1/'+table+'?select=revision&limit=1';
   const res=await fetch(endpoint,{headers:{apikey:cfg.anonKey,Accept:'application/json'},signal:AbortSignal.timeout(10000)});
-  assert.equal(res.status,200,table+' expected to be reachable with public client key');
-  const rows=await res.json();
-  assert.ok(Array.isArray(rows)&&rows.length===0,table+' must not expose private rows to an anonymous visitor');
-  console.log('PASS Real Supabase anonymous PostgREST '+table+' returns zero private rows');
+  assert.ok([200,401,403].includes(res.status),table+' must either block anonymous access or return zero rows; got '+res.status);
+  if(res.status===200){
+    const rows=await res.json();
+    assert.ok(Array.isArray(rows)&&rows.length===0,table+' must not expose private rows to an anonymous visitor');
+  }
+  console.log('PASS Real Supabase anonymous PostgREST '+table+' denied data exposure (HTTP '+res.status+')');
  }
 }
 main().catch(e=>{console.error('FAIL read-only PostgREST:',e.stack||e);process.exitCode=1});
