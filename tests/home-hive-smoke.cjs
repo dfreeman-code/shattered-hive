@@ -150,6 +150,36 @@ try {
  await page.evaluate(()=>goto('runner'));
  assert(await page.evaluate(()=>adventureRunnerDraft().adventureId==='vesper-adventure-1'),'Vesper Adventure Runner data changed unexpectedly');
 
+
+ // DM-only interactive marker regressions: creation, edit, movement, persistence and player privacy.
+ await page.evaluate(()=>{goto('maps');mapSwitch('evergarden-home-hive')});
+ assert(await page.locator('.map-marker-editor').count()===1,'DM marker editor missing');
+ await page.selectOption('#dm-marker-type','S');
+ await page.getByRole('button',{name:'＋ Place DM marker'}).click();
+ let markerId=await page.evaluate(()=>currentMap().dmMarkers.at(-1)?.id);
+ assert(!!markerId,'DM marker was not created');
+ assert(await page.locator('[data-dm-marker="'+markerId+'"]').count()===1,'Map marker is not rendered');
+ await page.locator('#dm-marker-title').fill('Hidden tunnel marker');
+ await page.locator('#dm-marker-title').dispatchEvent('change');
+ await page.locator('#dm-marker-notes').fill('PRIVATE TEST: do not reveal Vesper information.');
+ await page.locator('#dm-marker-notes').dispatchEvent('change');
+ assert(await page.evaluate(()=>currentMap().dmMarkers.at(-1).notes.includes('PRIVATE TEST')),'Marker notes not saved');
+ await page.evaluate(()=>dmMarkerMove(8,12));
+ assert(await page.evaluate(()=>currentMap().dmMarkers.at(-1).x===8&&currentMap().dmMarkers.at(-1).y===12),'Marker move failed');
+ await page.reload();
+ await page.evaluate(()=>{goto('maps');mapSwitch('evergarden-home-hive')});
+ assert(await page.locator('[data-dm-marker="'+markerId+'"]').count()===1,'DM marker lost after refresh');
+ assert(await page.evaluate(()=>currentMap().dmMarkers.some(m=>m.notes.includes('PRIVATE TEST'))),'DM marker notes did not persist');
+ await page.evaluate(()=>mapSetView('player'));
+ assert(await page.locator('[data-dm-marker]').count()===0,'Private DM marker rendered in Player View');
+ assert(await page.locator('.map-marker-editor').count()===0,'DM marker editor rendered in Player View');
+ assert(!(await page.locator('#app').innerText()).includes('PRIVATE TEST'),'Private notes leaked into Player View');
+ await page.evaluate(()=>mapSetView('dm'));
+ assert(await page.locator('[data-dm-marker="'+markerId+'"]').count()===1,'DM marker did not return in DM View');
+ await page.evaluate(id=>{mapState().selectedDmMarker=id;render()},markerId);
+ await page.getByRole('button',{name:'Delete selected marker'}).click();
+ assert(await page.evaluate(()=>currentMap().dmMarkers.length===0),'Marker delete did not work');
+
  // Create a custom scene, verify refresh and retention of the Home Hive.
  await page.evaluate(()=>{mapState().scenes.push({id:'test-custom',name:'Test Custom',theme:'blank',tokens:[]});save()});
  await page.reload();
