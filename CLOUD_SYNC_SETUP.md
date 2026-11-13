@@ -8,21 +8,25 @@ On the HOME computer, open Campaign Chronicle → **Export backup**. Keep that J
 
 Do **not** use Import on your other computer to overwrite the home save. Never run Reset to troubleshoot synchronization.
 
-## 2. Create a Supabase project
+## 2. Supabase project status
 
-1. Sign up or log in at https://supabase.com/dashboard and create a new project that you control.
-2. Go to **SQL Editor** and run the repository file [supabase/cloud-sync.sql](supabase/cloud-sync.sql). It creates an owner-isolated table and a revision-checked save function.
+The project **shattered-hive** (`tlfijoztmohqtqrmtmub`) has already been created, the database migration applied, and the public client configuration connected on this feature branch. You do NOT need to create a second Supabase project or rerun the schema SQL manually.
+
+## 2a. Project configuration reference
+
+1. Open your existing project at https://supabase.com/dashboard/project/tlfijoztmohqtqrmtmub; do not create a duplicate.
+2. The database has already been created, with owner-isolated SELECT and an authenticated revision-checked write function. Do not rerun migration SQL.
 3. In **Authentication → Providers**, enable email authentication; use the default email magic-link flow.
 4. In **Authentication → URL Configuration**, use:
    - **Site URL**: \`https://dfreeman-code.github.io/shattered-hive/\`
    - **Redirect URLs**: add \`https://dfreeman-code.github.io/shattered-hive/\` (exactly).
-5. In the Supabase Dashboard's **Connect** / project API settings, copy the **Project URL** and **publishable key** (or legacy **anon public key**). These are the only values meant to go into the public website.
+5. The project URL and public publishable key are already configured on the GitHub feature branch. The remaining step is setting the **Site URL and Redirect URL** under Authentication → URL Configuration in the Supabase Dashboard.
 
 **Never add a database password, Supabase secret key, or service_role key to the repository.**
 
 ## 3. Configure the GitHub app
 
-In [assets/cloud-config.js](assets/cloud-config.js), replace the empty strings:
+The public-only project settings have **already been filled in** in [assets/cloud-config.js](assets/cloud-config.js). They should not need to be changed unless you intentionally switch Supabase projects. For reference, the expected shape is:
 
 \`\`\`js
 window.SH_CLOUD_CONFIG = {
@@ -31,7 +35,7 @@ window.SH_CLOUD_CONFIG = {
 };
 \`\`\`
 
-Only use the public key. Commit the configuration change to your repository **after the feature pull request has merged**. Publishing these public values is normal: access control comes from Supabase Auth and database row-level authorization, not hiding a public API key.
+Only a publishable public key was committed to the feature branch. No service role, database password or secret API key was committed. The feature is **not live** until the PR is merged and the email redirect URL is configured.
 
 ## 4. First sync — HOME computer only
 
@@ -70,4 +74,4 @@ Only use the public key. Commit the configuration change to your repository **af
 3. Try a stale write from A after editing on B; confirm the revision check rejects it without overwriting B.
 4. Verify the public website runs normally without cloud configuration; character creation, maps, music, import/export, and other modules continue to use browser saves.
 
-Database connection and email delivery cannot be validated until a Supabase project is configured. The repository alone does not enable real-time cloud synchronization.
+Project setup, schema, RLS, permissions, and public config were verified via the connected Supabase project. Email delivery, redirect flow, and actual two-computer data sync have **not** been tested; complete those tests before merging into production. One expected Supabase advisor warning may appear for the security-definer save function: this authenticated-only endpoint is deliberately used to protect compare-and-swap writes, verifies auth.uid(), and cannot accept an arbitrary owner ID.
