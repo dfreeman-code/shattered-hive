@@ -46,6 +46,29 @@ async function ready(url){
   await page.reload();
   await page.getByRole('button',{name:/Adventure Runner/}).click();
   assert.equal(await page.locator('#ar-readAloud').inputValue(),'SAVED TEST DRAFT');
+  // Tabletop mode presents focused script text without changing saved data.
+  await page.locator('#ar-readAloud').fill('A winter star shines over Hearthhollow. <safe & literal>');
+  await page.locator('#ar-npcDialogue').fill('Mayor: Save the star!');
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  assert.equal(await page.locator('.ar-field textarea').count(),0,'Reader mode should not show editor fields');
+  assert.equal(await page.locator('.ar-reading-section').count(),1);
+  assert.match(await page.locator('.ar-reading-text').innerText(),/winter star shines/);
+  assert.match(await page.locator('.ar-reading-text').innerText(),/<safe & literal>/,'Narration content should be safely escaped');
+  assert.equal(await page.locator('#app').getByRole('button',{name:'NPC dialogue'}).count(),1);
+  await page.getByRole('button',{name:'NPC dialogue'}).click();
+  assert.match(await page.locator('.ar-reading-text').innerText(),/Mayor: Save the star!/);
+  await page.getByRole('button',{name:'All sections'}).click();
+  assert.equal(await page.locator('.ar-reading-section').count(),9);
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  await page.locator('.ar-scene').nth(1).click();
+  assert.equal(await page.locator('.ar-field textarea').count(),0,'Reader mode persists when switching scenes');
+  await page.getByRole('button',{name:'Draft Editor'}).click();
+  await page.locator('.ar-scene').first().click();
+  assert.equal(await page.locator('#ar-readAloud').inputValue(),'A winter star shines over Hearthhollow. <safe & literal>');
+  assert.equal(await page.locator('#ar-npcDialogue').inputValue(),'Mayor: Save the star!');
+  const readerState=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  assert.equal(readerState.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.ok(readerState.decisions.every(x=>x.status==='Not decided'));
   // Command Center, battle map, music, and combat reachable.
   await page.getByRole('button',{name:/Session Command Center/}).click();
   assert.ok(await page.locator('#cc-notes').isVisible());
