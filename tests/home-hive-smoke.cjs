@@ -114,6 +114,27 @@ try {
  await page.evaluate(()=>{currentMap().tokens.push({id:'test-neutral-npc',kind:'npc',name:'Guard',x:6,y:7});save();render()});
  assert(!(await page.locator('[data-token="test-neutral-npc"]').getAttribute('style')).includes('background-color'),'NPC appearance unintentionally changed');
 
+ // Christmas Caper scene catalog and Story Runner cross-link tests.
+ await page.evaluate(()=>{mapState();goto('runner')});
+ const christmas=await page.evaluate(()=>mapState().scenes.filter(m=>m.id.startsWith('caper-')).map(m=>m.id));
+ assert(christmas.length===4,'Four Christmas Caper map locations were not seeded');
+ assert(new Set(christmas).size===4,'Duplicate Christmas scene IDs');
+ assert(await page.locator('#ar-scene-map').count()===1,'Adventure Runner scene map selector missing');
+ await page.evaluate(()=>{adventureRunnerGo(5)});
+ assert(await page.locator('#ar-scene-map').inputValue()==='caper-gift-maze','Gift maze staging suggestion missing');
+ await page.selectOption('#ar-scene-map','caper-tinsel-crossing');
+ assert(await page.evaluate(()=>db.christmasSceneMaps['a1-scene-06']==='caper-tinsel-crossing'),'Scene-specific map override not persisted');
+ await page.reload();
+ await page.evaluate(()=>goto('runner'));
+ await page.evaluate(()=>adventureRunnerGo(5));
+ assert(await page.locator('#ar-scene-map').inputValue()==='caper-tinsel-crossing','Scene map assignment lost on refresh');
+ await page.getByRole('button',{name:'Open battle map'}).click();
+ assert(await page.evaluate(()=>mapState().active==='caper-tinsel-crossing'),'Map open did not select assigned scene');
+ assert(await page.evaluate(()=>mapState().viewMode==='dm'),'Map open must use DM mode');
+ assert(await page.evaluate(()=>mapCols(currentMap())===30&&mapRows(currentMap())===30),'Christmas map is not 30x30');
+ await page.evaluate(()=>goto('runner'));
+ assert(await page.evaluate(()=>adventureRunnerDraft().adventureId==='vesper-adventure-1'),'Vesper Adventure Runner data changed unexpectedly');
+
  // Create a custom scene, verify refresh and retention of the Home Hive.
  await page.evaluate(()=>{mapState().scenes.push({id:'test-custom',name:'Test Custom',theme:'blank',tokens:[]});save()});
  await page.reload();
