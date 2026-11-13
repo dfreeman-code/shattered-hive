@@ -228,8 +228,13 @@
       if (!remote) return notify('No cloud save yet. Upload from your home computer.');
       var previous = meta(), localHash = fingerprint(getLocal());
       if (!previous || previous.userId !== session.user.id || previous.fingerprint !== localHash) {
+        if (linked && !blocked && previous && previous.userId === session.user.id &&
+            Number(remote.revision) === revision) {
+          changedWhileBusy = true;
+          return notify('Local edits are pending; cloud has not changed. Uploading those edits next.');
+        }
         linked = false; blocked = true;
-        return notify('This browser has unsynchronized changes or was never linked. Export a backup, then download cloud or resolve differences manually.');
+        return notify('This browser has unsynchronized changes and the cloud may have changed. Export a backup before resolving the conflict.');
       }
       if (Number(remote.revision) !== revision) {
         // Fetch the larger payload only after discovering a newer revision.
@@ -244,7 +249,12 @@
       syncSuccess(remote.updated_at);
       notify('Cloud checked: this browser is up to date.');
     } catch (e) { notify('Cloud refresh failed: ' + e.message); }
-    finally { busy = false; renderStatus(); }
+    finally {
+      busy = false;
+      if (changedWhileBusy && linked && !blocked) { changedWhileBusy = false; queueSave(); }
+      else changedWhileBusy = false;
+      renderStatus();
+    }
   }
   function queueSave() {
     if (!session || !linked || blocked) return;
@@ -275,7 +285,12 @@
       notify('Recovery history loaded. Restoring creates a NEW cloud revision; previous versions remain available until they age out.');
     } catch(e) {
       notify('Recovery history unavailable: ' + e.message);
-    } finally { busy = false; renderStatus(); }
+    } finally {
+      busy = false;
+      if (changedWhileBusy && linked && !blocked) { changedWhileBusy = false; queueSave(); }
+      else changedWhileBusy = false;
+      renderStatus();
+    }
   }
   async function restoreRevision(wanted) {
     wanted = Number(wanted);
