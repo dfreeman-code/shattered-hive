@@ -40,14 +40,18 @@
     if (parent) parent.outerHTML = settingsHtml();
     var indicator = document.getElementById('cloud-header-status');
     if (indicator) {
+      var attention = blocked || /failed|conflict|error|unsynchronized|not confirmed|blocked/i.test(status);
       var label = !configured ? 'Cloud: not configured' :
         !session ? 'Cloud: signed out' : busy ? 'Cloud: syncing' :
-        blocked ? 'Cloud: attention needed' : linked ? 'Cloud: synced' :
+        attention ? 'Cloud: attention needed' :
+        (timer || status.indexOf('waiting to sync') !== -1) ? 'Cloud: pending' :
+        linked ? 'Cloud: synced' :
         'Cloud: connection needed';
       indicator.textContent = label;
       indicator.title = status + (lastSyncedAt ? ' Last successful sync: ' + new Date(lastSyncedAt).toLocaleString() : '');
       indicator.setAttribute('aria-label', indicator.title);
-      indicator.dataset.state = !configured || !session ? 'offline' : blocked ? 'warning' : linked ? 'ok' : 'pending';
+      indicator.dataset.state = !configured || !session ? 'offline' : attention ? 'warning' :
+        (timer || status.indexOf('waiting to sync') !== -1) ? 'pending' : linked ? 'ok' : 'pending';
     }
   }
   function syncSuccess(at) { lastSyncedAt = at || new Date().toISOString(); renderStatus(); }
@@ -109,6 +113,11 @@
   }
   async function readCloud() {
     var rows = await request('/rest/v1/shattered_hive_cloud_saves?select=revision,payload,updated_at&limit=1',
+      'GET', undefined, true);
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  }
+  async function readCloudVersion() {
+    var rows = await request('/rest/v1/shattered_hive_cloud_saves?select=revision,updated_at&limit=1',
       'GET', undefined, true);
     return Array.isArray(rows) && rows[0] ? rows[0] : null;
   }
@@ -204,21 +213,28 @@
       syncSuccess(remote.updated_at);
       notify('Cloud campaign downloaded. This browser is now linked for automatic syncing.');
     } catch (e) { notify('Could not download cloud campaign: ' + e.message); }
-    finally { busy = false; renderStatus(); }
+    finally {
+      busy = false;
+      if(changedWhileBusy && linked && !blocked){changedWhileBusy=false;queueSave();}
+      else changedWhileBusy=false;
+      renderStatus();
+    }
   }
   async function refresh() {
     if (busy || !session || timer) return;
     busy = true;
     try {
-      var remote = await readCloud();
+      var remote = await readCloudVersion();
       if (!remote) return notify('No cloud save yet. Upload from your home computer.');
-      validateDocument(remote.payload);
       var previous = meta(), localHash = fingerprint(getLocal());
       if (!previous || previous.userId !== session.user.id || previous.fingerprint !== localHash) {
         linked = false; blocked = true;
         return notify('This browser has unsynchronized changes or was never linked. Export a backup, then download cloud or resolve differences manually.');
       }
       if (Number(remote.revision) !== revision) {
+        // Fetch the larger payload only after discovering a newer revision.
+        remote = await readCloud();
+        validateDocument(remote.payload);
         linked = false; blocked = true;
         revision = Number(remote.revision);
         bridge.replaceData(remote.payload);
@@ -233,10 +249,10 @@
   function queueSave() {
     if (!session || !linked || blocked) return;
     status = 'Changes saved locally; waiting to sync…';
-    renderStatus();
-    if (busy) { changedWhileBusy = true; return; }
+    if (busy) { changedWhileBusy = true; renderStatus(); return; }
     clearTimeout(timer);
     timer = setTimeout(function () { timer=null; if (!busy && linked && !blocked) upload(false); }, 1200);
+    renderStatus();
   }
   function signOut() {
     if(busy)return notify('Finish the current sync operation before signing out.');
