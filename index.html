@@ -803,12 +803,14 @@ const CHRISTMAS_CAPER_SCENES=[
  {id:'caper-tree-base',name:'The Enchanted Christmas Tree — Tree Base',theme:'christmas',desc:'Festive tree clearing • ribbon routes • gift cover • candy-cane crossing',cols:30,rows:30,asset:'caper-tree-base',tokens:[],playerShared:false},
  {id:'caper-gift-maze',name:'The Great Gift Pile Maze',theme:'christmas',desc:'Gift-box corridors • ribbon ramps • hidden passages',cols:30,rows:30,asset:'caper-gift-maze',tokens:[],playerShared:false},
  {id:'caper-tinsel-crossing',name:'Tinsel & Bell Crossing',theme:'christmas',desc:'Suspended garlands • bells • branch platforms',cols:30,rows:30,asset:'caper-tinsel-crossing',tokens:[],playerShared:false},
- {id:'caper-starlight-shrine',name:'The Starlight Root Shrine',theme:'tunnel',desc:'Star-lit root chamber • memory echoes • sheltered paths',cols:30,rows:30,asset:'caper-starlight-shrine',tokens:[],playerShared:false}
+ {id:'caper-starlight-shrine',name:'The Starlight Root Shrine',theme:'tunnel',desc:'Star-lit root chamber • memory echoes • sheltered paths',cols:30,rows:30,asset:'caper-starlight-shrine',tokens:[],playerShared:false},
+ {id:'caper-frozen-berry',name:'The Frozen Berry Clearing',theme:'christmas',desc:'Snowy clearing • massive frozen berry • slippery ice and twig cover',cols:30,rows:30,asset:'caper-frozen-berry',tokens:[],dmMarkers:[],playerShared:false},
+ {id:'caper-glass-doors',name:'The Three Glass Doors',theme:'christmas',desc:'Three magical glass entrances • branching paths • frost and reflections',cols:30,rows:30,asset:'caper-glass-doors',tokens:[],dmMarkers:[],playerShared:false}
 ];
 // Editable DM suggestions only — never imply the party has visited or discovered a map.
 const CHRISTMAS_SCENE_MAP_SUGGESTIONS=[
- '', 'caper-tree-base','caper-tree-base','caper-tree-base',
- 'caper-gift-maze','caper-gift-maze','caper-starlight-shrine',
+ '', 'caper-tree-base','caper-tree-base','caper-frozen-berry',
+ 'caper-glass-doors','caper-gift-maze','caper-starlight-shrine',
  'caper-starlight-shrine','caper-tree-base','caper-starlight-shrine'
 ];
 function mapCols(m){return Number.isInteger(m?.cols)&&m.cols>=4&&m.cols<=100?m.cols:MAP_COLS}
@@ -850,6 +852,14 @@ function mapState(){
   }
   ms.christmasCaperMapsSeeded=true;
   try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){console.warn('Christmas map registration could not save; export backup',e)}
+ }
+ if(!ms.christmasFinalTwoMapsSeeded){
+  // Add the two final location maps without altering existing scenes, positions or secrets.
+  for(const preset of CHRISTMAS_CAPER_SCENES.filter(p=>p.id==='caper-frozen-berry'||p.id==='caper-glass-doors')){
+   if(!ms.scenes.some(m=>m.id===preset.id)&&!ms.scenes.some(m=>m.name===preset.name))ms.scenes.push(clone(preset));
+  }
+  ms.christmasFinalTwoMapsSeeded=true;
+  try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){console.warn('Christmas location map registration could not save; export a backup',e)}
  }
  if(!ms.scenes.length)ms.scenes=[clone(EVERGARDEN_SCENES[0])];
  if(!ms.scenes.some(m=>m.id===ms.active))ms.active=ms.scenes[0].id;
