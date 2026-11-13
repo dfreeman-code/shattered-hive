@@ -1,0 +1,23 @@
+name: DM usability audit
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/dm-usability-audit.cjs'
+      - '.github/workflows/dm-usability-audit.yml'
+  workflow_dispatch:
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Simulate tabletop workflow
+        run: node tests/dm-usability-audit.cjs
