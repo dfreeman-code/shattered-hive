@@ -1,6 +1,5 @@
-// Public Supabase project configuration (never paste a service_role or secret key here).
-// Fill in ONLY the Project URL and the publishable/anon key from Supabase Dashboard -> Connect.
+// Public Supabase Project URL and publishable key. No service_role / secret keys.
 window.SH_CLOUD_CONFIG = {
-  url: "",
-  anonKey: ""
+  url: "https://tlfijoztmohqtqrmtmub.supabase.co",
+  anonKey: "sb_publishable_8dDaWwm35YWH-Cq3CNC4Vg_3-ODdouD"
 };
