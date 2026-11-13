@@ -36,7 +36,7 @@
     var el = document.getElementById('cloud-sync-status');
     if (el) el.textContent = status;
     var parent = document.getElementById('cloud-sync-panel');
-    if (parent) parent.innerHTML = settingsHtml();
+    if (parent) parent.outerHTML = settingsHtml();
   }
   function notify(msg) { status = msg; renderStatus(); }
   function apiHeaders(authorized) {
@@ -166,7 +166,7 @@
         queueSave();
       } else notify('Cloud up to date. Changes on this browser will sync automatically.');
     } catch (e) { notify('Cloud upload failed (local save retained): ' + e.message); }
-    finally { busy = false; renderStatus(); }
+    finally { busy = false; renderStatus(); if(changedWhileBusy && linked && !blocked){changedWhileBusy=false;queueSave();} }
   }
   async function download() {
     if (busy || !session) return;
@@ -187,7 +187,7 @@
     finally { busy = false; renderStatus(); }
   }
   async function refresh() {
-    if (busy || !session) return;
+    if (busy || !session || timer) return;
     busy = true;
     try {
       var remote = await readCloud();
@@ -213,9 +213,10 @@
     if (!session || !linked || blocked) return;
     if (busy) { changedWhileBusy = true; return; }
     clearTimeout(timer);
-    timer = setTimeout(function () { if (!busy && linked && !blocked) upload(false); }, 1200);
+    timer = setTimeout(function () { timer=null; if (!busy && linked && !blocked) upload(false); }, 1200);
   }
   function signOut() {
+    if(busy)return notify('Finish the current sync operation before signing out.');
     clearTimeout(timer);
     session = null; linked = false; blocked = false; revision = 0; remoteAvailable = false;
     localStorage.removeItem(SESSION_KEY);
@@ -255,8 +256,15 @@
       if (session) await connect();
     } catch (e) { notify('Cloud initialization failed (local data safe): ' + e.message); }
   }
+  setInterval(function(){if(session && linked && !busy && !timer && !blocked && document.visibilityState === 'visible')refresh();},60000);
+  function suspendForReplacement(){
+    if(!session || !linked)return;
+    clearTimeout(timer);timer=null;linked=false;blocked=true;
+    notify('Campaign replaced locally. Cloud auto-sync is paused to protect your previous cloud save. Download your cloud save or manually replace it after reviewing both backups.');
+  }
   window.SHCloud = {
     boot:boot, settingsHtml:settingsHtml, sendLink:sendLink,
+    suspendForReplacement:suspendForReplacement,
     uploadFirst:function(){upload(true);}, download:download, refresh:refresh,
     signOut:signOut, queueSave:queueSave,
     isLinked:function(){return !!linked && !blocked;}
