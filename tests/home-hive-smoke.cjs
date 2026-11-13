@@ -133,7 +133,7 @@ try {
  await page.evaluate(()=>{mapState();goto('runner')});
  const christmas=await page.evaluate(()=>mapState().scenes.filter(m=>m.id.startsWith('caper-')).map(m=>m.id));
  assert(christmas.length===6,'Six Christmas Caper map locations were not seeded');
- assert(new Set(christmas).size===4,'Duplicate Christmas scene IDs');
+ assert(new Set(christmas).size===6,'Duplicate Christmas scene IDs');
  assert(await page.locator('#ar-scene-map').count()===1,'Adventure Runner scene map selector missing');
  await page.evaluate(()=>{adventureRunnerGo(5)});
  assert(await page.locator('#ar-scene-map').inputValue()==='caper-gift-maze','Gift maze staging suggestion missing');
