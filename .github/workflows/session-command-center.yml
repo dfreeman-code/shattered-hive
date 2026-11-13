@@ -1,0 +1,32 @@
+name: Live Session Command Center browser tests
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/session-command-center.smoke.cjs'
+      - '.github/workflows/session-command-center.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  session-command-center:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Serve candidate version locally
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/hive-http.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ >/dev/null && break; sleep 1; done
+      - name: Test command center without live campaign data
+        run: node tests/session-command-center.smoke.cjs
