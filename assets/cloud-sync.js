@@ -13,6 +13,7 @@
   var status = configured ? 'Cloud sign-in is optional; browser saves continue working.' :
     'Cloud sync setup is not complete. Local browser saves still work.';
   var remoteAvailable = false;
+  var historyRows = [], historyLoaded = false, lastSyncedAt = null;
   function getLocal() { return bridge.getData(); }
   function fingerprint(value) {
     var s = JSON.stringify(value), h = 2166136261;
@@ -37,7 +38,19 @@
     if (el) el.textContent = status;
     var parent = document.getElementById('cloud-sync-panel');
     if (parent) parent.outerHTML = settingsHtml();
+    var indicator = document.getElementById('cloud-header-status');
+    if (indicator) {
+      var label = !configured ? 'Cloud: not configured' :
+        !session ? 'Cloud: signed out' : busy ? 'Cloud: syncing' :
+        blocked ? 'Cloud: attention needed' : linked ? 'Cloud: synced' :
+        'Cloud: connection needed';
+      indicator.textContent = label;
+      indicator.title = status + (lastSyncedAt ? ' Last successful sync: ' + new Date(lastSyncedAt).toLocaleString() : '');
+      indicator.setAttribute('aria-label', indicator.title);
+      indicator.dataset.state = !configured || !session ? 'offline' : blocked ? 'warning' : linked ? 'ok' : 'pending';
+    }
   }
+  function syncSuccess(at) { lastSyncedAt = at || new Date().toISOString(); renderStatus(); }
   function notify(msg) { status = msg; renderStatus(); }
   function apiHeaders(authorized) {
     var h = {'apikey':API_KEY, 'Content-Type':'application/json'};
@@ -95,7 +108,7 @@
     } catch (e) { notify('Sign-in email failed: ' + e.message); }
   }
   async function readCloud() {
-    var rows = await request('/rest/v1/shattered_hive_cloud_saves?select=revision,payload&limit=1',
+    var rows = await request('/rest/v1/shattered_hive_cloud_saves?select=revision,payload,updated_at&limit=1',
       'GET', undefined, true);
     return Array.isArray(rows) && rows[0] ? rows[0] : null;
   }
@@ -122,11 +135,13 @@
         if (saved && saved.userId === session.user.id && saved.fingerprint === localHash) {
           if (saved.revision === revision) {
             linked = true; blocked = false;
+            syncSuccess(remote.updated_at);
             notify('Synced. This browser has the latest cloud campaign.');
           } else {
             bridge.replaceData(remote.payload);
             setMeta();
             linked = true; blocked = false;
+            syncSuccess(remote.updated_at);
             notify('Updated this browser with newer cloud campaign data.');
           }
         } else {
@@ -156,7 +171,8 @@
         return notify('SYNC CONFLICT: another computer has newer data. Export this browser backup, then download the cloud version. Nothing was overwritten.');
       }
       revision = Number(result);
-      remoteAvailable = true; linked = true; blocked = false;
+      remoteAvailable = true; linked = true; blocked = false; historyLoaded = false;
+      syncSuccess(new Date().toISOString());
       // Keep the hash of exactly the revision uploaded. A new edit during the request must be sent next.
       var snapshotHash = fingerprint(snapshot);
       localStorage.setItem(META_KEY,JSON.stringify({userId:session.user.id,revision:revision,fingerprint:snapshotHash}));
@@ -182,6 +198,7 @@
       bridge.replaceData(remote.payload);
       setMeta();
       linked = true; blocked = false;
+      syncSuccess(remote.updated_at);
       notify('Cloud campaign downloaded. This browser is now linked for automatic syncing.');
     } catch (e) { notify('Could not download cloud campaign: ' + e.message); }
     finally { busy = false; renderStatus(); }
@@ -205,12 +222,15 @@
         setMeta();
       }
       linked = true; blocked = false; revision = Number(remote.revision);
+      syncSuccess(remote.updated_at);
       notify('Cloud checked: this browser is up to date.');
     } catch (e) { notify('Cloud refresh failed: ' + e.message); }
     finally { busy = false; renderStatus(); }
   }
   function queueSave() {
     if (!session || !linked || blocked) return;
+    status = 'Changes saved locally; waiting to sync…';
+    renderStatus();
     if (busy) { changedWhileBusy = true; return; }
     clearTimeout(timer);
     timer = setTimeout(function () { timer=null; if (!busy && linked && !blocked) upload(false); }, 1200);
@@ -219,8 +239,68 @@
     if(busy)return notify('Finish the current sync operation before signing out.');
     clearTimeout(timer);
     session = null; linked = false; blocked = false; revision = 0; remoteAvailable = false;
+    historyRows = []; historyLoaded = false; lastSyncedAt = null;
     localStorage.removeItem(SESSION_KEY);
     notify('Signed out of cloud sync. Browser saves continue normally.');
+  }
+
+  async function loadHistory() {
+    if (busy || !session || !remoteAvailable) return;
+    busy = true; renderStatus();
+    try {
+      var rows = await request('/rest/v1/shattered_hive_save_history?select=revision,created_at,pc_count,npc_count,map_count&order=revision.desc&limit=30',
+        'GET', undefined, true);
+      if (!Array.isArray(rows)) throw Error('Invalid cloud history response.');
+      historyRows = rows.filter(function(r) {return Number.isSafeInteger(Number(r.revision));});
+      historyLoaded = true;
+      notify('Recovery history loaded. Restoring creates a NEW cloud revision; previous versions remain available until they age out.');
+    } catch(e) {
+      notify('Recovery history unavailable: ' + e.message);
+    } finally { busy = false; renderStatus(); }
+  }
+  async function restoreRevision(wanted) {
+    wanted = Number(wanted);
+    if (busy || !session || !remoteAvailable || !Number.isSafeInteger(wanted) || wanted < 1) return;
+    if (!historyLoaded || !historyRows.some(function(row) {return Number(row.revision) === wanted;}))
+      return notify('Load recovery history and select an available revision.');
+    if (!linked || blocked) return notify('Sync is not linked. Resolve/download the latest cloud campaign before restoring history.');
+    var currentMeta = meta();
+    if (!currentMeta || currentMeta.userId !== session.user.id ||
+        currentMeta.revision !== revision || currentMeta.fingerprint !== fingerprint(getLocal()))
+      return notify('Unsynced local changes detected. Export JSON backup and resolve syncing before restoring.');
+    if (!confirm('Restore cloud revision ' + wanted + '? This replaces THIS browser campaign and creates a NEW cloud revision. A current JSON backup will download first.')) return;
+    busy = true; renderStatus();
+    try {
+      // Always verify the latest revision immediately before a restoration.
+      var latest = await readCloud();
+      if (!latest || Number(latest.revision) !== revision) {
+        linked = false; blocked = true;
+        return notify('A different device has updated the campaign. Your data was not changed. Download the latest cloud campaign before restoring.');
+      }
+      var rows = await request('/rest/v1/shattered_hive_save_history?select=revision,payload&revision=eq.' + wanted + '&limit=1',
+        'GET', undefined, true);
+      var snapshot = Array.isArray(rows) && rows[0] ? rows[0].payload : null;
+      validateDocument(snapshot);
+      // Export BEFORE the first remote or local mutation. If export fails, abort.
+      bridge.exportBackup();
+      var result = await request('/rest/v1/rpc/shattered_hive_store','POST',
+        {expected_revision:revision,document:snapshot},true);
+      if (result == null || !Number.isSafeInteger(Number(result))) {
+        linked = false; blocked = true;
+        return notify('Restore blocked by newer cloud edits. No data was overwritten; download the latest campaign before retrying.');
+      }
+      linked = false; blocked = true; // prevent replaceData/save() from queueing an extra write
+      revision = Number(result);
+      bridge.replaceData(snapshot);
+      setMeta();
+      linked = true; blocked = false; historyLoaded = false;
+      syncSuccess(new Date().toISOString());
+      notify('Revision ' + wanted + ' restored as NEW revision ' + revision + '. The previous campaign is in recovery history.');
+    } catch(e) {
+      // A server may have committed before a network error; never assume restoration succeeded.
+      linked = false; blocked = true;
+      notify('Restore could not be confirmed: ' + e.message + '. Your local browser save remains available; check cloud status.');
+    } finally { busy = false; renderStatus(); }
   }
   function settingsHtml() {
     if (!configured) return '<div id="cloud-sync-panel"><p>Cloud sync has not been configured yet. Your browser data remains available. See the GitHub CLOUD_SYNC_SETUP.md instructions.</p></div>';
@@ -234,8 +314,23 @@
       '<button class="btn small" type="button" onclick="SHCloud.uploadFirst()">Upload this browser to cloud (first time)</button> ' + buttons;
     else buttons = '<p><b>' + account + '</b> · Cloud revision ' + revision + '</p>' +
       (!linked ? '<button class="btn small" type="button" onclick="SHCloud.download()">Download cloud to this browser</button> ' : '<button class="btn small" type="button" onclick="SHCloud.uploadPending()">Sync changes now</button> ') + buttons;
+    var historyMarkup = session && remoteAvailable ?
+      '<div class="cloud-history"><h4>Recovery history</h4><p class="muted">Latest 30 cloud saves (older versions expire). Each restore exports a backup and creates a new revision.</p>' +
+      '<button type="button" class="btn small secondary" onclick="SHCloud.loadHistory()">Load recovery history</button>' +
+      (historyLoaded ? '<div class="cloud-history-list">' + historyRows.map(function(row) {
+        var v = Number(row.revision);
+        return '<div class="cloud-history-item"><span><b>Revision ' + v + '</b> · ' +
+          escapeHtml(new Date(row.created_at).toLocaleString()) + '<small> · ' +
+          Number(row.pc_count || 0) + ' PCs, ' + Number(row.npc_count || 0) + ' NPCs, ' +
+          Number(row.map_count || 0) + ' maps</small></span>' +
+          '<button type="button" class="btn small secondary" ' + (!linked || blocked ? 'disabled ' : '') +
+          'onclick="SHCloud.restoreRevision(' + v + ')">Restore</button></div>';
+      }).join('') + '</div>' : '') + '</div>' : '';
     return '<div id="cloud-sync-panel">' + buttons + '<p id="cloud-sync-status" class="muted" role="status" aria-live="polite">' +
-      escapeHtml(status) + '</p><p class="muted">Every device must use the same email account. Cloud data is private to that account. Local JSON backups remain recommended.</p></div>';
+      escapeHtml(status) + '</p>' +
+      (lastSyncedAt ? '<p class="muted"><b>Last confirmed cloud save:</b> ' + escapeHtml(new Date(lastSyncedAt).toLocaleString()) + '</p>' : '') +
+      '<p class="muted">Every device must use the same email account. Cloud data is private to that account. Local JSON backups remain recommended.</p>' +
+      historyMarkup + '</div>';
   }
   async function boot(appBridge) {
     bridge = appBridge;
@@ -254,6 +349,7 @@
         if (stored && stored.access_token && stored.refresh_token) session = stored;
       }
       if (session) await connect();
+      renderStatus();
     } catch (e) { notify('Cloud initialization failed (local data safe): ' + e.message); }
   }
   setInterval(function(){if(session && linked && !busy && !timer && !blocked && document.visibilityState === 'visible')refresh();},60000);
@@ -263,7 +359,7 @@
     notify('Campaign replaced locally. Cloud auto-sync is paused to protect your previous cloud save. Download your cloud save or manually replace it after reviewing both backups.');
   }
   window.SHCloud = {
-    boot:boot, settingsHtml:settingsHtml, sendLink:sendLink,
+    boot:boot, settingsHtml:settingsHtml, sendLink:sendLink, loadHistory:loadHistory, restoreRevision:restoreRevision,
     suspendForReplacement:suspendForReplacement,
     uploadFirst:function(){upload(true);}, uploadPending:function(){if(timer){clearTimeout(timer);timer=null;}upload(false);}, download:download, refresh:refresh,
     signOut:signOut, queueSave:queueSave,
