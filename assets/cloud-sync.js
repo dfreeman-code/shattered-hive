@@ -187,11 +187,14 @@
   async function download() {
     if (busy || !session) return;
     if (!confirm('Download the cloud campaign to THIS browser? Current browser data will be exported as a JSON backup first, then replaced.')) return;
+    var localBeforeDownload = fingerprint(getLocal());
     busy = true;
     try {
       var remote = await readCloud();
       if (!remote) return notify('No cloud save found. Upload from your home computer first.');
       validateDocument(remote.payload);
+      if (fingerprint(getLocal()) !== localBeforeDownload || changedWhileBusy)
+        return notify('Local changes happened during download. Nothing replaced; retry after the edits finish syncing.');
       bridge.exportBackup();
       linked = false; blocked = true;
       revision = Number(remote.revision); remoteAvailable = true;
@@ -282,6 +285,8 @@
       var snapshot = Array.isArray(rows) && rows[0] ? rows[0].payload : null;
       validateDocument(snapshot);
       // Export BEFORE the first remote or local mutation. If export fails, abort.
+      if (changedWhileBusy || fingerprint(getLocal()) !== currentMeta.fingerprint)
+        return notify('Local edits were made during recovery. Nothing restored; retry after saving.');
       bridge.exportBackup();
       var result = await request('/rest/v1/rpc/shattered_hive_store','POST',
         {expected_revision:revision,document:snapshot},true);
@@ -291,6 +296,8 @@
       }
       linked = false; blocked = true; // prevent replaceData/save() from queueing an extra write
       revision = Number(result);
+      if (changedWhileBusy || fingerprint(getLocal()) !== currentMeta.fingerprint)
+        return notify('Cloud restore succeeded, but this browser changed during the operation. Local data was kept. Export your local JSON and download the restored cloud revision to reconcile.');
       bridge.replaceData(snapshot);
       setMeta();
       linked = true; blocked = false; historyLoaded = false;
@@ -300,7 +307,7 @@
       // A server may have committed before a network error; never assume restoration succeeded.
       linked = false; blocked = true;
       notify('Restore could not be confirmed: ' + e.message + '. Your local browser save remains available; check cloud status.');
-    } finally { busy = false; renderStatus(); }
+    } finally { busy = false; changedWhileBusy = false; renderStatus(); }
   }
   function settingsHtml() {
     if (!configured) return '<div id="cloud-sync-panel"><p>Cloud sync has not been configured yet. Your browser data remains available. See the GitHub CLOUD_SYNC_SETUP.md instructions.</p></div>';
