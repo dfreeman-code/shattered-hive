@@ -116,6 +116,12 @@ const assert = require('node:assert/strict');
     await page.getByRole('button',{name:'Load recovery history'}).click();
     await page.getByText('Revision 2',{exact:false}).first().waitFor({timeout:15000});
     await page.waitForFunction(() => document.querySelector('#cloud-header-status')?.textContent === 'Cloud: synced');
+    // Verify cancelling a restore leaves both cloud and local data untouched.
+    const originalRevision = revision;
+    page.once('dialog',d=>d.dismiss());
+    const originalRow=panel.locator('.cloud-history-item').filter({hasText:'Revision 1'});
+    await originalRow.getByRole('button',{name:'Restore'}).click();
+    check('Cancelling restore does not mutate cloud data',revision===originalRevision);
     // Restore older revision, verify another JSON backup is offered and
     // the restore is written as a NEW revision.
     page.once('dialog',d=>d.accept());
@@ -134,8 +140,53 @@ const assert = require('node:assert/strict');
     const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
     check('Restoration creates a fresh revision',revision===3);
     check('Restoration recovers old characters',!restored.pcs.some(x=>x.name==='Smoke Hero'));
+    // Responsive layout + second independent browser profile.
+    const mobileContext = await browser.newContext({
+      viewport:{width:390,height:844}, isMobile:true, hasTouch:true, acceptDownloads:true
+    });
+    await mobileContext.addInitScript(() => {
+      localStorage.setItem('shattered-hive-cloud-session-v1',JSON.stringify({
+        access_token:'smoke-token',refresh_token:'smoke-refresh',
+        expires_at:Math.floor(Date.now()/1000)+3600,
+        user:{id:'smoke-user',email:'smoke@example.org'}
+      }));
+    });
+    const mobile = await mobileContext.newPage();
+    mobile.on('pageerror',e=>failures.push('mobile: '+String(e)));
+    await mobile.goto(base,{waitUntil:'domcontentloaded'});
+    const mobileStatus = mobile.locator('#cloud-header-status');
+    await mobileStatus.waitFor({state:'visible',timeout:20000});
+    const screen = await mobile.evaluate(() => ({
+      width:window.innerWidth,
+      status:(() => { const r=document.getElementById('cloud-header-status').getBoundingClientRect();return {left:r.left,right:r.right,width:r.width}; })()
+    }));
+    check('Mobile status button fits within 390px screen',
+      screen.status.width>20 && screen.status.left>=0 && screen.status.right<=screen.width+2);
+    await mobileStatus.click();
+    const mobilePanel=mobile.locator('#cloud-sync-panel');
+    await mobilePanel.waitFor({state:'visible',timeout:10000});
+    check('Mobile Settings displays cloud controls',await mobilePanel.count()===1);
+    mobile.once('dialog',d=>d.accept());
+    const mobileBackup=mobile.waitForEvent('download');
+    await mobile.getByRole('button',{name:'Download cloud to this browser'}).click();
+    const mobileDownload=await mobileBackup;
+    check('Independent mobile browser backs up before cloud download',
+      mobileDownload.suggestedFilename().endsWith('.json'));
+    await mobile.waitForFunction(() => {
+      const m=JSON.parse(localStorage.getItem('shattered-hive-cloud-sync-meta-v1')||'null');
+      return m?.revision===3;
+    },null,{timeout:15000});
+    const received=await mobile.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+    check('Independent mobile browser receives restored campaign',
+      !!received && Array.isArray(received.pcs) && !received.pcs.some(x=>x.name==='Smoke Hero'));
+    await mobileStatus.click();
+    await mobile.getByRole('button',{name:'Load recovery history'}).click();
+    await mobile.getByText('Revision 3',{exact:false}).first().waitFor({timeout:15000});
+    check('Mobile recovery history lists the latest cloud revision',
+      await mobile.getByText('Revision 3',{exact:false}).count()>0);
+    await mobileContext.close();
     await page.screenshot({path:screenshot,fullPage:true});
-    check('No uncaught page errors',failures.length===0);
+    check('No uncaught page errors on either browser',failures.length===0);
     console.log('SMOKE TEST PASSED: browser checks completed using disposable Supabase responses.');
   } catch (e) {
     console.error('SMOKE TEST FAILED',e.stack||e);
