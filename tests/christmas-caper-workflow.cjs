@@ -53,6 +53,7 @@ async function ready(url){
    })};
   });
   await page.locator('#ar-import').setInputFiles({name:'approved-test-script.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(sample))});
+  await page.waitForFunction(()=>Object.keys(JSON.parse(localStorage.getItem('shattered-hive-v1')||'{}').adventureScriptDraft?.scenes||{}).length===10,null,{timeout:10000});
   let state=await read();
   assert.equal(Object.keys(state.adventureScriptDraft.scenes).length,10);
   assert.equal(state.adventureScriptDraft.scenes['a1-scene-10'].rewards,'TEST ONLY scene 10 rewards');

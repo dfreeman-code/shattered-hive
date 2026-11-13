@@ -11,7 +11,7 @@ try {
  await page.evaluate(()=>goto('maps'));
  await page.waitForSelector('#map-board');
  let data=await page.evaluate(()=>({scenes:mapState().scenes.map(m=>m.id),active:mapState().active,archived:mapState().archivedScenes.length,cols:mapCols(currentMap()),rows:mapRows(currentMap()),player:mapAssetUrl(currentMap(),'player'),dm:mapAssetUrl(currentMap(),'dm')}));
- assert(data.scenes.length===1&&data.active==='evergarden-home-hive','Only official Home Hive should be active');
+ assert(data.scenes.length===5&&data.scenes.includes('evergarden-home-hive')&&data.active==='evergarden-home-hive','Home Hive and four Christmas maps should exist, with Home Hive active');
  assert(data.archived>=6,'Old scenes should be preserved in archive');
  assert(data.cols===30&&data.rows===30,'Home Hive grid must be 30x30');
  const checkImage=async(url)=>{const r=await page.request.get('http://127.0.0.1:8000/'+url);assert(r.ok()&&/image\/png/.test(r.headers()['content-type']),url+' image missing');};
@@ -72,6 +72,21 @@ try {
  assert(await page.evaluate(()=>currentMap().revealed.length===0),'Fog hide failed');
  await page.evaluate(()=>{mapFogAll(true)});
  assert(await page.evaluate(()=>currentMap().revealed.length===900),'Fog reveal did not cover 900 cells');
+ // Verify all eight official Christmas PNGs load as real images, not fallback SVGs.
+ for(const sceneId of ['caper-tree-base','caper-gift-maze','caper-tinsel-crossing','caper-starlight-shrine']){
+   for(const mode of ['dm','player']){
+     await page.evaluate(({sceneId,mode})=>{const ms=mapState();ms.active=sceneId;ms.viewMode=mode;render()},{sceneId,mode});
+     const info=await page.locator('#map-board .map-custom-image').evaluate(async img=>{
+       if(!img.complete)await new Promise((resolve,reject)=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',reject,{once:true})});
+       return {src:img.getAttribute('src'),width:img.naturalWidth,height:img.naturalHeight};
+     });
+     assert(info.src==='assets/maps/'+sceneId+'-'+(mode==='dm'?'dm':'player')+'.png',sceneId+' '+mode+' did not select the correct PNG');
+     assert(info.width===1200&&info.height===1200,sceneId+' '+mode+' PNG missing or incorrect size');
+     assert(await page.evaluate(()=>mapCols(currentMap())===30&&mapRows(currentMap())===30),sceneId+' lost 30x30 grid');
+   }
+ }
+ await page.evaluate(()=>{mapState().active='evergarden-home-hive';mapState().viewMode='dm';save();render()});
+
  // Character-linked PC token style regression.
  await page.evaluate(()=>{
    db.pcs.push({id:'test-hero-appearance',name:'Vismund Test Hero',species:'Spiderkin',class:'Wizard',status:'Active'});
@@ -113,6 +128,27 @@ try {
  // Other token types must retain legacy appearance.
  await page.evaluate(()=>{currentMap().tokens.push({id:'test-neutral-npc',kind:'npc',name:'Guard',x:6,y:7});save();render()});
  assert(!(await page.locator('[data-token="test-neutral-npc"]').getAttribute('style')).includes('background-color'),'NPC appearance unintentionally changed');
+
+ // Christmas Caper scene catalog and Story Runner cross-link tests.
+ await page.evaluate(()=>{mapState();goto('runner')});
+ const christmas=await page.evaluate(()=>mapState().scenes.filter(m=>m.id.startsWith('caper-')).map(m=>m.id));
+ assert(christmas.length===4,'Four Christmas Caper map locations were not seeded');
+ assert(new Set(christmas).size===4,'Duplicate Christmas scene IDs');
+ assert(await page.locator('#ar-scene-map').count()===1,'Adventure Runner scene map selector missing');
+ await page.evaluate(()=>{adventureRunnerGo(5)});
+ assert(await page.locator('#ar-scene-map').inputValue()==='caper-gift-maze','Gift maze staging suggestion missing');
+ await page.selectOption('#ar-scene-map','caper-tinsel-crossing');
+ assert(await page.evaluate(()=>db.christmasSceneMaps['a1-scene-06']==='caper-tinsel-crossing'),'Scene-specific map override not persisted');
+ await page.reload();
+ await page.evaluate(()=>goto('runner'));
+ await page.evaluate(()=>adventureRunnerGo(5));
+ assert(await page.locator('#ar-scene-map').inputValue()==='caper-tinsel-crossing','Scene map assignment lost on refresh');
+ await page.getByRole('button',{name:'Open battle map'}).click();
+ assert(await page.evaluate(()=>mapState().active==='caper-tinsel-crossing'),'Map open did not select assigned scene');
+ assert(await page.evaluate(()=>mapState().viewMode==='dm'),'Map open must use DM mode');
+ assert(await page.evaluate(()=>mapCols(currentMap())===30&&mapRows(currentMap())===30),'Christmas map is not 30x30');
+ await page.evaluate(()=>goto('runner'));
+ assert(await page.evaluate(()=>adventureRunnerDraft().adventureId==='vesper-adventure-1'),'Vesper Adventure Runner data changed unexpectedly');
 
  // Create a custom scene, verify refresh and retention of the Home Hive.
  await page.evaluate(()=>{mapState().scenes.push({id:'test-custom',name:'Test Custom',theme:'blank',tokens:[]});save()});
