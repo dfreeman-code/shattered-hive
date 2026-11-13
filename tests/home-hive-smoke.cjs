@@ -11,7 +11,7 @@ try {
  await page.evaluate(()=>goto('maps'));
  await page.waitForSelector('#map-board');
  let data=await page.evaluate(()=>({scenes:mapState().scenes.map(m=>m.id),active:mapState().active,archived:mapState().archivedScenes.length,cols:mapCols(currentMap()),rows:mapRows(currentMap()),player:mapAssetUrl(currentMap(),'player'),dm:mapAssetUrl(currentMap(),'dm')}));
- assert(data.scenes.length===5&&data.scenes.includes('evergarden-home-hive')&&data.active==='evergarden-home-hive','Home Hive and four Christmas maps should exist, with Home Hive active');
+ assert(data.scenes.length===7&&data.scenes.includes('evergarden-home-hive')&&data.active==='evergarden-home-hive','Home Hive and six Christmas maps should exist, with Home Hive active');
  assert(data.archived>=6,'Old scenes should be preserved in archive');
  assert(data.cols===30&&data.rows===30,'Home Hive grid must be 30x30');
  const checkImage=async(url)=>{const r=await page.request.get('http://127.0.0.1:8000/'+url);assert(r.ok()&&/image\/png/.test(r.headers()['content-type']),url+' image missing');};
@@ -73,7 +73,7 @@ try {
  await page.evaluate(()=>{mapFogAll(true)});
  assert(await page.evaluate(()=>currentMap().revealed.length===900),'Fog reveal did not cover 900 cells');
  // Verify all eight official Christmas PNGs load as real images, not fallback SVGs.
- for(const sceneId of ['caper-tree-base','caper-gift-maze','caper-tinsel-crossing','caper-starlight-shrine']){
+ for(const sceneId of ['caper-tree-base','caper-gift-maze','caper-tinsel-crossing','caper-starlight-shrine','caper-frozen-berry','caper-glass-doors']){
    for(const mode of ['dm','player']){
      await page.evaluate(({sceneId,mode})=>{const ms=mapState();ms.active=sceneId;ms.viewMode=mode;render()},{sceneId,mode});
      const info=await page.locator('#map-board .map-custom-image').evaluate(async img=>{
@@ -132,7 +132,7 @@ try {
  // Christmas Caper scene catalog and Story Runner cross-link tests.
  await page.evaluate(()=>{mapState();goto('runner')});
  const christmas=await page.evaluate(()=>mapState().scenes.filter(m=>m.id.startsWith('caper-')).map(m=>m.id));
- assert(christmas.length===4,'Four Christmas Caper map locations were not seeded');
+ assert(christmas.length===6,'Six Christmas Caper map locations were not seeded');
  assert(new Set(christmas).size===4,'Duplicate Christmas scene IDs');
  assert(await page.locator('#ar-scene-map').count()===1,'Adventure Runner scene map selector missing');
  await page.evaluate(()=>{adventureRunnerGo(5)});
@@ -150,6 +150,28 @@ try {
  await page.evaluate(()=>goto('runner'));
  assert(await page.evaluate(()=>adventureRunnerDraft().adventureId==='vesper-adventure-1'),'Vesper Adventure Runner data changed unexpectedly');
 
+
+ // Verify official Frozen Berry / Glass Doors scene links and private marker persistence.
+ await page.evaluate(()=>{goto('runner');adventureRunnerGo(3)});
+ assert(await page.locator('#ar-scene-map').inputValue()==='caper-frozen-berry','Scene 4 must default to Frozen Berry Clearing');
+ await page.getByRole('button',{name:'Open battle map'}).click();
+ assert(await page.evaluate(()=>currentMap().id==='caper-frozen-berry'),'Scene 4 map did not open Frozen Berry');
+ assert(await page.locator('.map-marker-editor').count()===1,'Frozen Berry marker editor missing');
+ await page.selectOption('#dm-marker-type','T');
+ await page.getByRole('button',{name:'＋ Place DM marker'}).click();
+ await page.locator('#dm-marker-notes').fill('TEST PRIVATE: frozen ice hazard');
+ await page.locator('#dm-marker-notes').dispatchEvent('change');
+ assert(await page.evaluate(()=>currentMap().dmMarkers.length===1),'Frozen Berry marker did not save');
+ await page.evaluate(()=>mapSetView('player'));
+ assert(await page.locator('.map-dm-marker').count()===0,'Frozen Berry private marker revealed in Player View');
+ await page.evaluate(()=>mapSetView('dm'));
+ await page.evaluate(()=>goto('runner'));
+ await page.evaluate(()=>adventureRunnerGo(4));
+ assert(await page.locator('#ar-scene-map').inputValue()==='caper-glass-doors','Scene 5 must default to Three Glass Doors');
+ await page.getByRole('button',{name:'Open battle map'}).click();
+ assert(await page.evaluate(()=>currentMap().id==='caper-glass-doors'),'Scene 5 map did not open Three Glass Doors');
+ assert(await page.locator('.map-marker-editor').count()===1,'Glass Doors marker editor missing');
+ await page.evaluate(()=>{mapState().active='evergarden-home-hive';mapState().viewMode='dm';save();render()});
 
  // DM-only interactive marker regressions: creation, edit, movement, persistence and player privacy.
  await page.evaluate(()=>{goto('maps');mapSwitch('evergarden-home-hive')});
