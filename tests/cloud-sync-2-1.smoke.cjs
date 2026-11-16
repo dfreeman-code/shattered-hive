@@ -107,7 +107,7 @@ async function bootBrowser(browser,width,initial,remote,options={}){
      const remote=clone(seed);remote.pcs.push(pc('remote-new','Jawshua Red Hawk'));
      const {page,ctx,state,errors}=await bootBrowser(browser,1280,local,remote,{revision:6,baseRevision:5,baseDocument:seed});
      await page.evaluate(()=>goto('settings'));
-     await page.getByRole('button',{name:'Preview safe recovery'}).click();
+     await page.getByRole('button',{name:'Preview safe recovery',exact:true}).click();
      await page.getByRole('button',{name:'Confirm reviewed recovery'}).waitFor();
      let pre=state.writes;assert.equal(pre,0);
      page.once('dialog',dlg=>dlg.accept());
@@ -129,7 +129,7 @@ async function bootBrowser(browser,width,initial,remote,options={}){
      const remote=clone(seed);remote.pcs[0].name='Cloud revision';
      const {page,ctx,state,errors}=await bootBrowser(browser,1280,local,remote,{revision:6,baseRevision:5,baseDocument:seed});
      await page.evaluate(()=>goto('settings'));
-     await page.getByRole('button',{name:'Preview safe recovery'}).click();
+     await page.getByRole('button',{name:'Preview safe recovery',exact:true}).click();
      await page.waitForFunction(()=>document.querySelector('#cloud-sync-status')?.textContent.includes('manual review'));
      assert.equal(state.writes,0);
      assert.equal((await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),DATA)).pcs[0].name,'Local revision');
@@ -142,7 +142,7 @@ async function bootBrowser(browser,width,initial,remote,options={}){
      const local=clone(seed);local.pcs.push(pc('p5','Unknown source'));
      const {page,ctx,state}=await bootBrowser(browser,1280,local,seed,{withoutBaseline:true});
      await page.evaluate(()=>goto('settings'));
-     await page.getByRole('button',{name:'Preview safe recovery'}).click();
+     await page.getByRole('button',{name:'Preview safe recovery',exact:true}).click();
      await page.waitForFunction(()=>document.querySelector('#cloud-sync-status')?.textContent.includes('No verified sync baseline'));
      assert.equal(state.writes,0);
      console.log('PASS unrecognized browser campaign requires manual backup and recovery');
