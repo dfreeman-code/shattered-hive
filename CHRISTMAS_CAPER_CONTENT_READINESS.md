@@ -46,6 +46,6 @@ Every row below requires **all nine approved script sections** to be reviewed: r
 
 ## Release boundary
 
-This audit contains no gameplay events or approved prose, and does not modify the game. The separate isolated dress-rehearsal PR #31 was **still open/draft when this audit was prepared**, despite a user report that it had been merged; verify its GitHub status before relying on it being part of `main`.
+This audit contains no gameplay events or approved prose, and does not modify the game. The isolated dress-rehearsal PR #31 has been confirmed **merged** into `main`. It tests software workflow and protected data, not approval of full DM story content.
 
 **Readiness conclusion:** the test infrastructure and encounter/map scaffolding are established, but **final DM narrative content readiness cannot be certified from the repository alone**. Inspect the authenticated app’s existing scripts or a user-approved private export and perform a per-scene content QA before running the one-shot.
