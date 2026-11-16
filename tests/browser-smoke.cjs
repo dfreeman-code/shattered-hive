@@ -229,6 +229,33 @@ async function check(label, fn) {
   assert.equal(await page.locator('#ar-encounter-search').count(),0);
   await page.evaluate(()=>mapSetView('dm'));
  });
+ await check('Christmas Caper readiness inventory reflects existing scene text and maps without recording play',async()=>{
+  await page.evaluate(()=>goto('runner'));
+  const before=await page.evaluate(()=>JSON.stringify({
+    campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,sessions:db.sessions,
+    decisions:db.decisions,quests:db.quests,encounters:db.encounters,maps:db.maps,
+    draft:db.adventureScriptDraft
+  }));
+  const panel=page.locator('#ar-readiness');
+  assert.equal(await panel.count(),1);
+  await panel.locator('summary').click();
+  assert.equal(await panel.locator('tbody tr').count(),10);
+  assert.match(await panel.innerText(),/Missing sections/);
+  assert.match(await panel.innerText(),/Not assigned/);
+  assert.match(await panel.innerText(),/Linked/);
+  const row=panel.locator('tbody tr').first();
+  assert.match(await row.innerText(),/Welcome to Hearthhollow/);
+  const scene=await page.evaluate(()=>adventureRunnerScene(0));
+  const missing=await page.evaluate(()=>ADVENTURE_FIELDS.filter(key=>!String(adventureRunnerScene(0)[key]||'').trim()));
+  assert.equal(await row.locator('td').first().innerText(),String(9-missing.length)+'/9');
+  const after=await page.evaluate(()=>JSON.stringify({
+    campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,sessions:db.sessions,
+    decisions:db.decisions,quests:db.quests,encounters:db.encounters,maps:db.maps,
+    draft:db.adventureScriptDraft
+  }));
+  assert.equal(after,before);
+  assert.ok(scene);
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
