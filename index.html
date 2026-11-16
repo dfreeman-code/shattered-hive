@@ -133,7 +133,7 @@ nav .nav-group-links button.active{background:#c7dcb6;color:#193f28;box-shadow:i
 .ar-sidebar{position:sticky;top:12px;padding:16px}.ar-sidebar h3{margin:0}.ar-scene-list{display:grid;gap:5px;margin:12px 0}
 .ar-scene{display:flex;gap:10px;width:100%;min-height:44px;text-align:left;align-items:center;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);cursor:pointer}
 .ar-scene>span{font-size:12px;color:var(--muted)}.ar-scene b{font-weight:600;font-size:13px}
-.ar-scene.ar-active{background:var(--light);border:2px solid var(--green)}.ar-sidebar-link{width:100%}
+.ar-scene.ar-active{background:var(--light);border:2px solid var(--green)}.ar-scene-count{margin-left:auto;white-space:nowrap;font-size:11px;color:var(--muted);font-weight:650}.ar-sidebar-link{width:100%}
 .ar-detail{display:grid;gap:14px;min-width:0}.ar-scene-head,.ar-editor{padding:18px}.ar-scene-head h3{font-size:23px;margin:3px 0 12px}
 .ar-nav{display:flex;gap:8px;flex-wrap:wrap}.ar-warning{border:1px solid var(--line);background:var(--light);padding:12px;border-radius:8px;margin-bottom:15px}
 .ar-field{display:block;margin:0 0 14px}.ar-field>span{display:block;font-weight:650;margin:0 0 6px}.ar-field textarea{width:100%;max-width:100%;min-height:90px;resize:vertical;line-height:1.5}
@@ -498,10 +498,13 @@ function adventureRunnerPage(){
    '<button type="button" class="btn secondary" onclick="adventureRunnerReadingMode(false)">Edit script</button></div>'+
    '<div class="ar-tabs" role="group" aria-label="Scene reference sections">'+focusTabs+'</div>'+
    '<div class="ar-reading-content">'+readingSections+'</div></div>';
+ const draft=adventureRunnerDraft();
+ const filledCount=i=>ADVENTURE_FIELDS.filter(key=>typeof draft.scenes[adventureSceneId(i)]?.[key]==='string'&&draft.scenes[adventureSceneId(i)][key].trim()).length;
+ const preparedScenes=ADVENTURE_ONE_SCENES.filter((_,i)=>filledCount(i)>0).length;
  const labels=ADVENTURE_ONE_SCENES.map((name,i)=>
    '<button type="button" class="ar-scene '+(index===i?'ar-active':'')+'" onclick="adventureRunnerGo('+i+')" '+
      (index===i?'aria-current="step"':'')+'><span>'+String(i+1).padStart(2,'0')+'</span>'+
-     '<b>'+esc(name)+'</b></button>').join('');
+     '<b>'+esc(name)+'</b><small class="ar-scene-count" aria-label="'+filledCount(i)+' of '+ADVENTURE_FIELDS.length+' script sections filled">'+filledCount(i)+'/'+ADVENTURE_FIELDS.length+'</small></button>').join('');
  const fields=ADVENTURE_FIELDS.map(key=>
    '<label class="ar-field"><span>'+esc(titles[key])+'</span>'+
    '<textarea id="ar-'+key+'" rows="'+(key==='readAloud'?7:4)+'" maxlength="24000" '+
@@ -515,7 +518,7 @@ function adventureRunnerPage(){
     '<button type="button" class="btn" onclick="document.getElementById(\'ar-import\').click()">Import approved script JSON</button>'+
     '<input id="ar-import" type="file" accept=".json,application/json" hidden onchange="adventureRunnerImport(event)"></div></div>'+
     '<div class="ar-layout"><aside class="card ar-sidebar"><h3>Scene navigator</h3>'+
-    '<p class="muted">10 planned scenes · No played progress</p><div class="ar-scene-list">'+labels+'</div>'+
+    '<p class="muted">'+preparedScenes+' of '+ADVENTURE_ONE_SCENES.length+' scenes contain draft text · No played progress</p><div class="ar-scene-list">'+labels+'</div>'+
     '<button type="button" class="btn secondary ar-sidebar-link" onclick="goto(\'command\')">Back to Command Center</button></aside>'+
     '<section class="ar-detail"><div class="card ar-scene-head"><p class="muted">SCENE '+(index+1)+' OF '+ADVENTURE_ONE_SCENES.length+'</p>'+
     '<h3>'+esc(title)+'</h3><div class="ar-map-link"><label for="ar-scene-map">DM scene map</label><select id="ar-scene-map" onchange="adventureRunnerSetMap(this.value)"><option value="">No map assigned</option>'+CHRISTMAS_CAPER_SCENES.map(x=>'<option value="'+esc(x.id)+'" '+(adventureRunnerMapId(index)===x.id?'selected':'')+'>'+esc(x.name)+'</option>').join('')+'</select><button type="button" class="btn secondary" onclick="adventureRunnerOpenMap()" '+(!adventureRunnerMapId(index)?'disabled':'')+'>Open battle map</button><small class="muted">Suggested staging only; does not reveal discoveries or record outcomes.</small></div><div class="ar-nav">'+
@@ -532,11 +535,11 @@ function adventureRunnerPage(){
 }
 
 // Live Session Command Center — additive, DM-only overview; no changes to existing rules or records.
-function commandCenterNote(value){
+function commandCenterNote(value,notify=true){
   if(typeof value!=='string')return;
-  db.sessionCommandNotes=value.slice(0,12000);
-  save();
-  toast('DM scratchpad saved');
+  const next=value.slice(0,12000);
+  if(db.sessionCommandNotes!==next){db.sessionCommandNotes=next;save()}
+  if(notify)toast('DM scratchpad saved');
 }
 function commandCenterSession(id){
   // Select an existing session to reference: never mark it Played or alter the story.
@@ -690,7 +693,7 @@ function commandCenterPage(){
     '<section class="card cc-card"><div class="cc-heading"><h3>✎ DM session scratchpad</h3>'+
     '<span class="pill">Private DM view</span></div>'+
     '<label class="cc-label" for="cc-notes">Session reminders, rulings, and things to follow up on</label>'+
-    '<textarea id="cc-notes" rows="7" maxlength="12000" onchange="commandCenterNote(this.value)" '+
+    '<textarea id="cc-notes" rows="7" maxlength="12000" oninput="commandCenterNote(this.value,false)" onchange="commandCenterNote(this.value)" '+
     'placeholder="Write your prep notes here. These are DM-only and do not change the official adventure or event timeline.">'+
     esc(note)+'</textarea><p class="muted cc-note">Saves when you leave the field. The scratchpad is included in local JSON backups and private cloud sync. Do not display this screen to players.</p></section>'+
     '<section class="card cc-card"><div class="cc-heading"><h3>✧ Story & ambience</h3>'+
