@@ -136,6 +136,37 @@ async function check(label, fn) {
   assert.equal(after.decisions,before.decisions);
   assert.ok(initial.includes('/9'));
  });
+ await check('DM map shortcuts preserve Runner scene and draft without recording play',async()=>{
+  await page.evaluate(()=>{goto('runner');adventureRunnerGo(2)});
+  const previous=await page.evaluate(()=>({
+    scene:adventurePreviewIndex,
+    session:db.campaign.session,
+    decisions:JSON.stringify(db.decisions||[]),
+    quests:JSON.stringify(db.quests||[])
+  }));
+  await page.evaluate(()=>goto('maps'));
+  await page.evaluate(()=>mapSetView('dm'));
+  assert.equal(await page.getByRole('group',{name:'DM session shortcuts'}).count(),1);
+  await page.getByRole('button',{name:'← Adventure Runner'}).click();
+  assert.equal(await page.evaluate(()=>page),'runner');
+  assert.equal(await page.evaluate(()=>adventurePreviewIndex),previous.scene);
+  await page.evaluate(()=>goto('maps'));
+  await page.getByRole('button',{name:'Session Command Center'}).click();
+  assert.equal(await page.evaluate(()=>page),'command');
+  const after=await page.evaluate(()=>({
+    session:db.campaign.session, decisions:JSON.stringify(db.decisions||[]), quests:JSON.stringify(db.quests||[])
+  }));
+  assert.equal(after.session,previous.session);
+  assert.equal(after.decisions,previous.decisions);
+  assert.equal(after.quests,previous.quests);
+ });
+ await check('DM navigation shortcuts are absent from player map view',async()=>{
+  await page.evaluate(()=>goto('maps'));
+  await page.evaluate(()=>mapSetView('player'));
+  assert.equal(await page.getByRole('group',{name:'DM session shortcuts'}).count(),0);
+  assert.equal(await page.getByRole('button',{name:'← Adventure Runner'}).count(),0);
+  await page.evaluate(()=>mapSetView('dm'));
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
