@@ -342,6 +342,19 @@ async function check(label, fn) {
   assert.ok(safe.scene.length>0);
   await page.setViewportSize({width:1365,height:900});
  });
+ await check('Sidebar category headers are 16px and labels are 13px without changing links',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  await page.evaluate(()=>{navPrefs.focus=false;navPrefs.expanded=true;navRender()});
+  const values=await page.evaluate(()=>({
+   headers:[...document.querySelectorAll('#nav .nav-group-toggle')].map(e=>parseFloat(getComputedStyle(e).fontSize)),
+   quick:parseFloat(getComputedStyle(document.querySelector('#nav .nav-quick-title')).fontSize),
+   links:[...document.querySelectorAll('#nav .nav-route')].map(e=>e.dataset.route)
+  }));
+  assert.ok(values.headers.length>=4);
+  assert.ok(values.headers.every(v=>v===16));
+  assert.equal(values.quick,13);
+  assert.deepEqual([...values.links].sort(),Object.keys(await page.evaluate(()=>sections)).sort());
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
