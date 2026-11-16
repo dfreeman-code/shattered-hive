@@ -151,6 +151,43 @@ async function ready(url){
   await page.getByRole('group',{name:'DM session shortcuts'}).getByRole('button',{name:'Session Command Center',exact:true}).click();
   await page.getByRole('button',{name:'Full Combat Tracker'}).click();
   assert.ok((await page.locator('#app').innerText()).length>100);
+  // Build Workshop: isolated six synthetic Bug Hero submissions, never live PCs.
+  const review=await browser.newContext({viewport:{width:1280,height:820}});
+  const wp=await review.newPage();
+  wp.on('dialog',d=>{void d.accept().catch(()=>{});});
+  await wp.goto('http://127.0.0.1:8767/index.html');
+  const inputPowers=['Magic spells','Sneaking and climbing','Super strength','Archery and exploring','Protecting friends','Super strength'];
+  const extras=['','','A Martial Warlock','','',''];
+  const expected=['Wizard','Rogue','Warlock','Ranger','Paladin','Fighter'];
+  await wp.evaluate(({inputPowers,extras})=>{
+   const data=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+   data.pcs=Array.from({length:6},(_,i)=>({id:'workshop-'+i,name:'Workshop Hero '+i,level:1,class:'Unassigned',background:'',species:'Spiderkin',status:'Active',
+    notes:'Player-chosen notes must remain intact',bugHero:{power:inputPowers[i],extra:extras[i],dream:'My own dream',fear:'My own fear'}}));
+   localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
+  },{inputPowers,extras});
+  await wp.reload();
+  await wp.evaluate(()=>goto('sheet'));
+  for(let i=0;i<6;i++){
+   await wp.locator('.card.section select').first().selectOption('workshop-'+i);
+   const workshop=wp.locator('#hero-build-workshop');
+   assert.ok(await workshop.count(),'Workshop appears for all six hero archetypes');
+   await workshop.locator('summary').click();
+   assert.match(await workshop.innerText(),new RegExp('Recommended class\\s*'+expected[i]));
+   assert.match(await workshop.innerText(),/My own fear/);
+   assert.match(await workshop.innerText(),/My own dream/);
+   if(i===0){
+    const before=JSON.parse(await wp.evaluate(()=>localStorage.getItem('shattered-hive-v1')));
+    assert.equal(before.pcs[0].class,'Unassigned','Review alone cannot assign class');
+    await workshop.getByRole('button',{name:/Apply approved class and background/}).click();
+    const updated=JSON.parse(await wp.evaluate(()=>localStorage.getItem('shattered-hive-v1')));
+    assert.equal(updated.pcs[0].class,'Wizard');
+    assert.equal(updated.pcs[0].background,'Sage');
+    assert.equal(updated.pcs[0].notes,'Player-chosen notes must remain intact');
+    assert.equal(updated.campaign.session,0);
+    assert.ok(updated.decisions.every(d=>d.status==='Not decided'));
+   }
+  }
+  await review.close();
   const after=await read();
   assert.equal(after.campaign.session,0);
   assert.equal(after.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
