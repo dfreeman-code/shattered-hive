@@ -67,6 +67,39 @@ async function bootBrowser(browser,width,initial,remote,options={}){
    assert.ok(seed&&seed.campaign&&seed.maps);
    seed.pcs=[pc('p1','One'),pc('p2','Two'),pc('p3','Three'),pc('p4','Four')];
    await plain.close();
+   // Regression: app bootstraps Christmas prep on render before Cloud Sync is initialized.
+   // A matching on-disk baseline must sync once and remain clean across future reloads.
+   {
+     const legacy=clone(seed);
+     delete legacy.christmasEncounterPrepVersion;
+     const {page,ctx,state,errors}=await bootBrowser(browser,1280,legacy,legacy);
+     await page.waitForFunction(()=>document.querySelector('#cloud-header-status')?.textContent.includes('synced')&&
+       JSON.parse(localStorage.getItem('shattered-hive-cloud-sync-meta-v1')).revision===6);
+     assert.equal(state.writes,1,'exactly one startup migration upload');
+     assert.equal(state.remote.christmasEncounterPrepVersion,1);
+     assert.equal(state.remote.pcs.length,4);
+     const confirmed=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-cloud-sync-meta-v1')));
+     assert.equal(confirmed.revision,6);
+     await page.reload({waitUntil:'domcontentloaded'});
+     await page.waitForFunction(()=>document.querySelector('#cloud-header-status')?.textContent.includes('synced'));
+     assert.equal(state.writes,1,'reload should not create another upload');
+     assert.equal(await page.evaluate(()=>!!localStorage.getItem('shattered-hive-cloud-pending-v2-1')),false);
+     assert.deepEqual(errors,[]);
+     console.log('PASS one-time startup migration syncs safely without recurring unsynced warning after reload');
+     await ctx.close();
+   }
+   // A real unsaved offline edit is not a verified on-disk cloud baseline.
+   {
+     const offline=clone(seed);
+     offline.pcs.push(pc('offline-new','Unsynced Offline Hero'));
+     const {page,ctx,state}=await bootBrowser(browser,1280,offline,seed,{baseRevision:4,baseDocument:seed,revision:5});
+     await page.waitForFunction(()=>document.querySelector('#cloud-header-status')?.textContent.includes('unsynced'));
+     assert.equal(state.writes,0,'never upload an unverified offline change automatically');
+     assert.equal(state.remote.pcs.length,4);
+     assert.equal((await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),DATA)).pcs.length,5);
+     console.log('PASS reload protection still blocks genuine offline edits');
+     await ctx.close();
+   }
    // Proactive session renewal and ordinary uploading.
    {
      const {page,ctx,state,errors}=await bootBrowser(browser,1280,seed,seed,{expiresSoon:true});
