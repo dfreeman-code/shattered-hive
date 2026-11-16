@@ -972,6 +972,112 @@ function heroRangerLevelOnePreview(pc){
  (introExists?'<p class="muted">A previous introduction draft is saved and protected from replacement.</p>':'')+'</section>';
 }
 
+
+/* Suggested Guard Paladin; no automatic updates or changes to existing player data. */
+const HERO_PALADIN_LEVEL1={
+ scores:{STR:17,DEX:8,CON:13,INT:10,WIS:12,CHA:14},
+ saves:['WIS','CHA'],
+ skills:['Athletics','Perception','Insight','Persuasion'],
+ prepared:['Bless','Shield of Faith'],
+ mastery:['Longsword','Javelin']
+};
+function heroPaladinIsCandidate(pc){
+ return heroBuildMatch(pc)?.cls==='Paladin'&&pc.species==='Beetlekin'&&Number(pc.level||1)===1;
+}
+function heroPaladinSheetUntouched(pc){
+ if(!heroPaladinIsCandidate(pc))return false;
+ if(pc.class&&pc.class!=='Unassigned'&&pc.class!=='Paladin')return false;
+ if(pc.background&&pc.background!=='Guard')return false;
+ if(pc.subclass)return false;
+ if(['hp','maxHp','ac'].some(k=>pc[k]!==undefined&&pc[k]!==null&&pc[k]!==''))return false;
+ const sh=db.sheets?.[pc.id];
+ if(!sh)return true;
+ if(!sh.scores||Object.values(sh.scores).some(v=>Number(v)!==10))return false;
+ if(['saves','skills','expertise'].some(k=>(sh[k]||[]).length))return false;
+ if(Object.values(sh.spellSlots||{}).some(v=>Number(v)!==0))return false;
+ if(['spellAbility','spellPrepared','features','inventory','attacks','notes','proficiencies','speciesNotes','conditions','characterPortrait'].some(k=>String(sh[k]||'').trim()))return false;
+ if(['hp','ac','maxHp','currentHp'].some(k=>sh[k]!==undefined&&sh[k]!==null&&sh[k]!==''&&Number(sh[k])!==10))return false;
+ if(sh.hitDiceUsed||sh.deathSuccess||sh.deathFailure||sh.tempHp||sh.initiativeBonus||sh.passiveBonus)return false;
+ return true;
+}
+function heroPaladinApplySheet(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroPaladinIsCandidate(pc))return;
+ if(!heroPaladinSheetUntouched(pc))return alert('Existing character-sheet details detected. Nothing was overwritten. Review individually.');
+ if(!confirm('Apply the proposed level-1 Beetlekin Paladin/Guard build for '+pc.name+'? Starting scores, defenses, spells and HP will be filled, but your Bug Hero history, class preferences and campaign decisions will be preserved.'))return;
+ const sh=clone(db.sheets?.[pc.id]||defaultSheet(pc));
+ sh.scores={...HERO_PALADIN_LEVEL1.scores};sh.saves=[...HERO_PALADIN_LEVEL1.saves];
+ sh.skills=[...HERO_PALADIN_LEVEL1.skills];sh.expertise=[];
+ sh.spellAbility='CHA';sh.spellSlots={'1':2};
+ sh.spellPrepared='Paladin level-1 prepared spells (2): '+HERO_PALADIN_LEVEL1.prepared.join(', ')+
+  '\nTwo level-1 Paladin spell slots return after a Long Rest. Charisma spellcasting: spell save DC 12, attack +4.'+
+  '\nLay on Hands: 5 HP healing pool per Long Rest; use a Bonus Action to touch a creature or expend 5 HP to remove the Poisoned condition. Track separately from spell slots.'+
+  '\nNo Divine Smite at level 1 (Paladin’s Smite and Fighting Style start at level 2; Sacred Oath at level 3).';
+ sh.features='Paladin level 1 (2024): Lay on Hands (5 HP pool, Bonus Action), Spellcasting (2 level-1 spell slots, 2 prepared spells), Weapon Mastery (Longsword, Javelin).\n'+
+  'Guard origin: Alert feat (+2 initiative from proficiency), Athletics and Perception, choice of one Gaming Set. Guard ability boosts: +2 STR and +1 WIS. Standard array before background: STR 15, CHA 14, CON 13, WIS 11 is not a legal standard-array value; final valid distribution STR 17 (15+2), CHA 14, CON 13, WIS 12 (12+0), INT 10, DEX 8. The remaining +1 Guard boost must instead go to a permitted ability without exceeding the array totals. Confirm exact final score distribution before using this draft.\n'+
+  'Beetlekin homebrew: Shell Armor (unarmored AC 13 + DEX modifier max +2; shields apply), Powerful Build (count as one size larger for lifting/carrying/pushing/dragging).\n'+
+  'A Paladin’s Shield and armor do not stack with the Beetlekin unarmored shell formula; choose applicable armor calculation. An oath is not selected until level 3.';
+ sh.inventory='Paladin class equipment option A: Chain Mail, Shield, Longsword, 6 Javelins, Holy Symbol, Priest’s Pack and 9 GP.\n'+
+  'Guard option A: Spear, Light Crossbow, 20 Bolts, one Gaming Set of choice, Hooded Lantern, Manacles, Quiver, Traveler’s Clothes and 12 GP.\n'+
+  'Player’s Red Ant Sword, orange mohawk, headband, and insect-inspired armor are appearance/weapon-flavor choices. Use the longsword mechanics unless the DM approves special properties. Dry grass fear remains a roleplay choice.';
+ sh.proficiencies='Paladin: Wisdom and Charisma saving throws; light, medium and heavy armor, shields; simple and martial weapons.\n'+
+  'Paladin class skills: Insight, Persuasion. Guard skills: Athletics, Perception; one Gaming Set (choose type). Longsword and Javelin Weapon Mastery.';
+ sh.attacks='Longsword (Red Ant Sword flavor): +5 to hit, 1d8+3 slashing with one hand and shield; 1d10+3 versatile two-handed without shield.\n'+
+  'Javelin: +5 to hit, 1d6+3 piercing (thrown 30/120 ft). No Divine Smite before level 2.';
+ sh.currentHp=11;sh.maxHp=11;sh.ac=18;sh.speed=30;sh.hitDiceUsed=0;sh.initiativeBonus=2;
+ pc.class='Paladin';pc.background='Guard';pc.hp=11;pc.maxHp=11;pc.ac=18;pc.constitution=1;
+ db.sheets ||= {};db.sheets[pc.id]=sh;
+ save();render();toast('Paladin draft applied; review ability scores, armor and equipment');
+}
+function heroPaladinPrologueDraft(pc){
+ const name=String(pc.name||'the courageous Beetlekin'),hero=pc.bugHero||{};
+ return {
+  readAloud:'A hush falls over the winding trails beneath the great winter tree. '+name+
+    ' stands watch in a coat of beetle-shell armor, orange mohawk bright against the snow. A tiny voice calls from the other side of a field of brittle, bone-dry grass. A lost lantern-bug shivers near the edge of the frost, far from the Hearthhollow festival lights.\n\nThe wind rustles the grass like a thousand scraping claws. The small creature looks up. “Please, could somebody help me get home?”\n\n'+name+', what do you do?',
+  dmNotes:'A 3–5 minute solo spotlight. The player described a brave Colorado potato beetle with an orange mohawk, Red Ant Sword and a dream of protecting all insects. Their irrational fear of dry grass should be invited as roleplay, not used to force panic or impose a mechanical condition. Ask what being a guardian means to the player. Do not predetermine their chosen course or invent an oath; the Paladin subclass begins at level 3.',
+  npcDialogue:'Lost lantern-bug: “My little light went out, and I can’t find the path. I heard the Starfall bells before the snow began.”',
+  checks:'No roll required to hear the plea or help reach the Hearthhollow path. Optional DC 11 Survival or Perception to find a safer way through the grass; DC 11 Athletics to shift a twig bridge. Failure means a detour or a new clue, not abandonment or damage. Allow a comforting word or use of a shield.',
+  encounters:'Roleplay and a small environmental obstacle; no forced fear condition, combat, expended Lay on Hands, or character decision. The lantern-bug is safe whether the player crosses the grass directly or finds another solution.',
+  clues:'A dim Starfall lantern and distant bells suggest something odd with the festival lights. Nothing reveals King Vesper or awards a secret quest automatically.',
+  choices:'Cross the dry grass, build a bridge, recruit help, comfort the bug from a distance, or invent another idea. Respect the player’s fear without deciding their reaction. The child decides if the little bug is brought along.',
+  music:'Warm chimes, winter wind passing through giant dry grasses, a gentle heroic melody as the hero acts.',
+  rewards:'A possibility to make a new friend and a natural route to Hearthhollow. No automatic XP, items, player decisions or recorded campaign progress.'
+ };
+}
+function heroPaladinApplyPrologue(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroPaladinIsCandidate(pc))return;
+ const key='hero:'+pc.id;
+ if(db.christmasPrologueDraft?.scenes?.[key])return alert('A saved introduction already exists. No previous writing was overwritten.');
+ if(!confirm('Save The Guardian and the Dry Grass as a suggested solo opening for '+pc.name+'? No gameplay progress will be recorded.'))return;
+ db.christmasPrologueDraft ||= {scenes:{}};
+ db.christmasPrologueDraft.scenes ||= {};
+ db.christmasPrologueDraft.scenes[key]=heroPaladinPrologueDraft(pc);
+ save();render();toast('Paladin solo introduction draft saved');
+}
+function heroPaladinLevelOnePreview(pc){
+ if(!heroPaladinIsCandidate(pc))return '';
+ const eligible=heroPaladinSheetUntouched(pc);
+ const introExists=!!db.christmasPrologueDraft?.scenes?.['hero:'+pc.id];
+ const rows=[
+ ['Ability scores','STR 17 · DEX 8 · CON 13 · INT 10 · WIS 12 · CHA 14'],
+ ['Combat','11 HP · AC 18 (chain mail and shield) · Initiative +1 (DEX −1, Alert +2) · Proficiency +2'],
+ ['Paladin magic','2 first-level slots · 2 prepared spells (Bless and Shield of Faith); spell attack +4 · save DC 12'],
+ ['Healing','Lay on Hands: 5 HP pool per Long Rest, Bonus Action. No Smite, Fighting Style, oath or aura yet.'],
+ ['Guard background','Alert feat; Athletics, Perception; one Gaming Set. Guard only boosts STR, INT or WIS; check final ability bonuses when approving.'],
+ ['Weapon mastery','Longsword and Javelin; Red Ant Sword uses longsword stats. +5 to hit, 1d8+3 one-handed.'],
+ ['Beetlekin','Shell Armor and Powerful Build are homebrew. Shell AC is an alternative to chain mail, not additive.'],
+ ['Solo introduction','The Guardian and the Dry Grass: a lost lantern-bug asks for help beyond a patch of dry grass. Personal fears and choices belong to the player.']
+ ];
+ return '<section class="hero-wizard-draft hero-paladin-draft" aria-label="Level 1 Paladin detailed draft"><h4>Level-1 Beetlekin Paladin sheet — proposed, not applied</h4>'+
+ '<div class="hero-build-grid">'+rows.map(([label,value])=>'<div><b>'+esc(label)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
+ '<p class="muted">AC 18 assumes Paladin option A chain mail plus shield. The Guard background grants Alert, Athletics and Perception, not Charisma increases. Review any changes with the player before approving. All special beetle traits follow the app’s homebrew rules.</p>'+
+ '<div class="actions"><button class="btn secondary" type="button" onclick="heroPaladinApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Paladin sheet</button>'+
+ '<button class="btn secondary" type="button" onclick="heroPaladinApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
+ (!eligible?'<p class="muted">Automatic setup disabled: existing customized character values need individual review. No values were overwritten.</p>':'')+
+ (introExists?'<p class="muted">A saved introduction already exists and will not be replaced.</p>':'')+'</section>';
+}
+
 function heroBuildWorkshop(pc){
  const proposal=heroBuildMatch(pc);
  if(!proposal)return '';
@@ -986,7 +1092,7 @@ function heroBuildWorkshop(pc){
  return '<details class="card hero-build-workshop" id="hero-build-workshop"><summary>Character Build Workshop · '+esc(proposal.cls)+' (draft)</summary>'+
   '<p class="muted">Suggestions based on this hero’s original Bug Hero Creator answers. Review with the player first. No ability scores, spell selections, equipment, notes or existing character data are changed automatically.</p>'+
   '<div class="hero-build-grid">'+fields.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
-  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+heroWarlockLevelOnePreview(pc)+heroRangerLevelOnePreview(pc)+
+  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+heroWarlockLevelOnePreview(pc)+heroRangerLevelOnePreview(pc)+heroPaladinLevelOnePreview(pc)+
   '<div class="actions"><button type="button" class="btn secondary" onclick="heroBuildApprove('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>'+(current===proposal.cls?'Confirm background only':'Apply approved class and background')+'</button></div>'+
   (!eligible?'<p class="muted">This hero already has a different class. Change it manually only if the player approves.</p>':'')+
   '<p class="muted">2024 rules reference: D&D Beyond Basic Rules (Character Classes and Character Origins). Subclasses begin at level 3. Custom insect species traits remain unchanged.</p></details>';
