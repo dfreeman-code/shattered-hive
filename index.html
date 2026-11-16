@@ -488,7 +488,7 @@ function heroBuildWorkshop(pc){
  ['Party role',proposal.role],['Ability-score focus',proposal.priority],
  ['Origin feat',proposal.origin],['Level 1 features / spell recommendations',proposal.features],
  ['Equipment direction',proposal.gear],['Solo prologue hook',proposal.opening],
- ['Player's original dream',hero.dream||'Not recorded'],['Player's original fear',hero.fear||'Not recorded']
+ ['Player’s original dream',hero.dream||'Not recorded'],['Player’s original fear',hero.fear||'Not recorded']
  ];
  const current=String(pc.class||'').trim(),eligible=!current||current==='Unassigned'||current===proposal.cls;
  return '<details class="card hero-build-workshop" id="hero-build-workshop"><summary>Character Build Workshop · '+esc(proposal.cls)+' (draft)</summary>'+
