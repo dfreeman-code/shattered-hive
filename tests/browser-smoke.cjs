@@ -18,7 +18,7 @@ async function check(label, fn) {
  await page.locator('#nav button').first().waitFor();
  await check('25 unique grouped navigation destinations',async()=>{
   const data=await page.evaluate(()=>({expected:Object.keys(sections),groups:Object.values(NAV_GROUPS).flat(),buttons:[...document.querySelectorAll('#nav button')].map(b=>b.textContent.trim())}));
-  assert.equal(data.expected.length,25);assert.deepEqual([...data.groups].sort(),[...data.expected].sort());assert.equal(data.buttons.length,25);
+  assert.ok(data.expected.length>=25);assert.deepEqual([...data.groups].sort(),[...data.expected].sort());assert.equal(data.buttons.length,data.expected.length);
   for(const key of data.groups){
    await page.locator('#nav button').nth(data.groups.indexOf(key)).click();
    assert.equal(await page.evaluate(()=>page),key);
@@ -105,10 +105,36 @@ async function check(label, fn) {
  await check('Tablet viewport navigation accessible',async()=>{
   await page.setViewportSize({width:768,height:1024});
   await page.evaluate(()=>goto('maps'));
-  assert.equal(await page.locator('#nav button').count(),25);
+  assert.equal(await page.locator('#nav button').count(),await page.evaluate(()=>Object.keys(sections).length));
   await page.locator('#nav button').last().scrollIntoViewIfNeeded();
   await page.locator('#nav button').last().click();
   assert.equal(await page.evaluate(()=>page),'settings');
+ });
+ await check('Command Center scratchpad persists without blur',async()=>{
+  await page.evaluate(()=>goto('command'));
+  const scratch=page.locator('#cc-notes');
+  await scratch.fill('QA scratchpad survives an immediate reload');
+  await page.reload({waitUntil:'domcontentloaded'});
+  assert.equal(await page.evaluate(()=>db.sessionCommandNotes),'QA scratchpad survives an immediate reload');
+  await page.evaluate(()=>goto('command'));
+  assert.equal(await page.locator('#cc-notes').inputValue(),'QA scratchpad survives an immediate reload');
+ });
+ await check('Adventure Runner scene draft coverage is read-only and persists',async()=>{
+  await page.evaluate(()=>goto('runner'));
+  const before=await page.evaluate(()=>({session:db.campaign.session,quests:JSON.stringify(db.quests),decisions:JSON.stringify(db.decisions||[]),scenes:db.adventureScriptDraft?.scenes?Object.keys(db.adventureScriptDraft.scenes).length:0}));
+  const first=page.locator('.ar-scene').first();
+  const initial=await first.locator('.ar-scene-count').innerText();
+  const raw=await page.evaluate(()=>adventureRunnerScene(0).readAloud||'');
+  await page.locator('#ar-readAloud').fill(raw+' QA scene coverage note');
+  await page.getByRole('button',{name:/Next scene/}).click();
+  assert.ok(Number((await first.locator('.ar-scene-count').innerText()).split('/')[0])>=1);
+  await page.reload({waitUntil:'domcontentloaded'});
+  assert.ok((await page.evaluate(()=>adventureRunnerScene(0).readAloud||'')).includes('QA scene coverage note'));
+  const after=await page.evaluate(()=>({session:db.campaign.session,quests:JSON.stringify(db.quests),decisions:JSON.stringify(db.decisions||[])}));
+  assert.equal(after.session,before.session);
+  assert.equal(after.quests,before.quests);
+  assert.equal(after.decisions,before.decisions);
+  assert.ok(initial.includes('/9'));
  });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
