@@ -100,6 +100,64 @@ async function bootBrowser(browser,width,initial,remote,options={}){
      console.log('PASS reload protection still blocks genuine offline edits');
      await ctx.close();
    }
+   // Cloud and browser can be identical even when legacy sync metadata is stale.
+   {
+     const {page,ctx,state,errors}=await bootBrowser(browser,1280,seed,seed,{baseRevision:4,baseDocument:seed,revision:5});
+     await page.waitForFunction(()=>document.querySelector('#cloud-header-status')?.textContent.includes('synced'));
+     assert.equal(state.writes,0);
+     assert.equal(await page.evaluate(k=>JSON.parse(localStorage.getItem(k)).revision,META),5);
+     await page.reload({waitUntil:'domcontentloaded'});
+     await page.waitForFunction(()=>document.querySelector('#cloud-header-status')?.textContent.includes('synced'));
+     assert.equal(state.writes,0);
+     assert.deepEqual(errors,[]);
+     console.log('PASS stale metadata rebaselined when browser and authenticated cloud content match exactly');
+     await ctx.close();
+   }
+   // The first visit can have already written startup prep to localStorage before
+   // the app learned which cloud revision was current. Recognize exact approved
+   // deterministic prep without treating it as arbitrary offline edits.
+   {
+     const before=clone(seed);
+     delete before.christmasEncounterPrepVersion;
+     const after=await browser.newPage();
+     await after.goto(BASE,{waitUntil:'domcontentloaded'});
+     const prepared=await after.evaluate((original)=>{
+       db=JSON.parse(JSON.stringify(original));
+       ensureChristmasEncounterPrep();
+       return JSON.parse(JSON.stringify(db));
+     },before);
+     await after.close();
+     assert.equal(prepared.christmasEncounterPrepVersion,1);
+     const {page,ctx,state,errors}=await bootBrowser(browser,1280,prepared,before,{baseRevision:4,baseDocument:before,revision:5});
+     await page.waitForFunction(()=>document.querySelector('#cloud-header-status')?.textContent.includes('synced')&&
+       JSON.parse(localStorage.getItem('shattered-hive-cloud-sync-meta-v1')).revision===6);
+     assert.equal(state.writes,1,'verified startup-only preparation must upload once');
+     assert.equal(state.remote.christmasEncounterPrepVersion,1);
+     await page.reload({waitUntil:'domcontentloaded'});
+     await page.waitForFunction(()=>document.querySelector('#cloud-header-status')?.textContent.includes('synced'));
+     assert.equal(state.writes,1,'next reopen must not trigger another upload');
+     assert.deepEqual(errors,[]);
+     console.log('PASS already persisted startup preparation is reconciled once and stays synced');
+     await ctx.close();
+   }
+   // Never auto-upload when browser has both startup additions and independent edits.
+   {
+     const before=clone(seed);delete before.christmasEncounterPrepVersion;
+     const after=await browser.newPage();await after.goto(BASE,{waitUntil:'domcontentloaded'});
+     const modified=await after.evaluate(original=>{
+       db=JSON.parse(JSON.stringify(original));
+       ensureChristmasEncounterPrep();
+       db.pcs.push({id:'genuine-offline',name:'Unsynced Hero',status:'Active'});
+       return JSON.parse(JSON.stringify(db));
+     },before);await after.close();
+     const {page,ctx,state}=await bootBrowser(browser,1280,modified,before,{baseRevision:4,baseDocument:before,revision:5});
+     await page.waitForFunction(()=>document.querySelector('#cloud-header-status')?.textContent.includes('unsynced'));
+     assert.equal(state.writes,0);
+     assert.equal(state.remote.pcs.length,4);
+     assert.equal((await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),DATA)).pcs.length,5);
+     console.log('PASS independent offline changes stay protected despite startup migration');
+     await ctx.close();
+   }
    // Proactive session renewal and ordinary uploading.
    {
      const {page,ctx,state,errors}=await bootBrowser(browser,1280,seed,seed,{expiresSoon:true});
