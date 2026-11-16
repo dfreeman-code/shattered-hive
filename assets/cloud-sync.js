@@ -355,7 +355,6 @@
         } else if (typeof bridge.getExpectedStartupPreparation === 'function' &&
                    // Do not silently merge a newer cloud revision with unconfirmed edits.
                    (!saved || saved.userId === session.user.id) &&
-                   (saved ? saved.revision === revision : true) &&
                    sameContent(getLocal(),bridge.getExpectedStartupPreparation(remote.payload))) {
           // Local campaign is EXACTLY the authenticated current cloud version
           // plus the app's known one-time Christmas preparation records.
