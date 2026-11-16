@@ -642,6 +642,112 @@ function heroWizardLevelOnePreview(pc){
  (introExists?'<p class="muted">This hero already has a saved introduction draft; existing text is protected.</p>':'')+'</section>';
 }
 
+
+/* Rogue character setup for a Bug Hero who chose stealth and climbing. */
+const HERO_ROGUE_LEVEL1={
+ scores:{STR:8,DEX:17,CON:14,INT:12,WIS:14,CHA:10},
+ saves:['DEX','INT'],
+ skills:['Insight','Stealth','Acrobatics','Investigation','Perception','Sleight of Hand'],
+ expertise:['Stealth','Investigation'],
+ mastery:['Dagger','Shortbow']
+};
+function heroRogueIsCandidate(pc){
+ return heroBuildMatch(pc)?.cls==='Rogue'&&pc.species==='Mantisborn'&&Number(pc.level||1)===1;
+}
+function heroRogueSheetUntouched(pc){
+ if(!heroRogueIsCandidate(pc))return false;
+ if(pc.class&&pc.class!=='Unassigned'&&pc.class!=='Rogue')return false;
+ if(pc.background&&pc.background!=='Wayfarer')return false;
+ if(pc.subclass)return false;
+ if(['hp','maxHp','ac'].some(k=>pc[k]!==undefined&&pc[k]!==null&&pc[k]!==''))return false;
+ const sh=db.sheets?.[pc.id];
+ if(!sh)return true;
+ if(!sh.scores||Object.values(sh.scores).some(x=>Number(x)!==10))return false;
+ if(['saves','skills','expertise'].some(k=>(sh[k]||[]).length))return false;
+ if(Object.values(sh.spellSlots||{}).some(x=>Number(x)!==0))return false;
+ if(['spellAbility','spellPrepared','features','inventory','attacks','notes','proficiencies','speciesNotes','conditions','characterPortrait'].some(k=>String(sh[k]||'').trim()))return false;
+ if(['hp','ac','maxHp','currentHp'].some(k=>sh[k]!==undefined&&sh[k]!==null&&sh[k]!==''&&Number(sh[k])!==10))return false;
+ if(sh.hitDiceUsed||sh.deathSuccess||sh.deathFailure||sh.tempHp||sh.initiativeBonus||sh.passiveBonus)return false;
+ return true;
+}
+function heroRogueApplySheet(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroRogueIsCandidate(pc))return;
+ if(!heroRogueSheetUntouched(pc))return alert('This character already has customized sheet data. No values were overwritten. Review the draft and update fields individually.');
+ if(!confirm('Apply the proposed level-1 Mantisborn Rogue/Wayfarer sheet for '+pc.name+'? Starting scores, skills, equipment notes, HP and AC will be filled, but original Bug Hero details, story and session progress will remain untouched.'))return;
+ const sh=clone(db.sheets?.[pc.id]||defaultSheet(pc));
+ sh.scores={...HERO_ROGUE_LEVEL1.scores};
+ sh.saves=[...HERO_ROGUE_LEVEL1.saves];
+ sh.skills=[...HERO_ROGUE_LEVEL1.skills];
+ sh.expertise=[...HERO_ROGUE_LEVEL1.expertise];
+ sh.spellAbility='';sh.spellSlots={};
+ sh.features='Rogue level 1: Expertise (Stealth and Investigation), Sneak Attack +1d6 once per turn with a Finesse or Ranged weapon when conditions apply, Thieves’ Cant and one additional language (choose with player), Weapon Mastery (Dagger, Shortbow).\n'+
+  'Wayfarer: Lucky origin feat, Insight and Stealth skills, Thieves’ Tools. Standard array before Wayfarer: 15 DEX, 14 CON, 13 WIS, 12 INT, 10 CHA, 8 STR; background +2 DEX and +1 WIS.\n'+
+  'Mantisborn (homebrew): Raptorial Strike unarmed slashing 1d6, Springing Leap +10 feet to jump distance PB times per Long Rest.\n'+
+  'The player-chosen spear is not a Finesse weapon and normally cannot trigger Rogue Sneak Attack. A compatible dagger or shortbow can.';
+ sh.inventory='Rogue equipment option A: Leather Armor, 2 Daggers, Shortsword, Shortbow, 20 Arrows, Quiver, Thieves’ Tools, Burglar’s Pack, 8 GP.\n'+
+  'Wayfarer background equipment option A: 2 Daggers, Thieves’ Tools, Gaming Set (choose type), Bedroll, 2 Pouches, Traveler’s Clothes, 16 GP.\n'+
+  'Player-chosen spear, goggles, tool belt and pocketed outfit are desired character flavor; confirm how the spear is obtained and whether gadgets have mechanical effects. Do not silently grant free extra items or proficiencies.';
+ sh.proficiencies='Rogue: Dexterity and Intelligence saves; light armor; simple weapons and martial weapons with Finesse or Light; Thieves’ Tools.\n'+
+  'Wayfarer skills: Insight and Stealth. Rogue skills: Acrobatics, Investigation, Perception, Sleight of Hand.\n'+
+  'Expertise: Stealth and Investigation. Weapon Mastery: Dagger and Shortbow. Choose one additional language for Thieves’ Cant feature.';
+ sh.attacks='Dagger: +5 to hit, 1d4+3 piercing (Finesse, Light, Thrown; 20/60 ft). Shortbow: +5 to hit, 1d6+3 piercing (Ranged; 80/320 ft). Sneak Attack: +1d6 once per turn when eligible.\n'+
+  'Spear (if acquired): +1 to hit, 1d6−1 piercing one-handed or 1d8−1 two-handed (20/60 ft thrown); not eligible for Sneak Attack. Confirm 2024 weapon property details at table.';
+ sh.currentHp=10;sh.maxHp=10;sh.ac=14;sh.speed=30;sh.hitDiceUsed=0;
+ pc.class='Rogue';pc.background='Wayfarer';pc.hp=10;pc.maxHp=10;pc.ac=14;pc.constitution=2;
+ db.sheets ||= {};
+ db.sheets[pc.id]=sh;
+ save();render();toast('Level-1 Rogue draft applied; review gear and language choice');
+}
+function heroRoguePrologueDraft(pc){
+ const name=String(pc.name||'the curious Mantisborn'),hero=pc.bugHero||{};
+ return {
+  readAloud:'Before the others gather at Hearthhollow, '+name+' slips between towering pine needles above a winter market. Brass goggles catch the light; pockets and a tool belt click softly as a spear taps a frozen railing. Below lies a dark channel of meltwater—deep enough to make even a daring climber hesitate.\n\nOn the far bank sits an enormous, sweet-smelling paper scrap. It carries the unmistakable scent of caramel popcorn and a mark shaped like six tiny stars. '+name+', how do you approach?',
+  dmNotes:'A 3–5 minute solo spotlight with no required combat. The player described a curious, stealthy climber with unusual yellow markings, goggles and a tool belt; a fear of deep water; and a dream of tasting caramel popcorn like a childhood memory. Ask the player to describe the memory in their own words rather than defining it for them. Let the player choose what the markings mean. The scrap is a possible story clue, not a guaranteed possession.',
+  npcDialogue:'A market moth, if wanted: “That scrap blew in from the giant world. Smells like festival sweets, doesn’t it? Careful by the water.”',
+  checks:'No roll is required to see the scrap or continue to Hearthhollow. Optional DC 11 Acrobatics to traverse a slick needle bridge, DC 11 Investigation to read the star pattern, or DC 11 Stealth to avoid startling a curious winter beetle. A failed check changes the situation, not the adventure outcome. Allow the Mantisborn Springing Leap or creative climbing to matter if the player uses it.',
+  encounters:'A small crossing and a chance to roleplay the fear of deep water. Nonlethal, no mandatory battle, no lost equipment on a failed check. The spear is a roleplay prop unless the character sheet supports it.',
+  clues:'Caramel popcorn scent and a six-star mark suggest connections between giant-world remnants and Starfall Eve. This clue does not expose Vesper or dictate David’s history.',
+  choices:'Does the hero risk the bridge, seek a safer route, request help, or leave the scrap? Let the player decide what they remember about the popcorn and whether the clue travels with them.',
+  music:'Light, playful stealth ambience, a few distant winter bells, low flowing-water sounds. Move gradually toward Hearthhollow celebration music.',
+  rewards:'A personal mystery and a reason to travel to Hearthhollow. The hero only obtains the scrap if the player chooses to retrieve it. No automatic mechanical reward, XP or player decision.'
+ };
+}
+function heroRogueApplyPrologue(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroRogueIsCandidate(pc))return;
+ const key='hero:'+pc.id;
+ if(db.christmasPrologueDraft?.scenes?.[key])return alert('A saved introduction already exists for this hero. Nothing was overwritten.');
+ if(!confirm('Save the proposed Caramel Trail opening as a DM draft for '+pc.name+'? It does not record any gameplay or alter the original Christmas Caper scenes.'))return;
+ db.christmasPrologueDraft ||= {scenes:{}};
+ db.christmasPrologueDraft.scenes ||= {};
+ db.christmasPrologueDraft.scenes[key]=heroRoguePrologueDraft(pc);
+ save();render();toast('Rogue solo introduction draft saved');
+}
+function heroRogueLevelOnePreview(pc){
+ if(!heroRogueIsCandidate(pc))return '';
+ const eligible=heroRogueSheetUntouched(pc);
+ const introExists=!!db.christmasPrologueDraft?.scenes?.['hero:'+pc.id];
+ const rows=[
+  ['Scores','STR 8 · DEX 17 · CON 14 · INT 12 · WIS 14 · CHA 10'],
+  ['Combat','10 HP · AC 14 with leather armor · Initiative +3 · Proficiency +2'],
+  ['Rogue skills','Acrobatics, Investigation, Perception, Sleight of Hand; plus Wayfarer Insight and Stealth'],
+  ['Saving throws and expertise','DEX and INT saves; Expertise in Stealth and Investigation'],
+  ['Features','Sneak Attack +1d6 once per turn (eligible finesse/ranged attack), Thieves’ Cant, Weapon Mastery (Dagger and Shortbow), Expertise'],
+  ['Wayfarer feat','Lucky; thieves’ tools, Insight and Stealth. +2 DEX and +1 WIS from background.'],
+  ['Weapons','Dagger and Shortbow +5 to hit; spear is STR-based and does not qualify for Sneak Attack.'],
+  ['Mantisborn','Raptorial Strike, Springing Leap (existing homebrew species traits; DM review required).'],
+  ['Opening story','The Caramel Trail: strange yellow markings, goggles, a dangerous water crossing, a familiar popcorn scent, and a mysterious six-star scrap.']
+ ];
+ return '<section class="hero-wizard-draft hero-rogue-draft" aria-label="Level 1 Rogue detailed draft"><h4>Level-1 Mantisborn Rogue sheet — proposed, not applied</h4>'+
+ '<div class="hero-build-grid">'+rows.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
+ '<p class="muted">Starting gear uses the Rogue and Wayfarer option A lists. A player-chosen spear, goggles and gadgets can be incorporated after DM equipment approval. Sneak Attack does not work with a spear, so keep a finesse or ranged weapon ready. The Level 3 subclass remains undecided.</p>'+
+ '<div class="actions"><button class="btn secondary" type="button" onclick="heroRogueApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Rogue sheet</button>'+
+ '<button class="btn secondary" type="button" onclick="heroRogueApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
+ (!eligible?'<p class="muted">Automatic setup is disabled because existing values need manual review. Nothing will be overwritten.</p>':'')+
+ (introExists?'<p class="muted">This hero already has a saved introduction. It is protected from replacement.</p>':'')+'</section>';
+}
+
 function heroBuildWorkshop(pc){
  const proposal=heroBuildMatch(pc);
  if(!proposal)return '';
@@ -656,7 +762,7 @@ function heroBuildWorkshop(pc){
  return '<details class="card hero-build-workshop" id="hero-build-workshop"><summary>Character Build Workshop · '+esc(proposal.cls)+' (draft)</summary>'+
   '<p class="muted">Suggestions based on this hero’s original Bug Hero Creator answers. Review with the player first. No ability scores, spell selections, equipment, notes or existing character data are changed automatically.</p>'+
   '<div class="hero-build-grid">'+fields.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
-  heroWizardLevelOnePreview(pc)+
+  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+
   '<div class="actions"><button type="button" class="btn secondary" onclick="heroBuildApprove('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>'+(current===proposal.cls?'Confirm background only':'Apply approved class and background')+'</button></div>'+
   (!eligible?'<p class="muted">This hero already has a different class. Change it manually only if the player approves.</p>':'')+
   '<p class="muted">2024 rules reference: D&D Beyond Basic Rules (Character Classes and Character Origins). Subclasses begin at level 3. Custom insect species traits remain unchanged.</p></details>';
