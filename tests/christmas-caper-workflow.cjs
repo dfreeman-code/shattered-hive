@@ -38,7 +38,7 @@ async function ready(url){
   await page.reload();
   const sixBefore=(await read()).pcs.map(p=>({...p}));
   await page.getByRole('button',{name:/Adventure Runner/}).click();
-  assert.match(await page.locator('#app').innerText(),/Party:\\s*6 character records/);
+  assert.match(await page.locator('#app').innerText(),/Party:\s*6 character records/);
   await page.locator('.ar-scene').nth(3).click();
   assert.match(await page.locator('#app').innerText(),/Frozen Berry Crossing/);
   await page.locator('.ar-scene').nth(6).click();
