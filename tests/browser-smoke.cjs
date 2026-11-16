@@ -110,6 +110,32 @@ async function check(label, fn) {
   await page.locator('#nav button').last().click();
   assert.equal(await page.evaluate(()=>page),'settings');
  });
+ await check('Command Center scratchpad persists without blur',async()=>{
+  await page.evaluate(()=>goto('command'));
+  const scratch=page.locator('#cc-notes');
+  await scratch.fill('QA scratchpad survives an immediate reload');
+  await page.reload({waitUntil:'domcontentloaded'});
+  assert.equal(await page.evaluate(()=>db.sessionCommandNotes),'QA scratchpad survives an immediate reload');
+  await page.evaluate(()=>goto('command'));
+  assert.equal(await page.locator('#cc-notes').inputValue(),'QA scratchpad survives an immediate reload');
+ });
+ await check('Adventure Runner scene draft coverage is read-only and persists',async()=>{
+  await page.evaluate(()=>goto('runner'));
+  const before=await page.evaluate(()=>({session:db.campaign.session,quests:JSON.stringify(db.quests),decisions:JSON.stringify(db.decisions||[]),scenes:db.adventureScriptDraft?.scenes?Object.keys(db.adventureScriptDraft.scenes).length:0}));
+  const first=page.locator('.ar-scene').first();
+  const initial=await first.locator('.ar-scene-count').innerText();
+  const raw=await page.evaluate(()=>adventureRunnerScene(0).readAloud||'');
+  await page.locator('#ar-readAloud').fill(raw+' QA scene coverage note');
+  await page.getByRole('button',{name:/Next scene/}).click();
+  assert.ok(Number((await first.locator('.ar-scene-count').innerText()).split('/')[0])>=1);
+  await page.reload({waitUntil:'domcontentloaded'});
+  assert.ok((await page.evaluate(()=>adventureRunnerScene(0).readAloud||'')).includes('QA scene coverage note'));
+  const after=await page.evaluate(()=>({session:db.campaign.session,quests:JSON.stringify(db.quests),decisions:JSON.stringify(db.decisions||[])}));
+  assert.equal(after.session,before.session);
+  assert.equal(after.quests,before.quests);
+  assert.equal(after.decisions,before.decisions);
+  assert.ok(initial.includes('/9'));
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
