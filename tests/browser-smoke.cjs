@@ -400,6 +400,45 @@ async function check(label, fn) {
   await page.setViewportSize({width:1365,height:900});
   await page.getByRole('button',{name:'Draft Editor'}).click();
  });
+ await check('Adventure Runner footer controls keep long-session navigation accessible without writing campaign state',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  await page.evaluate(()=>{adventureReadMode=false;adventureSpotlight='all';adventurePreviewIndex=0;goto('runner')});
+  const before=await page.evaluate(()=>JSON.stringify({
+   campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,quests:db.quests,
+   decisions:db.decisions,sessions:db.sessions,maps:db.maps,draft:db.adventureScriptDraft
+  }));
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  const footer=page.locator('.ar-reading-footer');
+  assert.equal(await footer.count(),1);
+  assert.equal(await footer.getByRole('button',{name:'Earlier scene'}).isDisabled(),true);
+  assert.equal(await footer.getByRole('button',{name:'Following scene'}).isEnabled(),true);
+  await footer.getByRole('button',{name:'Back to quick cues'}).click();
+  assert.equal(await page.locator('.ar-priority-cues .ar-tab[aria-pressed="true"]').count(),1);
+  assert.equal(await page.locator('.ar-priority-cues .ar-tab[aria-pressed="true"]').evaluate(el=>document.activeElement===el),true);
+  await footer.getByRole('button',{name:'Following scene'}).click();
+  assert.equal(await page.locator('.ar-scene[aria-current="step"]').count(),1);
+  assert.match(await page.locator('.ar-scene[aria-current="step"]').innerText(),/02/);
+  await page.locator('.ar-reading-footer').getByRole('button',{name:'Earlier scene'}).click();
+  assert.match(await page.locator('.ar-scene[aria-current="step"]').innerText(),/01/);
+  const after=await page.evaluate(()=>JSON.stringify({
+   campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,quests:db.quests,
+   decisions:db.decisions,sessions:db.sessions,maps:db.maps,draft:db.adventureScriptDraft
+  }));
+  assert.equal(after,before);
+  await page.getByRole('button',{name:'Draft Editor'}).click();
+  assert.equal(await page.locator('.ar-reading-footer').count(),0);
+ });
+ await check('Reading footer is mobile-accessible without horizontal overflow',async()=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>{adventureSpotlight='all';goto('runner')});
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  const footer=page.locator('.ar-reading-footer');
+  assert.equal(await footer.getByRole('button').count(),3);
+  const sizes=await page.evaluate(()=>({viewport:innerWidth,page:document.documentElement.scrollWidth}));
+  assert.ok(sizes.page<=sizes.viewport+5,JSON.stringify(sizes));
+  await page.getByRole('button',{name:'Draft Editor'}).click();
+  await page.setViewportSize({width:1365,height:900});
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
