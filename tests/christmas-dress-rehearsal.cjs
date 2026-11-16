@@ -122,7 +122,7 @@ const base='http://127.0.0.1:8765/';
    assert.equal(await page.evaluate(id=>mapState().scenes.find(m=>m.id===id).revealed.includes(37),mapId),true);
   });
   await check('Combat preview logs turns without archiving a played encounter',async()=>{
-   await page.evaluate(()=>{goto('combat');combatAddPreset('spore');combatNext()});
+   await page.evaluate(()=>{goto('combat');combatAddPreset('mite');combatNext()});
    assert.ok(await page.evaluate(()=>combatState().active));
    assert.ok(await page.evaluate(()=>combatState().participants.length>0));
    assert.ok(await page.evaluate(()=>combatState().history.length>0));
