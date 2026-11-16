@@ -17,6 +17,7 @@ async function bootBrowser(browser,width,initial,remote,options={}){
  const ctx=await browser.newContext({viewport:{width,height:900},acceptDownloads:true});
  const state={remote:clone(remote),revision:options.revision||5,history:new Map(),refreshes:0,writes:0,failRefresh:!!options.failRefresh,failUpload:false};
  state.history.set(state.revision,clone(state.remote));
+ if(options.baseRevision)state.history.set(options.baseRevision,clone(options.baseDocument));
  ctx.route(/https:\/\/[^/]+\.supabase\.co\/.*/,async route=>{
    const u=new URL(route.request().url());
    const path=u.pathname;
@@ -48,7 +49,7 @@ async function bootBrowser(browser,width,initial,remote,options={}){
    localStorage.setItem('shattered-hive-v1',JSON.stringify(initial));
    localStorage.setItem('shattered-hive-cloud-session-v1',JSON.stringify(session));
    if(meta)localStorage.setItem('shattered-hive-cloud-sync-meta-v1',JSON.stringify(meta));
- },{initial,session:{access_token:'old-token',refresh_token:'refresh-token',expires_at:options.expiresSoon?Math.floor(Date.now()/1000)+30:Math.floor(Date.now()/1000)+3600,user:{id:'test-user',email:'dm@example.test'}},meta:options.withoutBaseline?null:{revision:state.revision,userId:'test-user',fingerprint:fingerprint(initial),lastSyncedAt:'2026-11-15T11:00:00Z'}});
+ },{initial,session:{access_token:'old-token',refresh_token:'refresh-token',expires_at:options.expiresSoon?Math.floor(Date.now()/1000)+30:Math.floor(Date.now()/1000)+3600,user:{id:'test-user',email:'dm@example.test'}},meta:options.withoutBaseline?null:{revision:options.baseRevision||state.revision,userId:'test-user',fingerprint:fingerprint(options.baseDocument||initial),lastSyncedAt:'2026-11-15T11:00:00Z'}});
  const page=await ctx.newPage();
  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
  await page.goto(BASE,{waitUntil:'domcontentloaded'});
@@ -104,8 +105,7 @@ async function bootBrowser(browser,width,initial,remote,options={}){
    {
      const local=clone(seed);local.pcs.push(pc('local-new','Mister Potts'));
      const remote=clone(seed);remote.pcs.push(pc('remote-new','Jawshua Red Hawk'));
-     const {page,ctx,state,errors}=await bootBrowser(browser,1280,local,remote);
-     state.history.set(5,clone(seed));state.revision=6; // baseline revision 5, remote changed after it
+     const {page,ctx,state,errors}=await bootBrowser(browser,1280,local,remote,{revision:6,baseRevision:5,baseDocument:seed});
      await page.evaluate(()=>goto('settings'));
      await page.getByRole('button',{name:'Preview safe recovery'}).click();
      await page.getByRole('button',{name:'Confirm reviewed recovery'}).waitFor();
@@ -127,8 +127,7 @@ async function bootBrowser(browser,width,initial,remote,options={}){
    {
      const local=clone(seed);local.pcs[0].name='Local revision';
      const remote=clone(seed);remote.pcs[0].name='Cloud revision';
-     const {page,ctx,state,errors}=await bootBrowser(browser,1280,local,remote);
-     state.history.set(5,clone(seed));state.revision=6;
+     const {page,ctx,state,errors}=await bootBrowser(browser,1280,local,remote,{revision:6,baseRevision:5,baseDocument:seed});
      await page.evaluate(()=>goto('settings'));
      await page.getByRole('button',{name:'Preview safe recovery'}).click();
      await page.waitForFunction(()=>document.querySelector('#cloud-sync-status')?.textContent.includes('manual review'));
