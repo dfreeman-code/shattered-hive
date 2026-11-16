@@ -17,11 +17,12 @@
   var remoteAvailable = false;
   var historyRows = [], historyLoaded = false, lastSyncedAt = null;
   function getLocal() { return bridge.getData(); }
-  function fingerprint(value) {
-    var s = JSON.stringify(value), h = 2166136261;
+  function fingerprintText(s) {
+    var h = 2166136261;
     for (var i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
     return (h >>> 0).toString(16) + ':' + s.length;
   }
+  function fingerprint(value) { return fingerprintText(JSON.stringify(value)); }
   function meta() {
     try { return JSON.parse(localStorage.getItem(META_KEY) || 'null'); } catch (_) { return null; }
   }
@@ -306,6 +307,7 @@
   }
   async function connect() {
     if (!session) return;
+    var uploadStartupChanges = false;
     busy = true; linked = false; blocked = true;
     try {
       await ensureSession();
@@ -332,6 +334,17 @@
             syncSuccess(remote.updated_at);
             notify('Updated this browser with newer cloud campaign data.');
           }
+        } else if (saved && saved.userId === session.user.id && saved.revision === revision &&
+                   typeof bridge.getStartupSerializedData === 'function' &&
+                   saved.fingerprint === fingerprintText(bridge.getStartupSerializedData())) {
+          // The on-disk document was exactly the last confirmed cloud revision.
+          // Only startup preparation/normalization changed it before connect().
+          // With no newer remote revision, preserve those edits via the normal
+          // CAS upload. Genuine offline edits never satisfy the baseline check.
+          linked = true; blocked = false;
+          uploadStartupChanges = true;
+          markPending();
+          notify('Startup preparation changed this browser after the last confirmed save. Synchronizing safely…');
         } else {
           // Never overwrite an unrecognized local save, even if the cloud is newer.
           markPending();
@@ -339,7 +352,11 @@
         }
       }
     } catch (e) { notify('Cloud connection error: ' + e.message); }
-    finally { busy = false; renderStatus(); }
+    finally {
+      busy = false;
+      if (uploadStartupChanges && linked && !blocked) queueSave();
+      else renderStatus();
+    }
   }
   async function upload(first) {
     if (busy || !session) return;
