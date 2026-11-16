@@ -1,0 +1,29 @@
+name: Christmas Caper pre-session readiness browser tests
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/christmas-session-preflight.smoke.cjs'
+      - '.github/workflows/christmas-session-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Serve candidate app
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/hive-preflight-http.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ >/dev/null && break; sleep 1; done
+      - name: Test read-only Christmas Caper session readiness
+        run: node tests/christmas-session-preflight.smoke.cjs
