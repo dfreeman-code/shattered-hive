@@ -1,5 +1,16 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
+async function navigateSidebar(page,label){
+ const key=await page.evaluate(text=>Object.keys(sections).find(k=>sections[k].replace(/^[^ ]+ /,'')===text),label);
+ if(!key)throw Error('Missing sidebar route for '+label);
+ const group=await page.evaluate(k=>Object.entries(NAV_GROUPS).find(([,keys])=>keys.includes(k))?.[0]||'',key);
+ if(group){
+  const toggle=page.locator('#nav .nav-group-toggle[data-group="'+group+'"]');
+  if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
+ }
+ await page.locator('#nav button.nav-route[data-route="'+key+'"]').click();
+}
+
 const {spawn}=require('node:child_process');
 const http=require('node:http');
 async function ready(url){
@@ -78,7 +89,7 @@ async function ready(url){
   await page.getByRole('button',{name:'Back to Command Center'}).click();
   await page.getByRole('button',{name:'Open Adventure Runner'}).click();
   assert.equal(await page.locator('#ar-dmNotes').inputValue(),'NAVIGATION TEST NOTES','Leaving the runner via Command Center button preserves text');
-  await page.getByRole('button',{name:/Music & Ambience/}).first().click();
+  await navigateSidebar(page,'Music & Ambience');
   assert.ok((await page.locator('#app').innerText()).length>30);
   await page.getByRole('button',{name:/Battle Maps/}).first().click();
   assert.ok((await page.locator('#app').innerText()).length>30);

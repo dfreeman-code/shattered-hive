@@ -1,5 +1,16 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
+async function navigateSidebar(page,label){
+ const key=await page.evaluate(text=>Object.keys(sections).find(k=>sections[k].replace(/^[^ ]+ /,'')===text),label);
+ if(!key)throw Error('Missing sidebar route for '+label);
+ const group=await page.evaluate(k=>Object.entries(NAV_GROUPS).find(([,keys])=>keys.includes(k))?.[0]||'',key);
+ if(group){
+  const toggle=page.locator('#nav .nav-group-toggle[data-group="'+group+'"]');
+  if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
+ }
+ await page.locator('#nav button.nav-route[data-route="'+key+'"]').click();
+}
+
 const {spawn}=require('node:child_process');
 const http=require('node:http');
 async function ready(url){for(let n=0;n<40;n++){try{await new Promise((ok,bad)=>http.get(url,r=>{r.resume();r.statusCode===200?ok():bad(Error(String(r.statusCode)))}).on('error',bad));return}catch{}await new Promise(r=>setTimeout(r,250))}throw Error('server not ready')}
@@ -12,7 +23,7 @@ async function ready(url){for(let n=0;n<40;n++){try{await new Promise((ok,bad)=>
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:8766/index.html');
   const original=await page.evaluate(()=>JSON.stringify(localStorage.getItem('shattered-hive-v1')));
-  await page.getByRole('button',{name:/AI Dungeon Master/}).click();
+  await navigateSidebar(page,'AI Dungeon Master');
   assert.match(await page.locator('#app').innerText(),/Assisted DM — private AI connection/);
   assert.match(await page.locator('#app').innerText(),/Vesper storyline/);
   assert.equal(await page.getByRole('button',{name:'Copy request + DM context'}).count(),1);
@@ -31,10 +42,10 @@ async function ready(url){for(let n=0;n<40;n++){try{await new Promise((ok,bad)=>
   assert.match(await page.locator('#dmHistory').innerText(),/Vismund discover/);
   const after=await page.evaluate(()=>JSON.stringify(localStorage.getItem('shattered-hive-v1')));
   assert.equal(after,original,'Read-only DM actions must not change campaign storage');
-  await page.reload();await page.getByRole('button',{name:/AI Dungeon Master/}).click();
+  await page.reload();await navigateSidebar(page,'AI Dungeon Master');
   assert.match(await page.locator('#dmHistory').innerText(),/No drafts saved this session/);
   for(const item of ['Player Decisions','Story Archive','Battle Maps','NPCs','Settings']){
-   await page.getByRole('button',{name:new RegExp(item)}).first().click();
+   await navigateSidebar(page,item);
    assert.ok((await page.locator('#app').innerText()).length>20,item+' renders');
   }
   assert.deepEqual(errors,[],'Page errors: '+errors.join('; '));
