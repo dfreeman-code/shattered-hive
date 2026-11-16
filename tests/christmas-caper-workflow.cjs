@@ -69,14 +69,14 @@ async function ready(url){
   assert.equal(exported.scenes.length,10);
   assert.equal(exported.scenes[9].rewards,'TEST ONLY scene 10 rewards');
 
-  await page.getByRole('button',{name:'Session Command Center',exact:true}).click();
+  await page.locator('#nav button').filter({hasText:'Session Command Center'}).click();
   assert.match(await page.locator('#app').innerText(),/Session Command Center/);
   assert.match(await page.locator('#app').innerText(),/Session 1 — The Great Christmas Caper/);
   await page.locator('#cc-notes').fill('TEST ONLY: prep notebook');
   await page.locator('#cc-notes').blur();
   assert.equal((await read()).sessionCommandNotes,'TEST ONLY: prep notebook');
   await page.reload();
-  await page.getByRole('button',{name:/Session Command Center/}).click();
+  await page.locator('#nav button').filter({hasText:'Session Command Center'}).click();
   assert.equal(await page.locator('#cc-notes').inputValue(),'TEST ONLY: prep notebook');
   await page.getByRole('button',{name:'Player-safe board'}).click();
   assert.equal(await page.locator('#cc-player-board').count(),1);
@@ -87,7 +87,7 @@ async function ready(url){
 
   await page.getByRole('button',{name:'Open Battle Map'}).click();
   assert.match(await page.locator('#app').innerText(),/Map|Battle/i);
-  await page.getByRole('button',{name:/Session Command Center/}).click();
+  await page.getByRole('group',{name:'DM session shortcuts'}).getByRole('button',{name:'Session Command Center',exact:true}).click();
   await page.getByRole('button',{name:'Full Combat Tracker'}).click();
   assert.ok((await page.locator('#app').innerText()).length>100);
   const after=await read();
