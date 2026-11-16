@@ -143,6 +143,8 @@ async function check(label, fn) {
   await page.setViewportSize({width:768,height:1024});
   await page.evaluate(()=>goto('maps'));
   assert.equal(await page.locator('#nav button.nav-route').count(),await page.evaluate(()=>Object.keys(sections).length));
+  const settingsGroup=page.locator('#nav .nav-group-toggle[data-group="Settings"]');
+  if(await settingsGroup.getAttribute('aria-expanded')!=='true')await settingsGroup.click();
   await page.locator('#nav button.nav-route[data-route="settings"]').scrollIntoViewIfNeeded();
   await page.locator('#nav button.nav-route[data-route="settings"]').click();
   assert.equal(await page.evaluate(()=>page),'settings');
