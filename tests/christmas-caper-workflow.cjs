@@ -39,6 +39,38 @@ async function ready(url){
   const sixBefore=(await read()).pcs.map(p=>({...p}));
   await page.getByRole('button',{name:/Adventure Runner/}).click();
   assert.match(await page.locator('#app').innerText(),/Party:\s*6 character records/);
+  await page.getByRole('button',{name:'Open Hero Introductions'}).click();
+  assert.match(await page.locator('#app').innerText(),/Six heroes, six beginnings/);
+  assert.equal(await page.locator('.ar-scene').count(),7,'six solo scenes plus gathering');
+  assert.match(await page.locator('#app').innerText(),/Test Hero 1/);
+  for(let i=0;i<6;i++){
+    await page.locator('.ar-scene').nth(i).click();
+    const text=await page.locator('#ar-readAloud').inputValue();
+    assert.match(text,new RegExp('Test Hero '+(i+1)));
+    assert.notEqual(text,'','Each hero must have individualized opening narration');
+    assert.equal(await page.locator('.ar-field textarea').count(),9);
+  }
+  await page.locator('.ar-scene').first().click();
+  await page.locator('#ar-readAloud').fill('Custom introduction for Test Hero 1');
+  await page.locator('.ar-scene').nth(1).click();
+  await page.locator('.ar-scene').first().click();
+  assert.equal(await page.locator('#ar-readAloud').inputValue(),'Custom introduction for Test Hero 1');
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  assert.match(await page.locator('.ar-reading-text').first().innerText(),/Custom introduction/);
+  await page.locator('.ar-scene').last().click();
+  assert.match(await page.locator('.ar-reading-text').first().innerText(),/six separate trails converge/i);
+  await page.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
+  assert.equal(await page.locator('.ar-scene').count(),10,'Original 10-scene structure must remain');
+  await page.reload();
+  await page.getByRole('button',{name:/Adventure Runner/}).click();
+  await page.getByRole('button',{name:'Open Hero Introductions'}).click();
+  await page.locator('.ar-scene').first().click();
+  assert.equal(await page.locator('#ar-readAloud').inputValue(),'Custom introduction for Test Hero 1');
+  assert.deepEqual((await read()).pcs,sixBefore,'Prologue preparation must not change PCs');
+  assert.equal((await read()).sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.ok((await read()).decisions.every(x=>x.status==='Not decided'));
+  await page.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
+
   await page.locator('.ar-scene').nth(3).click();
   assert.match(await page.locator('#app').innerText(),/Frozen Berry Crossing/);
   await page.locator('.ar-scene').nth(6).click();
