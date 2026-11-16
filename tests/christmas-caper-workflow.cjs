@@ -166,7 +166,7 @@ async function ready(url){
    localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
   },{inputPowers,extras});
   await wp.reload();
-  await wp.locator('#nav button').filter({hasText:'Character Sheets'}).click();
+  await wp.evaluate(()=>goto('sheet'));
   for(let i=0;i<6;i++){
    await wp.locator('.card.section select').first().selectOption('workshop-'+i);
    const workshop=wp.locator('#hero-build-workshop');
