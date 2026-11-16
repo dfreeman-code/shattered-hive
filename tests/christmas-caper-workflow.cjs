@@ -550,6 +550,70 @@ async function ready(url){
   assert.equal(fs.pcs[1].notes,'My manually chosen armor stays');
   await fighterContext.close();
 
+
+  // Six-hero review and gathering: isolated browser; no cloud account or real family data.
+  const readinessContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const prepPage=await readinessContext.newPage();
+  prepPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
+  await prepPage.goto('http://127.0.0.1:8767/index.html');
+  await prepPage.evaluate(()=>{
+    const data=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+    const powers=['Magic spells','Sneaking and climbing','Super strength','Archery and exploring','Protecting friends','Super strength'];
+    const species=['Spiderkin','Mantisborn','Spiderkin','Firefly Folk','Beetlekin','Antfolk'];
+    const classes=['Wizard','Rogue','Warlock','Ranger','Paladin','Fighter'];
+    data.pcs=Array.from({length:6},(_,i)=>({
+      id:'party-review-'+i,name:'Review Hero '+(i+1),class:classes[i],background:'',level:1,species:species[i],status:'Active',
+      notes:'Original notes '+i,bugHero:{power:powers[i],extra:i===2?'A Martial Warlock':'',dream:'Unique dream '+i,fear:'Unique fear '+i}
+    }));
+    data.christmasPrologueDraft={scenes:{}};
+    localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
+  });
+  await prepPage.reload();
+  await prepPage.evaluate(()=>goto('sheet'));
+  assert.equal(await prepPage.locator('.hero-ready-card').count(),6,'All six PC reviews appear');
+  assert.match(await prepPage.locator('#hero-party-readiness').innerText(),/0\/6 reviewed/);
+  const prepState=()=>prepPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  const prepBefore=await prepState();
+  await prepPage.locator('.hero-ready-card').first().locator('summary').click();
+  await prepPage.locator('.hero-ready-card').first().locator('input[type=checkbox]').first().check();
+  let prepAfter=await prepState();
+  assert.equal(prepAfter.heroReadiness['party-review-0'].build,true);
+  assert.equal(prepAfter.heroReadiness['party-review-0'].scene,undefined);
+  assert.deepEqual(prepAfter.pcs,prepBefore.pcs,'Review status must not change any character');
+  assert.equal(prepAfter.campaign.session,0,'Review status cannot start campaign');
+  assert.ok(prepAfter.decisions.every(x=>x.status==='Not decided'),'Review status cannot decide story');
+  await prepPage.reload();
+  await prepPage.evaluate(()=>goto('sheet'));
+  await prepPage.locator('.hero-ready-card').first().locator('summary').click();
+  assert.equal(await prepPage.locator('.hero-ready-card').first().locator('input[type=checkbox]').first().isChecked(),true,
+    'Review acknowledgment should survive reload');
+  await prepPage.evaluate(()=>goto('runner'));
+  await prepPage.getByRole('button',{name:'Open Hero Introductions'}).click();
+  await prepPage.locator('.ar-scene').last().click();
+  const gatherButton=prepPage.getByRole('button',{name:'Prepare personalized gathering draft'});
+  assert.equal(await gatherButton.isEnabled(),true);
+  await gatherButton.click();
+  prepAfter=await prepState();
+  assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.readAloud,/six small figures/);
+  assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Review Hero 1/);
+  assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Review Hero 6/);
+  assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Unique dream 3/);
+  assert.equal(prepAfter.campaign.session,0);
+  assert.ok(prepAfter.decisions.every(x=>x.status==='Not decided'));
+  assert.equal(await prepPage.getByRole('button',{name:'Prepare personalized gathering draft'}).isDisabled(),true,
+    'Saved gathering must not be overwritten');
+  await prepPage.reload();
+  await prepPage.evaluate(()=>goto('runner'));
+  await prepPage.getByRole('button',{name:'Open Hero Introductions'}).click();
+  await prepPage.locator('.ar-scene').last().click();
+  assert.match(await prepPage.locator('#ar-readAloud').inputValue(),/six small figures/);
+  await prepPage.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
+  assert.equal(await prepPage.locator('.ar-scene').count(),10);
+  prepAfter=await prepState();
+  assert.equal(prepAfter.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.deepEqual(prepAfter.pcs,prepBefore.pcs);
+  await readinessContext.close();
+
   const after=await read();
   assert.equal(after.campaign.session,0);
   assert.equal(after.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
