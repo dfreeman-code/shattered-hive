@@ -467,7 +467,7 @@ async function ready(url){
   assert.equal(ps.sheets['test-paladin'].initiativeBonus,2);
   assert.match(ps.sheets['test-paladin'].features,/Lay on Hands/);
   assert.match(ps.sheets['test-paladin'].features,/Sacred Oath|oath/i);
-  assert.match(ps.sheets['test-paladin'].features,/not additive/);
+  assert.match(ps.sheets['test-paladin'].features,/do not stack/);
   assert.equal(ps.campaign.session,0);
   assert.equal(ps.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
   assert.ok(ps.decisions.every(d=>d.status==='Not decided'));
