@@ -200,6 +200,35 @@ async function check(label, fn) {
   assert.equal(await page.locator('#ar-quick-npc').count(),0);
   await page.evaluate(()=>mapSetView('dm'));
  });
+ await check('Runner reference search filters by name, role and enemies without modifying campaign',async()=>{
+  await page.evaluate(()=>{
+   db.npcs.push({id:'qa-search-guide',name:'QA Lantern Guide',role:'QA-Only-Scout-163',location:'Winter Root'});
+   db.npcs.push({id:'qa-search-smith',name:'QA Root Smith',role:'Artisan',location:'Mushroom Hall'});
+   db.encounters.push({id:'qa-search-mites',name:'QA Frost Passage',status:'Planned',enemies:'QA-Only-Snow-tuft-163 mites'});
+   save();goto('runner');
+  });
+  const before=await page.evaluate(()=>JSON.stringify({npcs:db.npcs,encounters:db.encounters,sessions:db.sessions,decisions:db.decisions,quests:db.quests,script:db.adventureScriptDraft}));
+  await page.locator('#ar-npc-search').fill('QA-Only-Scout-163');
+  assert.equal(await page.locator('#ar-quick-npc option').count(),2);
+  assert.match(await page.locator('#ar-quick-npc option').last().innerText(),/QA Lantern Guide/);
+  await page.locator('#ar-quick-npc').selectOption('qa-search-guide');
+  assert.match(await page.locator('#ar-reference-detail').innerText(),/Winter Root/);
+  await page.locator('#ar-encounter-search').fill('QA-Only-Snow-tuft-163');
+  assert.equal(await page.locator('#ar-quick-encounter option').count(),2);
+  await page.locator('#ar-quick-encounter').selectOption('qa-search-mites');
+  assert.match(await page.locator('#ar-reference-detail').innerText(),/QA-Only-Snow-tuft-163 mites/);
+  await page.locator('#ar-npc-search').fill('no-match-qa-xyz');
+  assert.equal(await page.locator('#ar-quick-npc option').count(),1);
+  assert.match(await page.locator('#ar-npc-count').innerText(),/^0 of /);
+  const after=await page.evaluate(()=>JSON.stringify({npcs:db.npcs,encounters:db.encounters,sessions:db.sessions,decisions:db.decisions,quests:db.quests,script:db.adventureScriptDraft}));
+  assert.equal(after,before);
+ });
+ await check('Runner quick reference filters are absent in player map view',async()=>{
+  await page.evaluate(()=>{goto('maps');mapSetView('player')});
+  assert.equal(await page.locator('#ar-npc-search').count(),0);
+  assert.equal(await page.locator('#ar-encounter-search').count(),0);
+  await page.evaluate(()=>mapSetView('dm'));
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
