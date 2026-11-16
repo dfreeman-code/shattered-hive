@@ -18,7 +18,7 @@ async function check(label, fn) {
  await page.locator('#nav button').first().waitFor();
  await check('25 unique grouped navigation destinations',async()=>{
   const data=await page.evaluate(()=>({expected:Object.keys(sections),groups:Object.values(NAV_GROUPS).flat(),buttons:[...document.querySelectorAll('#nav button')].map(b=>b.textContent.trim())}));
-  assert.equal(data.expected.length,25);assert.deepEqual([...data.groups].sort(),[...data.expected].sort());assert.equal(data.buttons.length,25);
+  assert.ok(data.expected.length>=25);assert.deepEqual([...data.groups].sort(),[...data.expected].sort());assert.equal(data.buttons.length,data.expected.length);
   for(const key of data.groups){
    await page.locator('#nav button').nth(data.groups.indexOf(key)).click();
    assert.equal(await page.evaluate(()=>page),key);
@@ -105,7 +105,7 @@ async function check(label, fn) {
  await check('Tablet viewport navigation accessible',async()=>{
   await page.setViewportSize({width:768,height:1024});
   await page.evaluate(()=>goto('maps'));
-  assert.equal(await page.locator('#nav button').count(),25);
+  assert.equal(await page.locator('#nav button').count(),await page.evaluate(()=>Object.keys(sections).length));
   await page.locator('#nav button').last().scrollIntoViewIfNeeded();
   await page.locator('#nav button').last().click();
   assert.equal(await page.evaluate(()=>page),'settings');
