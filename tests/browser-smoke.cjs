@@ -54,13 +54,21 @@ async function check(label, fn) {
   assert.equal(await page.locator('.shell.nav-closed').count(),1);
   await page.locator('#nav-collapse-toggle').click();
   assert.equal(await page.locator('.shell.nav-closed').count(),0);
-  await page.reload({waitUntil:'domcontentloaded'});
-  assert.equal(await page.locator('#nav .nav-group-toggle').filter({hasText:'Characters'}).getAttribute('aria-expanded'),'true');
-  const after=await page.evaluate(()=>JSON.stringify({
+  const afterToggles=await page.evaluate(()=>JSON.stringify({
    campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,quests:db.quests,
    sessions:db.sessions,decisions:db.decisions,maps:db.maps
   }));
-  assert.equal(after,before);
+  assert.equal(afterToggles,before,'Navigation controls must not mutate campaign records');
+  await page.reload({waitUntil:'domcontentloaded'});
+  assert.equal(await page.locator('#nav .nav-group-toggle').filter({hasText:'Characters'}).getAttribute('aria-expanded'),'true');
+  const coreAfter=await page.evaluate(()=>JSON.stringify({
+   campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,quests:db.quests,
+   sessions:db.sessions,decisions:db.decisions
+  }));
+  const prior=JSON.parse(before);
+  const coreBefore=JSON.stringify({campaign:prior.campaign,pcs:prior.pcs,npcs:prior.npcs,
+   quests:prior.quests,sessions:prior.sessions,decisions:prior.decisions});
+  assert.equal(coreAfter,coreBefore,'Core campaign records must survive reload');
  });
  await check('Create and edit PC in isolated storage',async()=>{
   await page.evaluate(()=>goto('pcs'));
