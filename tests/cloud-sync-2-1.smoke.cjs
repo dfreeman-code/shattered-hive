@@ -101,6 +101,18 @@ async function bootBrowser(browser,width,initial,remote,options={}){
      console.log('PASS offline pending edit persistence, refresh warning, backup control and mobile layout');
      await ctx.close();
    }
+   // Expired refresh credentials must NEVER discard the saved campaign.
+   {
+     const {page,ctx,state,errors}=await bootBrowser(browser,1280,seed,seed,{expiresSoon:true,failRefresh:true});
+     await page.waitForFunction(()=>document.querySelector('#cloud-sync-status')?.textContent.includes('Cloud connection error'));
+     assert.equal((await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),DATA)).pcs.length,4);
+     assert.equal(state.writes,0);
+     await page.evaluate(()=>goto('settings'));
+     assert.ok(await page.getByRole('button',{name:'Sign out'}).count());
+     assert.deepEqual(errors,[]);
+     console.log('PASS failed auth renewal warns and leaves browser characters untouched');
+     await ctx.close();
+   }
    // Distinct local/remote edits merge after explicit human confirmation, revision-checked.
    {
      const local=clone(seed);local.pcs.push(pc('local-new','Mister Potts'));
@@ -135,6 +147,25 @@ async function bootBrowser(browser,width,initial,remote,options={}){
      assert.equal((await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),DATA)).pcs[0].name,'Local revision');
      assert.deepEqual(errors,[]);
      console.log('PASS competing edits to same record do not overwrite either version');
+     await ctx.close();
+   }
+   // A different device saving after preview must invalidate confirmation.
+   {
+     const local=clone(seed);local.pcs.push(pc('local-extra','Local New'));
+     const remote=clone(seed);remote.pcs.push(pc('remote-extra','Remote New'));
+     const {page,ctx,state,errors}=await bootBrowser(browser,1280,local,remote,{revision:6,baseRevision:5,baseDocument:seed});
+     await page.evaluate(()=>goto('settings'));
+     await page.getByRole('button',{name:'Preview safe recovery',exact:true}).click();
+     await page.getByRole('button',{name:'Confirm reviewed recovery'}).waitFor();
+     state.revision=7;state.remote.pcs.push(pc('remote-later','Another Device'));
+     page.once('dialog',dlg=>dlg.accept());
+     await page.getByRole('button',{name:'Confirm reviewed recovery'}).click();
+     await page.waitForFunction(()=>document.querySelector('#cloud-sync-status')?.textContent.includes('Cloud changed since recovery preview'));
+     assert.equal(state.writes,0);
+     assert.equal(state.remote.pcs.length,6);
+     assert.equal((await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),DATA)).pcs.length,5);
+     assert.deepEqual(errors,[]);
+     console.log('PASS stale merge preview aborts before cloud write or local replacement');
      await ctx.close();
    }
    // No baseline means no automatic merge.
