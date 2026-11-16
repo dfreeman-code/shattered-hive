@@ -167,6 +167,39 @@ async function check(label, fn) {
   assert.equal(await page.getByRole('button',{name:'← Adventure Runner'}).count(),0);
   await page.evaluate(()=>mapSetView('dm'));
  });
+ await check('Runner quick references show existing NPC and encounter details without altering records',async()=>{
+  await page.evaluate(()=>{
+    db.npcs.push({id:'qa-quick-npc',name:'QA Reference Moth',role:'Guide',location:'Root Bridge',notes:'Visible description',secret:'DM ONLY secret <script>unsafe</script>'});
+    db.encounters.push({id:'qa-quick-encounter',name:'QA Reference Encounter',status:'Planned',enemies:'Two tiny mites',notes:'Use the branch crossing'});
+    save();goto('runner');
+  });
+  const before=await page.evaluate(()=>JSON.stringify({
+    npcs:db.npcs,encounters:db.encounters,decisions:db.decisions,quests:db.quests,
+    sessions:db.sessions,session:db.campaign.session,script:db.adventureScriptDraft
+  }));
+  await page.locator('#ar-quick-npc').selectOption('qa-quick-npc');
+  assert.match(await page.locator('#ar-reference-detail').innerText(),/QA Reference Moth/);
+  assert.match(await page.locator('#ar-reference-detail').innerText(),/DM ONLY secret/);
+  assert.equal(await page.locator('#ar-reference-detail script').count(),0);
+  await page.locator('#ar-quick-encounter').selectOption('qa-quick-encounter');
+  assert.match(await page.locator('#ar-reference-detail').innerText(),/Two tiny mites/);
+  assert.equal(await page.locator('#ar-quick-npc').inputValue(),'');
+  const after=await page.evaluate(()=>JSON.stringify({
+    npcs:db.npcs,encounters:db.encounters,decisions:db.decisions,quests:db.quests,
+    sessions:db.sessions,session:db.campaign.session,script:db.adventureScriptDraft
+  }));
+  assert.equal(after,before);
+ });
+ await check('Runner references available in tabletop and draft views, absent from player map',async()=>{
+  await page.evaluate(()=>goto('runner'));
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  assert.equal(await page.locator('#ar-quick-npc').count(),1);
+  await page.getByRole('button',{name:'Draft Editor'}).click();
+  assert.equal(await page.locator('#ar-quick-encounter').count(),1);
+  await page.evaluate(()=>{goto('maps');mapSetView('player')});
+  assert.equal(await page.locator('#ar-quick-npc').count(),0);
+  await page.evaluate(()=>mapSetView('dm'));
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
