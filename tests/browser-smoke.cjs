@@ -301,6 +301,47 @@ async function check(label, fn) {
   assert.equal(after,before);
   assert.ok(scene);
  });
+ await check('Enchanted Woodland colors, typography and keyboard focus are readable',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  await page.evaluate(()=>goto('dashboard'));
+  const styles=await page.evaluate(()=>{
+   const body=getComputedStyle(document.body),root=getComputedStyle(document.documentElement);
+   const header=getComputedStyle(document.querySelector('header'));
+   const navLink=getComputedStyle(document.querySelector('#nav .nav-route'));
+   const title=getComputedStyle(document.querySelector('#app h2'));
+   return {bodySize:parseFloat(body.fontSize),bg:root.getPropertyValue('--bg').trim(),
+    foreground:root.getPropertyValue('--ink').trim(),headerBg:header.backgroundColor,
+    linkSize:parseFloat(navLink.fontSize),titleFont:title.fontFamily};
+  });
+  assert.equal(styles.bodySize,16);
+  assert.equal(styles.bg,'#f5f0df');
+  assert.equal(styles.foreground,'#38312b');
+  assert.equal(styles.headerBg,'rgb(32, 61, 48)');
+  assert.ok(styles.linkSize>=14);
+  assert.match(styles.titleFont,/Georgia|serif/);
+  await page.locator('#nav .nav-route[data-route="command"]').focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  const focus=await page.locator('#nav .nav-route[data-route="command"]').evaluate(el=>({
+   visible:el.matches(':focus-visible'),outline:getComputedStyle(el).outlineStyle
+  }));
+  assert.equal(focus.visible,true,'Keyboard navigation must show focus-visible state');
+  assert.notEqual(focus.outline,'none');
+ });
+ await check('Theme preserves compact desktop and mobile scene navigation',async()=>{
+  await page.evaluate(()=>goto('runner'));
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  assert.equal(await page.locator('.ar-scene').count(),10);
+  const reader=await page.locator('.ar-reading-panel').evaluate(el=>parseFloat(getComputedStyle(el).fontSize));
+  assert.ok(reader>=17);
+  await page.getByRole('button',{name:'Draft Editor'}).click();
+  await page.setViewportSize({width:390,height:844});
+  const safe=await page.evaluate(()=>({doc:document.documentElement.scrollWidth,window:innerWidth,
+    scene:document.querySelector('.ar-scene.ar-active')?.textContent||''}));
+  assert.ok(safe.doc<=safe.window+5,'Mobile page must not overflow horizontally: '+JSON.stringify(safe));
+  assert.ok(safe.scene.length>0);
+  await page.setViewportSize({width:1365,height:900});
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
