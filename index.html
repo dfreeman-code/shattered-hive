@@ -179,6 +179,21 @@ let db;try{db=JSON.parse(localStorage.getItem(KEY))||clone(initial)}catch(e){db=
 // Capture exactly what was on disk before startup migrations/rendering can save changes.
 // Cloud Sync uses this only to recognize a verified baseline; it never uploads blindly.
 const cloudSyncStartupDocument=JSON.stringify(db);
+// Side-effect-free mirror of the one-time Christmas preparation seed. This is
+// used only to verify that a supposedly-unsynced local copy differs from an
+// authenticated cloud record solely by this deterministic app upgrade.
+function cloudSyncExpectedChristmasPreparation(source){
+ const candidate=clone(source);
+ if(candidate.christmasEncounterPrepVersion>=1)return candidate;
+ if(!Array.isArray(candidate.encounters))candidate.encounters=[];
+ if(!Array.isArray(candidate.music))candidate.music=[];
+ const encounterIds=new Set(candidate.encounters.map(e=>e.id));
+ for(const record of CHRISTMAS_PREP_ENCOUNTERS)if(!encounterIds.has(record.id))candidate.encounters.push(clone(record));
+ const musicIds=new Set(candidate.music.map(e=>e.id));
+ for(const cue of CHRISTMAS_PREP_MUSIC)if(!musicIds.has(cue.id))candidate.music.push(clone(cue));
+ candidate.christmasEncounterPrepVersion=1;
+ return candidate;
+}
 for(const k in initial){if(!(k in db))db[k]=clone(initial[k])}const MUSIC_STARTER=[
 {id:'m1',name:'Dewdrop Hollow — Village & Festival',category:'Location',target:'Dewdrop Hollow',mood:'Cheerful, welcoming',track:'Pelican Town',artist:'ConcernedApe',url:'',ambience:'Garden birds, gentle breeze',notes:'Arrival and town dialogue. Low volume.'},
 {id:'m2',name:'The Silent Symphony — Investigation',category:'Quest',target:'The Silent Symphony',mood:'Curious, mysterious',track:'Dirtmouth',artist:'Christopher Larkin',url:'',ambience:'Soft crickets and rustling leaves',notes:'Use during clues and witness interviews.'},
@@ -1242,4 +1257,4 @@ async function importBugHero(e){
  }catch(err){alert('Hero import failed: '+err.message)}finally{e.target.value=''}
 }
 async function importData(e){let f=e.target.files?.[0];if(!f)return;try{let v=JSON.parse(await f.text());let d=v.data||v;if(!d.campaign||!Array.isArray(d.npcs)||!Array.isArray(d.quests))throw Error('Not a valid campaign backup.');if(!confirm('Replace all current data with this backup? Export your current data first if needed.'))return;window.SHCloud?.suspendForReplacement();db=d;for(let k in initial)if(!(k in db))db[k]=clone(initial[k]);if(!Array.isArray(db.music))db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();save();goto('dashboard');toast('Backup imported')}catch(ex){alert('Import failed: '+ex.message)}finally{e.target.value=''}}function resetData(){if(!confirm('Reset ALL campaign data to the original starter content? This will erase edits.'))return;if(!confirm('Last chance: have you exported a backup?'))return;window.SHCloud?.suspendForReplacement();db=clone(initial);db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();save();goto('dashboard');toast('Campaign reset')}render();
-</script><script src="assets/cloud-config.js"></script><script src="assets/cloud-sync.js"></script><script>if(window.SHCloud)window.SHCloud.boot({getData:()=>db,getStartupSerializedData:()=>cloudSyncStartupDocument,exportBackup:exportData,replaceData:(v)=>{if(!v||!v.campaign||!Array.isArray(v.pcs)||!Array.isArray(v.npcs)||!Array.isArray(v.quests))throw Error('Invalid cloud data');db=clone(v);for(let k in initial)if(!(k in db))db[k]=clone(initial[k]);if(!Array.isArray(db.music))db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();save();goto('dashboard')}});</script><script src="assets/ai-dm.js"></script></body></html>
+</script><script src="assets/cloud-config.js"></script><script src="assets/cloud-sync.js"></script><script>if(window.SHCloud)window.SHCloud.boot({getData:()=>db,getStartupSerializedData:()=>cloudSyncStartupDocument,getExpectedStartupPreparation:cloudSyncExpectedChristmasPreparation,exportBackup:exportData,replaceData:(v)=>{if(!v||!v.campaign||!Array.isArray(v.pcs)||!Array.isArray(v.npcs)||!Array.isArray(v.quests))throw Error('Invalid cloud data');db=clone(v);for(let k in initial)if(!(k in db))db[k]=clone(initial[k]);if(!Array.isArray(db.music))db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();save();goto('dashboard')}});</script><script src="assets/ai-dm.js"></script></body></html>

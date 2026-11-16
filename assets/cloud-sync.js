@@ -23,6 +23,18 @@
     return (h >>> 0).toString(16) + ':' + s.length;
   }
   function fingerprint(value) { return fingerprintText(JSON.stringify(value)); }
+  // PostgreSQL JSONB reorders object keys; array ordering is still significant.
+  // Compare exact document content, not an insertion-order-dependent hash.
+  function canonical(value) {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === 'object') {
+      var sorted = {};
+      Object.keys(value).sort().forEach(function(key){sorted[key]=canonical(value[key]);});
+      return sorted;
+    }
+    return value;
+  }
+  function sameContent(a,b) { return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b)); }
   function meta() {
     try { return JSON.parse(localStorage.getItem(META_KEY) || 'null'); } catch (_) { return null; }
   }
@@ -334,6 +346,22 @@
             syncSuccess(remote.updated_at);
             notify('Updated this browser with newer cloud campaign data.');
           }
+        } else if (sameContent(getLocal(),remote.payload)) {
+          // An old/stale fingerprint can differ even though browser and cloud
+          // contain exactly the same document. Re-establish trusted metadata.
+          linked=true;blocked=false;lastSyncedAt=remote.updated_at;
+          setMeta();syncSuccess(remote.updated_at);
+          notify('Synced. Browser and cloud content match; stale sync warning cleared.');
+        } else if (typeof bridge.getExpectedStartupPreparation === 'function' &&
+                   // Do not silently merge a newer cloud revision with unconfirmed edits.
+                   (!saved || saved.userId === session.user.id) &&
+                   sameContent(getLocal(),bridge.getExpectedStartupPreparation(remote.payload))) {
+          // Local campaign is EXACTLY the authenticated current cloud version
+          // plus the app's known one-time Christmas preparation records.
+          // Never auto-upload arbitrary offline changes; CAS still protects races.
+          linked=true;blocked=false;uploadStartupChanges=true;
+          markPending();
+          notify('Verified startup preparation is the only local difference. Synchronizing safely…');
         } else if (saved && saved.userId === session.user.id && saved.revision === revision &&
                    typeof bridge.getStartupSerializedData === 'function' &&
                    saved.fingerprint === fingerprintText(bridge.getStartupSerializedData())) {
