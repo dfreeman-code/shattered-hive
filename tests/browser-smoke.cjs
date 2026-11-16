@@ -16,14 +16,51 @@ async function check(label, fn) {
  page.on('dialog',d=>d.accept());
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.locator('#nav button').first().waitFor();
- await check('25 unique grouped navigation destinations',async()=>{
-  const data=await page.evaluate(()=>({expected:Object.keys(sections),groups:Object.values(NAV_GROUPS).flat(),buttons:[...document.querySelectorAll('#nav button')].map(b=>b.textContent.trim())}));
-  assert.ok(data.expected.length>=25);assert.deepEqual([...data.groups].sort(),[...data.expected].sort());assert.equal(data.buttons.length,data.expected.length);
-  for(const key of data.groups){
-   await page.locator('#nav button').nth(data.groups.indexOf(key)).click();
+ await check('All navigation destinations reachable through quick links or collapsible groups',async()=>{
+  const data=await page.evaluate(()=>({
+   expected:Object.keys(sections),groups:Object.values(NAV_GROUPS).flat(),quick:NAV_QUICK,
+   buttons:[...document.querySelectorAll('#nav button.nav-route')].map(b=>b.dataset.route),
+   initialNav:navPrefs
+  }));
+  assert.ok(data.expected.length>=25);
+  assert.deepEqual([...data.groups,...data.quick].sort(),[...data.expected].sort());
+  assert.equal(new Set(data.buttons).size,data.expected.length);
+  for(const key of [...data.quick,...data.groups]){
+   const targetGroup=Object.entries((await page.evaluate(()=>NAV_GROUPS))).find(([,keys])=>keys.includes(key))?.[0];
+   if(targetGroup){
+    await page.evaluate(()=>{if(navPrefs.focus){navPrefs.focus=false;navRender()}});
+    const toggle=page.locator('#nav .nav-group-toggle').filter({hasText:targetGroup});
+    if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
+   }
+   await page.locator('#nav button.nav-route[data-route="'+key+'"]').click();
    assert.equal(await page.evaluate(()=>page),key);
-   assert.equal(await page.locator('#nav button.active').count(),1);
+   assert.equal(await page.locator('#nav button.nav-route.active').count(),1);
   }
+ });
+ await check('Sidebar group, session focus and visibility preferences preserve records',async()=>{
+  await page.evaluate(()=>goto('dashboard'));
+  const before=await page.evaluate(()=>JSON.stringify({
+   campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,quests:db.quests,
+   sessions:db.sessions,decisions:db.decisions,maps:db.maps
+  }));
+  await page.locator('#nav .nav-group-toggle').filter({hasText:'Characters'}).click();
+  assert.equal(await page.locator('#nav .nav-group-toggle').filter({hasText:'Characters'}).getAttribute('aria-expanded'),'true');
+  await page.locator('#nav .nav-focus-toggle').click();
+  assert.equal(await page.locator('#nav .nav-group').count(),0);
+  assert.equal(await page.locator('#nav .nav-shortcut').count(),4);
+  await page.locator('#nav .nav-focus-toggle').click();
+  assert.equal(await page.locator('#nav .nav-group-toggle').filter({hasText:'Characters'}).getAttribute('aria-expanded'),'true');
+  await page.locator('#nav-collapse-toggle').click();
+  assert.equal(await page.locator('.shell.nav-closed').count(),1);
+  await page.locator('#nav-collapse-toggle').click();
+  assert.equal(await page.locator('.shell.nav-closed').count(),0);
+  await page.reload({waitUntil:'domcontentloaded'});
+  assert.equal(await page.locator('#nav .nav-group-toggle').filter({hasText:'Characters'}).getAttribute('aria-expanded'),'true');
+  const after=await page.evaluate(()=>JSON.stringify({
+   campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,quests:db.quests,
+   sessions:db.sessions,decisions:db.decisions,maps:db.maps
+  }));
+  assert.equal(after,before);
  });
  await check('Create and edit PC in isolated storage',async()=>{
   await page.evaluate(()=>goto('pcs'));
@@ -105,9 +142,9 @@ async function check(label, fn) {
  await check('Tablet viewport navigation accessible',async()=>{
   await page.setViewportSize({width:768,height:1024});
   await page.evaluate(()=>goto('maps'));
-  assert.equal(await page.locator('#nav button').count(),await page.evaluate(()=>Object.keys(sections).length));
-  await page.locator('#nav button').last().scrollIntoViewIfNeeded();
-  await page.locator('#nav button').last().click();
+  assert.equal(await page.locator('#nav button.nav-route').count(),await page.evaluate(()=>Object.keys(sections).length));
+  await page.locator('#nav button.nav-route[data-route="settings"]').scrollIntoViewIfNeeded();
+  await page.locator('#nav button.nav-route[data-route="settings"]').click();
   assert.equal(await page.evaluate(()=>page),'settings');
  });
  await check('Command Center scratchpad persists without blur',async()=>{
