@@ -876,7 +876,7 @@ function adventureRunnerPage(){
   const populated=key==='all'||(typeof scene[key]==='string'&&scene[key].trim());
   return '<button type="button" class="ar-tab '+(adventureSpotlight===key?'ar-selected':'')+
    '" aria-pressed="'+(adventureSpotlight===key)+'" onclick="adventureRunnerSpotlight(\''+key+'\')">'+esc(readingLabels[key])+
-   (key==='all'?'':'<span class="ar-tab-status" aria-label="'+(populated?'Text available':'No text yet')+'" title="'+(populated?'Text available':'No text yet')+'">'+(populated?'●':'○')+'</span>')+'</button>';
+   (key==='all'?'':'<span class="ar-tab-status" aria-hidden="true" title="'+(populated?'Text available':'No text yet')+'">'+(populated?'●':'○')+'</span>')+'</button>';
  };
  const focusTabs='<div class="ar-priority-cues" role="group" aria-label="At-the-table quick cues">'+
   '<div class="ar-cues-heading">At the table <span class="muted">Narration · dialogue · checks · choices</span></div>'+
