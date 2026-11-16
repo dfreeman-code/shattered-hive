@@ -119,7 +119,7 @@ const base='http://127.0.0.1:8765/';
    await page.evaluate(()=>mapSetView('dm'));
    await page.getByRole('group',{name:'DM session shortcuts'}).getByRole('button',{name:'← Adventure Runner'}).click();
    assert.equal(await page.evaluate(()=>adventurePreviewIndex),3);
-   assert.equal(await page.evaluate(()=>mapState().scenes.find(m=>m.id===mapId).revealed.includes(37)),true);
+   assert.equal(await page.evaluate(id=>mapState().scenes.find(m=>m.id===id).revealed.includes(37),mapId),true);
   });
   await check('Combat preview logs turns without archiving a played encounter',async()=>{
    await page.evaluate(()=>{goto('combat');combatAddPreset('spore');combatNext()});
