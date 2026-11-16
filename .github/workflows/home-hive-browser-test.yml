@@ -1,7 +1,7 @@
 name: Home Hive browser smoke test
 on:
   push:
-    branches: [feature/home-hive-official-map, fix/home-hive-view-distinction, fix/map-view-controls-sidebar, feature/pc-character-linked-tokens, feature/christmas-caper-official-maps, feature/interactive-dm-map-markers, feature/christmas-caper-final-two-maps]
+    branches: [feature/home-hive-official-map, fix/home-hive-view-distinction, fix/map-view-controls-sidebar, feature/pc-character-linked-tokens, feature/christmas-caper-official-maps, feature/interactive-dm-map-markers, feature/christmas-caper-final-two-maps, feature/christmas-caper-script-linked-markers]
   workflow_dispatch:
 jobs:
   browser-test:
