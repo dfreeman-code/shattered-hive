@@ -1078,6 +1078,113 @@ function heroPaladinLevelOnePreview(pc){
  (introExists?'<p class="muted">A saved introduction already exists and will not be replaced.</p>':'')+'</section>';
 }
 
+
+/* Level-1 Antfolk Fighter proposal. Guard all existing player records and DM drafts. */
+const HERO_FIGHTER_LEVEL1={
+ scores:{STR:17,DEX:13,CON:15,INT:8,WIS:12,CHA:10},
+ saves:['STR','CON'],
+ skills:['Athletics','Intimidation','Perception','Insight','Survival'],
+ mastery:['Greatsword','Flail','Javelin']
+};
+function heroFighterIsCandidate(pc){
+ return heroBuildMatch(pc)?.cls==='Fighter'&&pc.species==='Antfolk'&&Number(pc.level||1)===1;
+}
+function heroFighterSheetUntouched(pc){
+ if(!heroFighterIsCandidate(pc))return false;
+ if(pc.class&&pc.class!=='Unassigned'&&pc.class!=='Fighter')return false;
+ if(pc.background&&pc.background!=='Soldier')return false;
+ if(pc.subclass)return false;
+ if(['hp','maxHp','ac'].some(k=>pc[k]!==undefined&&pc[k]!==null&&pc[k]!==''))return false;
+ const sh=db.sheets?.[pc.id];
+ if(!sh)return true;
+ if(!sh.scores||Object.values(sh.scores).some(v=>Number(v)!==10))return false;
+ if(['saves','skills','expertise'].some(k=>(sh[k]||[]).length))return false;
+ if(Object.values(sh.spellSlots||{}).some(v=>Number(v)!==0))return false;
+ if(['spellAbility','spellPrepared','features','inventory','attacks','notes','proficiencies','speciesNotes','conditions','characterPortrait'].some(k=>String(sh[k]||'').trim()))return false;
+ if(['hp','ac','maxHp','currentHp'].some(k=>sh[k]!==undefined&&sh[k]!==null&&sh[k]!==''&&Number(sh[k])!==10))return false;
+ if(sh.hitDiceUsed||sh.deathSuccess||sh.deathFailure||sh.tempHp||sh.initiativeBonus||sh.passiveBonus)return false;
+ return true;
+}
+function heroFighterApplySheet(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroFighterIsCandidate(pc))return;
+ if(!heroFighterSheetUntouched(pc))return alert('This Fighter has existing customized sheet data. Nothing was overwritten. Review and enter changes individually.');
+ if(!confirm('Apply the proposed level-1 Antfolk Fighter/Soldier build for '+pc.name+'? This sets starting scores, skills, HP, armor and equipment guidance, but preserves all original Bug Hero details, notes and campaign decisions.'))return;
+ const sh=clone(db.sheets?.[pc.id]||defaultSheet(pc));
+ sh.scores={...HERO_FIGHTER_LEVEL1.scores};
+ sh.saves=[...HERO_FIGHTER_LEVEL1.saves];
+ sh.skills=[...HERO_FIGHTER_LEVEL1.skills];sh.expertise=[];
+ sh.spellAbility='';sh.spellSlots={};sh.spellPrepared='';
+ sh.features='Fighter level 1 (2024): Fighting Style (Defense, +1 AC while wearing armor), Second Wind (2 uses; Bonus Action heal 1d10+1 HP; regain 1 use on a Short Rest and all on a Long Rest), Weapon Mastery (Greatsword, Flail, Javelin).\n'+
+  'Weapon Mastery: Greatsword (Graze), Flail (Sap), Javelin (Slow). Check each mastery property against the official weapon table when using it.\n'+
+  'Soldier origin: Savage Attacker (once per turn when a weapon attack hits, roll weapon damage dice twice and choose one roll), Athletics and Intimidation, one Gaming Set. Standard array before origin: STR 15, CON 14, DEX 13, WIS 12, CHA 10, INT 8; Soldier +2 STR and +1 CON.\n'+
+  'Antfolk (homebrew): Colony Cooperation (Bonus Action Help for ally within 5 feet, proficiency bonus uses per Long Rest); Tunnel Sense (proficiency in Survival chosen over Investigation).\n'+
+  'Trap-jaw bite and defensive scent are player-created appearance/story details; NO automatic extra weapon attack, damage, poison, aura, resistance or status effect is granted. Fighter subclass starts at level 3.';
+ sh.inventory='Fighter class equipment option A: Chain Mail, Greatsword, Flail, 8 Javelins, Dungeoneer’s Pack, 4 GP.\n'+
+  'Soldier background equipment option A: Spear, Shortbow, 20 Arrows, one Gaming Set, Healer’s Kit, Quiver, Traveler’s Clothes, 14 GP.\n'+
+  'Player-chosen platform shoes and red/black armor are appearance details without a height, reach, speed or defense bonus. The requested sword and shield can be a later alternate loadout: a Greatsword requires two hands to attack and cannot be used simultaneously with a wielded shield.';
+ sh.proficiencies='Fighter: Strength and Constitution saves; all armor and shields; simple and martial weapons.\n'+
+  'Fighter skills: Perception and Insight. Soldier skills: Athletics and Intimidation. Antfolk Tunnel Sense: Survival. Soldier gaming set type is the player’s choice.\n'+
+  'Fighter Weapon Mastery: Greatsword, Flail, Javelin; Defense Fighting Style feat.';
+ sh.attacks='Greatsword: +5 to hit, 2d6+3 slashing, Two-Handed, Heavy, Graze mastery (confirm rules).\n'+
+  'Flail: +5 to hit, 1d8+3 bludgeoning, Sap mastery.\n'+
+  'Javelin: +5 to hit, 1d6+3 piercing, thrown 30/120 ft, Slow mastery.\n'+
+  'Savage Attacker: once on your turn when you hit with a weapon, roll its damage dice twice and use one total; no extra attack. Second Wind is a healing Bonus Action.';
+ sh.currentHp=12;sh.maxHp=12;sh.ac=17;sh.speed=30;sh.hitDiceUsed=0;
+ pc.class='Fighter';pc.background='Soldier';pc.hp=12;pc.maxHp=12;pc.ac=17;pc.constitution=2;
+ db.sheets ||= {};db.sheets[pc.id]=sh;
+ save();render();toast('Level-1 Fighter proposal applied; review weapon choices and appearance');
+}
+function heroFighterPrologueDraft(pc){
+ const name=String(pc.name||'the brave little Antfolk'),hero=pc.bugHero||{};
+ return {
+  readAloud:'Just before the lights of Hearthhollow brighten for Starfall Eve, '+name+
+   ' stands before an icy channel between two roots. An enormous human-world boot print has cracked the frozen bank. Beyond the water, a frightened seed-courier struggles to pull a bundle free of the slush.\n\nA greatsword glints against dark red-and-black armor. Tall platform shoes add a little height, though they cannot hide the sound of rushing water. The courier looks up. “You look strong. Can you help?”\n\n'+name+', what do you do?',
+  dmNotes:'Three to five minutes, no automatic combat. This Trap-Jaw Ant is funny, super strong, uses armor and a greatsword, wears platform shoes to appear taller, fears water and dreams of greater height. Invite the player to invent a joke and decide whether Jawshua approaches the stream, searches for a bridge, or asks for assistance. The player-mentioned unusual trap-jaw and scent defenses are narrative until the DM approves mechanics. Do not impose water-fear penalties or decide Jawshua’s reaction.',
+  npcDialogue:'Seed-courier: “I was bringing the last decorations to Hearthhollow. Then the ice broke! If you get this bundle out, I can show you a dry path toward the celebration.”',
+  checks:'No roll is required to notice the courier or reach Hearthhollow. Optional DC 11 Athletics to lift a fallen twig safely, DC 11 Perception to notice a hidden root bridge, or DC 11 Survival to pick a dry route. Failed rolls introduce a harmless complication, never drown the courier or end the scene.',
+  encounters:'Noncombat rescue challenge. No mandatory initiative or combat damage. Heavy armor does not grant swimming ability; the player should always have a practical option that avoids the water.',
+  clues:'The seed-courier’s decorations carry six pinpricks of fading light, quietly foreshadowing the Starheart mystery but revealing nothing of King Vesper.',
+  choices:'Try a strength-based rescue, leap across, build a bridge, ask a nearby bug for help, invent a daring trick, or choose another approach. Let the player decide what makes the hero feel brave and whether they share the incident later.',
+  music:'Playful low brass and soft winter percussion under running-water ambience, shifting into bright Starfall bells after the rescue.',
+  rewards:'A possible new acquaintance and an invitation toward Hearthhollow. No automatic equipment, feats, XP, character commitments, player decisions or session progress.'
+ };
+}
+function heroFighterApplyPrologue(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroFighterIsCandidate(pc))return;
+ const key='hero:'+pc.id;
+ if(db.christmasPrologueDraft?.scenes?.[key])return alert('A saved introduction already exists for this hero. No text was overwritten.');
+ if(!confirm('Save The Crossing of Little Giants as a suggested solo intro for '+pc.name+'? This is DM preparation only and does not record player choices.'))return;
+ db.christmasPrologueDraft ||= {scenes:{}};
+ db.christmasPrologueDraft.scenes ||= {};
+ db.christmasPrologueDraft.scenes[key]=heroFighterPrologueDraft(pc);
+ save();render();toast('Fighter solo introduction draft saved');
+}
+function heroFighterLevelOnePreview(pc){
+ if(!heroFighterIsCandidate(pc))return '';
+ const eligible=heroFighterSheetUntouched(pc);
+ const introExists=!!db.christmasPrologueDraft?.scenes?.['hero:'+pc.id];
+ const rows=[
+  ['Ability scores','STR 17 · DEX 13 · CON 15 · INT 8 · WIS 12 · CHA 10'],
+  ['Combat','12 HP · AC 17 (chain mail AC 16 + Defense style +1) · Initiative +1 · Proficiency +2'],
+  ['Fighter features','Fighting Style: Defense; Second Wind twice per Long Rest (one restored on Short Rest); three Weapon Masteries'],
+  ['Weapon and damage','Greatsword +5 to hit, 2d6+3 slashing. Fighter also trained in Flail and Javelin; Greatsword is two-handed, so no shield while attacking with it.'],
+  ['Soldier background','Savage Attacker origin feat; Athletics and Intimidation, gaming set; +2 STR and +1 CON'],
+  ['Saving throws and skills','STR/CON saves; Perception and Insight (Fighter), Athletics and Intimidation (Soldier), Survival (Antfolk Tunnel Sense)'],
+  ['Antfolk homebrew','Colony Cooperation: Bonus Action Help for ally within 5 ft, 2 uses/Long Rest; Tunnel Sense: Survival. Trap-jaws/scent do not automatically add attack or damage effects.'],
+  ['Starting equipment','Fighter option A: chain mail, greatsword, flail, eight javelins, dungeoneer’s pack, 4 GP; Soldier option A chosen separately.'],
+  ['Personal solo intro','The Crossing of Little Giants: help a courier near water without forcing a fear response; platform shoes and humor are roleplay, not mechanical bonuses.']
+ ];
+ return '<section class="hero-wizard-draft hero-fighter-draft" aria-label="Level 1 Fighter detailed draft"><h4>Level-1 Trap-Jaw Ant Fighter sheet — proposed, not applied</h4>'+
+ '<div class="hero-build-grid">'+rows.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
+ '<p class="muted">2024 Fighter begins with Fighting Style, Second Wind, and 3 Weapon Masteries. Action Surge is level 2; subclass is level 3. Custom Antfolk features remain subject to the campaign’s homebrew approval.</p>'+
+ '<div class="actions"><button class="btn secondary" type="button" onclick="heroFighterApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Fighter sheet</button>'+
+ '<button class="btn secondary" type="button" onclick="heroFighterApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
+ (!eligible?'<p class="muted">Automatic setup unavailable because an existing character sheet has recorded data. Nothing will be overwritten.</p>':'')+
+ (introExists?'<p class="muted">This hero already has a saved prologue, protected from replacement.</p>':'')+'</section>';
+}
+
 function heroBuildWorkshop(pc){
  const proposal=heroBuildMatch(pc);
  if(!proposal)return '';
@@ -1092,7 +1199,7 @@ function heroBuildWorkshop(pc){
  return '<details class="card hero-build-workshop" id="hero-build-workshop"><summary>Character Build Workshop · '+esc(proposal.cls)+' (draft)</summary>'+
   '<p class="muted">Suggestions based on this hero’s original Bug Hero Creator answers. Review with the player first. No ability scores, spell selections, equipment, notes or existing character data are changed automatically.</p>'+
   '<div class="hero-build-grid">'+fields.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
-  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+heroWarlockLevelOnePreview(pc)+heroRangerLevelOnePreview(pc)+heroPaladinLevelOnePreview(pc)+
+  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+heroWarlockLevelOnePreview(pc)+heroRangerLevelOnePreview(pc)+heroPaladinLevelOnePreview(pc)+heroFighterLevelOnePreview(pc)+
   '<div class="actions"><button type="button" class="btn secondary" onclick="heroBuildApprove('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>'+(current===proposal.cls?'Confirm background only':'Apply approved class and background')+'</button></div>'+
   (!eligible?'<p class="muted">This hero already has a different class. Change it manually only if the player approves.</p>':'')+
   '<p class="muted">2024 rules reference: D&D Beyond Basic Rules (Character Classes and Character Origins). Subclasses begin at level 3. Custom insect species traits remain unchanged.</p></details>';

@@ -488,6 +488,68 @@ async function ready(url){
   assert.equal(ps.pcs[1].notes,'Manual build must remain');
   await paladinContext.close();
 
+
+  // Fighter final-hero workshop: disposable browser-only PC records, no cloud campaign access.
+  const fighterContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const fighterPage=await fighterContext.newPage();
+  fighterPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
+  await fighterPage.goto('http://127.0.0.1:8767/index.html');
+  await fighterPage.evaluate(()=>{
+   const d=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+   d.pcs=[
+    {id:'test-fighter',name:'Test Trap-Jaw Hero',class:'Unassigned',background:'',level:1,species:'Antfolk',status:'Active',
+     hp:'',maxHp:'',ac:'',notes:'Do not overwrite the original family character notes',
+     bugHero:{power:'Super strength',gear:'Sword and shield',trait:'Funny',fear:'Water',dream:'Wish I were taller',
+      extra:'Trap Jaw Ant, natural scent defenses',outfit:'Armor, great sword and platform shoes'}},
+    {id:'test-fighter-custom',name:'Customized Ant Fighter',class:'Fighter',background:'Soldier',level:1,species:'Antfolk',status:'Active',
+     hp:15,maxHp:15,ac:18,notes:'My manually chosen armor stays',
+     bugHero:{power:'Super strength',gear:'Greatsword'}}
+   ];
+   localStorage.setItem('shattered-hive-v1',JSON.stringify(d));
+  });
+  await fighterPage.reload();
+  await fighterPage.evaluate(()=>goto('sheet'));
+  await fighterPage.locator('.card.section select').first().selectOption('test-fighter');
+  await fighterPage.locator('#hero-build-workshop summary').click();
+  assert.match(await fighterPage.locator('#hero-build-workshop').innerText(),/Crossing of Little Giants/);
+  assert.match(await fighterPage.locator('#hero-build-workshop').innerText(),/CON 15/);
+  const fighterState=()=>fighterPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  let fs=await fighterState();
+  assert.equal(fs.pcs[0].class,'Unassigned','Preview cannot automatically change the class');
+  assert.ok(!fs.christmasPrologueDraft?.scenes?.['hero:test-fighter'],'Preview cannot choose a story outcome');
+  await fighterPage.getByRole('button',{name:'Apply approved level-1 Fighter sheet'}).click();
+  fs=await fighterState();
+  assert.equal(fs.pcs[0].class,'Fighter');
+  assert.equal(fs.pcs[0].background,'Soldier');
+  assert.equal(fs.pcs[0].hp,12);
+  assert.equal(fs.pcs[0].ac,17);
+  assert.equal(fs.pcs[0].notes,'Do not overwrite the original family character notes');
+  assert.deepEqual(fs.sheets['test-fighter'].scores,{STR:17,DEX:13,CON:15,INT:8,WIS:12,CHA:10});
+  assert.deepEqual(fs.sheets['test-fighter'].saves,['STR','CON']);
+  assert.equal(fs.sheets['test-fighter'].spellAbility,'');
+  assert.match(fs.sheets['test-fighter'].features,/Second Wind/);
+  assert.match(fs.sheets['test-fighter'].features,/Savage Attacker/);
+  assert.match(fs.sheets['test-fighter'].features,/no automatic extra|NO automatic extra/i);
+  assert.equal(fs.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.equal(fs.campaign.session,0);
+  assert.ok(fs.decisions.every(x=>x.status==='Not decided'));
+  await fighterPage.locator('#hero-build-workshop summary').click();
+  await fighterPage.getByRole('button',{name:'Save suggested solo introduction draft'}).click();
+  fs=await fighterState();
+  assert.match(fs.christmasPrologueDraft.scenes['hero:test-fighter'].readAloud,/platform shoes/);
+  assert.match(fs.christmasPrologueDraft.scenes['hero:test-fighter'].dmNotes,/water/);
+  assert.equal(fs.pcs[0].bugHero.dream,'Wish I were taller');
+  await fighterPage.reload();
+  await fighterPage.evaluate(()=>goto('sheet'));
+  await fighterPage.locator('.card.section select').first().selectOption('test-fighter-custom');
+  await fighterPage.locator('#hero-build-workshop summary').click();
+  assert.equal(await fighterPage.getByRole('button',{name:'Apply approved level-1 Fighter sheet'}).isDisabled(),true);
+  fs=await fighterState();
+  assert.equal(fs.pcs[1].hp,15);
+  assert.equal(fs.pcs[1].ac,18);
+  assert.equal(fs.pcs[1].notes,'My manually chosen armor stays');
+  await fighterContext.close();
+
   const after=await read();
   assert.equal(after.campaign.session,0);
   assert.equal(after.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
