@@ -172,7 +172,7 @@ async function ready(url){
    const workshop=wp.locator('#hero-build-workshop');
    assert.ok(await workshop.count(),'Workshop appears for all six hero archetypes');
    await workshop.locator('summary').click();
-   assert.match(await workshop.innerText(),new RegExp('Recommended class\\\\s*'+expected[i]));
+   assert.match(await workshop.innerText(),new RegExp('Recommended class\\s*'+expected[i]));
    assert.match(await workshop.innerText(),/My own fear/);
    assert.match(await workshop.innerText(),/My own dream/);
    if(i===0){
