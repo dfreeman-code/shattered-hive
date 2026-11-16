@@ -188,6 +188,66 @@ async function ready(url){
    }
   }
   await review.close();
+
+  // Wizard workshop runs against disposable fictional PCs only; never the real cloud account.
+  const wizardContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const wiz=await wizardContext.newPage();
+  wiz.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
+  await wiz.goto('http://127.0.0.1:8767/index.html');
+  await wiz.evaluate(()=>{
+    const data=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+    data.pcs=[
+      {id:'test-wizard',name:'Test Silk Scholar',class:'Unassigned',background:'',level:1,species:'Spiderkin',status:'Active',
+       hp:'',ac:'',maxHp:'',notes:'Never overwrite my original player notes',bugHero:{power:'Magic spells',gear:'Magic staff',dream:'Learn forgotten spells',fear:'Lady spiders'}},
+      {id:'test-custom',name:'Custom Spell Scholar',class:'Wizard',background:'Sage',level:1,species:'Spiderkin',status:'Active',
+       hp:9,ac:15,maxHp:9,notes:'An existing build',bugHero:{power:'Magic spells',gear:'Staff'}}];
+    localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
+  });
+  await wiz.reload();
+  await wiz.evaluate(()=>goto('sheet'));
+  await wiz.locator('.card.section select').first().selectOption('test-wizard');
+  const summary=wiz.locator('#hero-build-workshop summary');
+  await summary.click();
+  assert.match(await wiz.locator('#hero-build-workshop').innerText(),/The Forbidden Thread/);
+  assert.match(await wiz.locator('#hero-build-workshop').innerText(),/INT 17/);
+  const getWizardState=()=>wiz.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  let w=await getWizardState();
+  assert.equal(w.pcs[0].class,'Unassigned','Preview cannot apply a class automatically');
+  assert.ok(!w.christmasPrologueDraft?.scenes?.['hero:test-wizard'],'Preview cannot automatically write prologue');
+  await wiz.getByRole('button',{name:'Apply approved level-1 Wizard sheet'}).click();
+  w=await getWizardState();
+  assert.equal(w.pcs[0].class,'Wizard');
+  assert.equal(w.pcs[0].background,'Sage');
+  assert.equal(w.pcs[0].hp,8);
+  assert.equal(w.pcs[0].ac,12);
+  assert.equal(w.pcs[0].notes,'Never overwrite my original player notes');
+  assert.deepEqual(w.sheets['test-wizard'].scores,{STR:8,DEX:14,CON:14,INT:17,WIS:12,CHA:10});
+  assert.deepEqual(w.sheets['test-wizard'].saves,['INT','WIS']);
+  assert.equal(w.sheets['test-wizard'].spellSlots['1'],2);
+  assert.equal(w.sheets['test-wizard'].spellAbility,'INT');
+  assert.match(w.sheets['test-wizard'].spellPrepared,/Find Familiar/);
+  assert.match(w.sheets['test-wizard'].spellPrepared,/Magic Initiate/);
+  assert.equal(w.sheets['test-wizard'].maxHp,8);
+  assert.equal(w.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.ok(w.decisions.every(x=>x.status==='Not decided'));
+  await wiz.locator('#hero-build-workshop summary').click();
+  await wiz.getByRole('button',{name:'Save suggested solo introduction draft'}).click();
+  w=await getWizardState();
+  assert.match(w.christmasPrologueDraft.scenes['hero:test-wizard'].readAloud,/frozen roots/);
+  assert.match(w.christmasPrologueDraft.scenes['hero:test-wizard'].dmNotes,/Learn forgotten spells/);
+  assert.ok(!w.adventureScriptDraft?.scenes?.['a1-scene-01']?.readAloud?.includes('frozen roots'),
+   'Original ten-scene script must not be replaced by the prologue');
+  await wiz.reload();
+  await wiz.evaluate(()=>goto('sheet'));
+  await wiz.locator('.card.section select').first().selectOption('test-custom');
+  await wiz.locator('#hero-build-workshop summary').click();
+  assert.equal(await wiz.getByRole('button',{name:'Apply approved level-1 Wizard sheet'}).isDisabled(),true,
+   'Existing player-created sheet must be protected from overwrite');
+  w=await getWizardState();
+  assert.equal(w.pcs[1].hp,9);
+  assert.equal(w.pcs[1].notes,'An existing build');
+  await wizardContext.close();
+
   const after=await read();
   assert.equal(after.campaign.session,0);
   assert.equal(after.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
