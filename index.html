@@ -259,7 +259,7 @@ const NAV_GROUP_ICONS={"Campaign":"✦","Characters":"♟","Worldbuilding":"✿"
 const NAV_UI_KEY='shattered-hive-nav-ui-v1'; // Device-only UI preferences; never enters campaign JSON or cloud sync.
 function navReadPrefs(){
  try{const stored=JSON.parse(sessionStorage.getItem(NAV_UI_KEY)||'{}');
- return {expanded:stored.expanded!==false,focus:stored.focus===true,open:typeof stored.open==='string'&&Object.hasOwn(NAV_GROUPS,stored.open)?stored.open:'Campaign'};}
+ return {expanded:stored.expanded!==false,focus:stored.focus===true,open:typeof stored.open==='string'&&(stored.open===''||Object.hasOwn(NAV_GROUPS,stored.open))?stored.open:'Campaign'};}
  catch{return {expanded:true,focus:false,open:'Campaign'}}
 }
 let navPrefs=navReadPrefs();
