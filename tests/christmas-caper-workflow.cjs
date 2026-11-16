@@ -343,7 +343,7 @@ async function ready(url){
   assert.equal(ws.sheets['warlock-test'].spellSlots['1'],1);
   assert.equal(ws.sheets['warlock-test'].spellAbility,'CHA');
   assert.match(ws.sheets['warlock-test'].features,/Pact of the Blade/);
-  assert.match(ws.sheets['warlock-test'].proficiencies,/no extra/gi);
+  assert.match(ws.sheets['warlock-test'].proficiencies,/Does not automatically grant shield training/);
   assert.equal(ws.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
   assert.equal(ws.campaign.session,0);
   assert.ok(ws.decisions.every(x=>x.status==='Not decided'));
