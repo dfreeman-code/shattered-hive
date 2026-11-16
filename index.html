@@ -748,6 +748,118 @@ function heroRogueLevelOnePreview(pc){
  (introExists?'<p class="muted">This hero already has a saved introduction. It is protected from replacement.</p>':'')+'</section>';
 }
 
+
+/* Non-destructive suggested build for the martial Spiderkin pact-caster hero. */
+const HERO_WARLOCK_LEVEL1={
+ scores:{STR:10,DEX:14,CON:14,INT:8,WIS:12,CHA:17},
+ saves:['WIS','CHA'],
+ skills:['Deception','Sleight of Hand','Arcana','Intimidation','Athletics','Perception','Stealth'],
+ cantrips:['Eldritch Blast','Minor Illusion'],
+ prepared:['Hex','Armor of Agathys'],
+ invocation:'Pact of the Blade'
+};
+function heroWarlockIsCandidate(pc){
+ return heroBuildMatch(pc)?.cls==='Warlock'&&pc.species==='Spiderkin'&&Number(pc.level||1)===1;
+}
+function heroWarlockSheetUntouched(pc){
+ if(!heroWarlockIsCandidate(pc))return false;
+ if(pc.class&&pc.class!=='Unassigned'&&pc.class!=='Warlock')return false;
+ if(pc.background&&pc.background!=='Charlatan')return false;
+ if(pc.subclass)return false;
+ if(['hp','maxHp','ac'].some(k=>pc[k]!==undefined&&pc[k]!==null&&pc[k]!==''))return false;
+ const sh=db.sheets?.[pc.id];
+ if(!sh)return true;
+ if(!sh.scores||Object.values(sh.scores).some(v=>Number(v)!==10))return false;
+ if(['saves','skills','expertise'].some(k=>(sh[k]||[]).length))return false;
+ if(Object.values(sh.spellSlots||{}).some(v=>Number(v)!==0))return false;
+ if(['spellAbility','spellPrepared','features','inventory','attacks','notes','proficiencies','speciesNotes','conditions','characterPortrait'].some(k=>String(sh[k]||'').trim()))return false;
+ if(['hp','ac','maxHp','currentHp'].some(k=>sh[k]!==undefined&&sh[k]!==null&&sh[k]!==''&&Number(sh[k])!==10))return false;
+ if(sh.hitDiceUsed||sh.deathSuccess||sh.deathFailure||sh.tempHp||sh.initiativeBonus||sh.passiveBonus)return false;
+ return true;
+}
+function heroWarlockApplySheet(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroWarlockIsCandidate(pc))return;
+ if(!heroWarlockSheetUntouched(pc))return alert('This character has existing sheet data. Nothing was overwritten; review and update it manually.');
+ if(!confirm('Apply the proposed level-1 Warlock/Charlatan build for '+pc.name+'? This fills starter scores, spells, skills, HP and AC, and will not replace the player’s existing Bug Hero history, notes or campaign decisions.'))return;
+ const sh=clone(db.sheets?.[pc.id]||defaultSheet(pc));
+ sh.scores={...HERO_WARLOCK_LEVEL1.scores};
+ sh.saves=[...HERO_WARLOCK_LEVEL1.saves];
+ sh.skills=[...HERO_WARLOCK_LEVEL1.skills];
+ sh.expertise=[];
+ sh.spellAbility='CHA';
+ sh.spellSlots={'1':1};
+ sh.spellPrepared='Warlock cantrips (2): '+HERO_WARLOCK_LEVEL1.cantrips.join(', ')+
+  '\nPrepared 1st-level Warlock spells (2): '+HERO_WARLOCK_LEVEL1.prepared.join(', ')+
+  '\nPact Magic: one level-1 spell slot; returns after a Short or Long Rest. Concentration applies to Hex.'+
+  '\nSpell save DC 13, spell attack +5 at Charisma 17 and proficiency +2.';
+ sh.features='Warlock level 1: Pact Magic, 1 Eldritch Invocation: Pact of the Blade (conjure or bond a melee weapon as a Bonus Action, use Charisma for attack and damage, gain proficiency with that pact weapon, use it as a focus).\n'+
+  'Charlatan: Deception and Sleight of Hand; Forgery Kit. Skilled origin feat: choose three extra skills—suggest Athletics, Perception and Stealth. Background +2 Charisma / +1 Constitution.\n'+
+  'Spiderkin (homebrew): Spider Climb (climbing speed equals walking speed; ceilings), Silk Thread (20 ft; proficiency bonus uses per Long Rest; supports 50 lb).\n'+
+  'Patron identity, promises and future subclass remain unresolved for player/DM discussion. A subclass is chosen at level 3, not level 1.';
+ sh.inventory='Warlock class equipment option A: Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb), Book of Occult Lore, Scholar’s Pack, 15 GP.\n'+
+  'Charlatan background equipment option A: Forgery Kit, Costume, Fine Clothes, 15 GP.\n'+
+  'Pact of the Blade can conjure a scimitar as the chosen bonded weapon. Two daggers match the player concept. Gold and platinum armor, fire-ant shield and toenail scimitar are visual concepts; shield proficiency or extra armor proficiency is NOT automatically granted. Confirm any physical items and their effects with the DM.';
+ sh.proficiencies='Warlock: Wisdom and Charisma saving throws; light armor; simple weapons. Skills Arcana and Intimidation (Warlock), Deception and Sleight of Hand (Charlatan), Athletics, Perception, Stealth (Skilled origin feat). Forgery Kit.\n'+
+  'Pact of the Blade: proficiency with the bonded weapon; it can be a scimitar and use CHA for attacks and damage. Does not automatically grant shield training or weapon mastery.';
+ sh.attacks='Pact scimitar: +5 to hit, 1d6+3 slashing (or Necrotic/Psychic/Radiant via Pact of the Blade); melee. Not a magical second attack.\n'+
+  'Eldritch Blast: +5 ranged spell attack, 1d10 force. Daggers (if used without pact bond): +4 to hit, 1d4+2 piercing when using Dexterity. Shield not equipped as Warlock lacks shield training by default.';
+ sh.currentHp=10;sh.maxHp=10;sh.ac=13;sh.speed=30;sh.hitDiceUsed=0;
+ pc.class='Warlock';pc.background='Charlatan';pc.hp=10;pc.maxHp=10;pc.ac=13;pc.constitution=2;
+ db.sheets ||= {};
+ db.sheets[pc.id]=sh;
+ save();render();toast('Level-1 Warlock proposal applied; review patron and equipment');
+}
+function heroWarlockPrologueDraft(pc){
+ const name=String(pc.name||'the mischievous Spiderkin'),hero=pc.bugHero||{};
+ return {
+  readAloud:'Beneath the great tree, where human ornaments loom like golden moons, '+name+
+   ' crouches beside a fragment of polished glass. Gold and platinum glimmer across old armor, and twin little daggers catch the reflected starlight. A scimitar-shaped shadow seems to move inside the glass, though the weapon itself is nowhere in sight.\n\nA voice arrives as quietly as falling snow: “Do you wish to be remembered above all my other champions?” The glass shows six tiny lights, then goes dark.\n\n'+name+', what do you say—or do?',
+  dmNotes:'A 3–5 minute spotlight. The player describes this hero as mischievous, wanting to be the favorite of a patron, afraid of being afraid, and aspiring to super strength and martial Warlock abilities. The offer is ambiguous: do not decide the patron’s identity, affiliation or motives; it need not be King Vesper. Invite the player to describe their pact, if known, and whether the voice sounds familiar. The response, acceptance and any relationship to the patron belong to the player, not this draft.',
+  npcDialogue:'Unseen voice (optional): “I offer no crown. Only a chance to prove what you already believe about yourself.” If the player refuses, the voice falls silent without punishment.',
+  checks:'No roll to hear the voice or find the Hearthhollow gathering. Optional DC 11 Arcana to recognize the glass as a conduit for pact-like magic; DC 11 Insight to notice the voice is withholding information. A failed check should not identify the patron or close off the story.',
+  encounters:'Tense conversation and a harmless reflection puzzle. No solo combat, automatic pact obligation, spell use, or forced character decision. Pact weapon imagery is atmospheric until the player approves the character sheet.',
+  clues:'A reflected pattern of six lights provides an early connection to Starfall Eve. Who sent it, whether it is an omen or a deception, and how it connects to the larger mystery are deliberately unresolved.',
+  choices:'Answer the voice, question it, ignore it, examine the glass, or invent another response. The patron’s favoritism is a motivation, not a predetermined reward. Record actual decisions only during play.',
+  music:'Subtle glass chimes and low shadowy strings under distant Christmas bells. Let the player’s answer have a moment of quiet.',
+  rewards:'A personal mystery and an invitation toward Hearthhollow. No compelled patron contract, free item, treasure, experience, or recorded game progress.'
+ };
+}
+function heroWarlockApplyPrologue(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroWarlockIsCandidate(pc))return;
+ const key='hero:'+pc.id;
+ if(db.christmasPrologueDraft?.scenes?.[key])return alert('A saved introduction already exists for this hero and will not be overwritten.');
+ if(!confirm('Save The Patron’s Favorite as a proposed DM-only solo introduction for '+pc.name+'? Player decisions remain open and no campaign progress is recorded.'))return;
+ db.christmasPrologueDraft ||= {scenes:{}};
+ db.christmasPrologueDraft.scenes ||= {};
+ db.christmasPrologueDraft.scenes[key]=heroWarlockPrologueDraft(pc);
+ save();render();toast('Warlock solo introduction draft saved');
+}
+function heroWarlockLevelOnePreview(pc){
+ if(!heroWarlockIsCandidate(pc))return '';
+ const eligible=heroWarlockSheetUntouched(pc);
+ const introExists=!!db.christmasPrologueDraft?.scenes?.['hero:'+pc.id];
+ const rows=[
+  ['Scores','STR 10 · DEX 14 · CON 14 · INT 8 · WIS 12 · CHA 17'],
+  ['Combat','10 HP · AC 13 in leather armor · Initiative +2 · Proficiency +2'],
+  ['Spellcasting','Spell attack +5 · Save DC 13 · 2 cantrips · 2 prepared Warlock spells · one level-1 Pact Magic slot (refreshes on Short or Long Rest)'],
+  ['Cantrips and spells',HERO_WARLOCK_LEVEL1.cantrips.join(', ')+'; '+HERO_WARLOCK_LEVEL1.prepared.join(', ')],
+  ['Martial invocation','Pact of the Blade at level 1: pact scimitar with Charisma +5 to hit, 1d6+3 damage; no weapon mastery or additional attack'],
+  ['Charlatan origin','Skilled feat (three additional skills), Deception, Sleight of Hand, Forgery Kit; suggested +2 CHA / +1 CON'],
+  ['Saves and skills','WIS/CHA saves; Arcana, Intimidation, Deception, Sleight of Hand, Athletics, Perception, Stealth'],
+  ['Spiderkin','Spider Climb and Silk Thread (existing homebrew; DM review). Fire-ant shield and ornate armor do not grant free mechanical proficiencies.'],
+  ['Patron mystery','The Patron’s Favorite: an unknown voice, a mirrored scimitar and six mysterious lights; the player determines how they respond. Patron identity and level-3 subclass remain open.']
+ ];
+ return '<section class="hero-wizard-draft hero-warlock-draft" aria-label="Level 1 Warlock detailed draft"><h4>Level-1 martial Spiderkin Warlock sheet — proposed, not applied</h4>'+
+ '<div class="hero-build-grid">'+rows.map(([label,value])=>'<div><b>'+esc(label)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
+ '<p class="muted">Warlock (2024): 1 invocation and 1 Pact Magic slot at level 1; patron subclass at level 3. A pact scimitar is valid, while shield proficiency is not automatically granted. All homebrew traits and equipment flavor require DM approval.</p>'+
+ '<div class="actions"><button class="btn secondary" type="button" onclick="heroWarlockApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Warlock sheet</button>'+
+ '<button class="btn secondary" type="button" onclick="heroWarlockApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
+ (!eligible?'<p class="muted">Automatic sheet setup is disabled because existing values require individual review. Nothing was overwritten.</p>':'')+
+ (introExists?'<p class="muted">This hero already has a saved prologue, which is protected from replacement.</p>':'')+'</section>';
+}
+
 function heroBuildWorkshop(pc){
  const proposal=heroBuildMatch(pc);
  if(!proposal)return '';
@@ -762,7 +874,7 @@ function heroBuildWorkshop(pc){
  return '<details class="card hero-build-workshop" id="hero-build-workshop"><summary>Character Build Workshop · '+esc(proposal.cls)+' (draft)</summary>'+
   '<p class="muted">Suggestions based on this hero’s original Bug Hero Creator answers. Review with the player first. No ability scores, spell selections, equipment, notes or existing character data are changed automatically.</p>'+
   '<div class="hero-build-grid">'+fields.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
-  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+
+  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+heroWarlockLevelOnePreview(pc)+
   '<div class="actions"><button type="button" class="btn secondary" onclick="heroBuildApprove('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>'+(current===proposal.cls?'Confirm background only':'Apply approved class and background')+'</button></div>'+
   (!eligible?'<p class="muted">This hero already has a different class. Change it manually only if the player approves.</p>':'')+
   '<p class="muted">2024 rules reference: D&D Beyond Basic Rules (Character Classes and Character Origins). Subclasses begin at level 3. Custom insect species traits remain unchanged.</p></details>';
