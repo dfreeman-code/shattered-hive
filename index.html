@@ -975,7 +975,7 @@ function heroRangerLevelOnePreview(pc){
 
 /* Suggested Guard Paladin; no automatic updates or changes to existing player data. */
 const HERO_PALADIN_LEVEL1={
- scores:{STR:17,DEX:8,CON:13,INT:10,WIS:12,CHA:14},
+ scores:{STR:17,DEX:8,CON:13,INT:10,WIS:13,CHA:14},
  saves:['WIS','CHA'],
  skills:['Athletics','Perception','Insight','Persuasion'],
  prepared:['Bless','Shield of Faith'],
@@ -1014,7 +1014,7 @@ function heroPaladinApplySheet(id){
   '\nLay on Hands: 5 HP healing pool per Long Rest; use a Bonus Action to touch a creature or expend 5 HP to remove the Poisoned condition. Track separately from spell slots.'+
   '\nNo Divine Smite at level 1 (Paladin’s Smite and Fighting Style start at level 2; Sacred Oath at level 3).';
  sh.features='Paladin level 1 (2024): Lay on Hands (5 HP pool, Bonus Action), Spellcasting (2 level-1 spell slots, 2 prepared spells), Weapon Mastery (Longsword, Javelin).\n'+
-  'Guard origin: Alert feat (+2 initiative from proficiency), Athletics and Perception, choice of one Gaming Set. Guard ability boosts: +2 STR and +1 WIS. Standard array before background: STR 15, CHA 14, CON 13, WIS 11 is not a legal standard-array value; final valid distribution STR 17 (15+2), CHA 14, CON 13, WIS 12 (12+0), INT 10, DEX 8. The remaining +1 Guard boost must instead go to a permitted ability without exceeding the array totals. Confirm exact final score distribution before using this draft.\n'+
+  'Guard origin: Alert feat (+2 initiative from proficiency), Athletics and Perception, choice of one Gaming Set. Guard ability boosts: +2 STR and +1 WIS. Standard array before background: STR 15, CHA 14, CON 13, WIS 12, INT 10, DEX 8. Guard boosts +2 STR and +1 WIS, yielding STR 17, CHA 14, CON 13, WIS 13, INT 10, DEX 8.\n'+
   'Beetlekin homebrew: Shell Armor (unarmored AC 13 + DEX modifier max +2; shields apply), Powerful Build (count as one size larger for lifting/carrying/pushing/dragging).\n'+
   'A Paladin’s Shield and armor do not stack with the Beetlekin unarmored shell formula; choose applicable armor calculation. An oath is not selected until level 3.';
  sh.inventory='Paladin class equipment option A: Chain Mail, Shield, Longsword, 6 Javelins, Holy Symbol, Priest’s Pack and 9 GP.\n'+
@@ -1060,11 +1060,11 @@ function heroPaladinLevelOnePreview(pc){
  const eligible=heroPaladinSheetUntouched(pc);
  const introExists=!!db.christmasPrologueDraft?.scenes?.['hero:'+pc.id];
  const rows=[
- ['Ability scores','STR 17 · DEX 8 · CON 13 · INT 10 · WIS 12 · CHA 14'],
+ ['Ability scores','STR 17 · DEX 8 · CON 13 · INT 10 · WIS 13 · CHA 14'],
  ['Combat','11 HP · AC 18 (chain mail and shield) · Initiative +1 (DEX −1, Alert +2) · Proficiency +2'],
  ['Paladin magic','2 first-level slots · 2 prepared spells (Bless and Shield of Faith); spell attack +4 · save DC 12'],
  ['Healing','Lay on Hands: 5 HP pool per Long Rest, Bonus Action. No Smite, Fighting Style, oath or aura yet.'],
- ['Guard background','Alert feat; Athletics, Perception; one Gaming Set. Guard only boosts STR, INT or WIS; check final ability bonuses when approving.'],
+ ['Guard background','Alert feat; Athletics, Perception; one Gaming Set. Guard boosts +2 STR / +1 WIS from a valid standard array; ability scores remain suggestions until approval.'],
  ['Weapon mastery','Longsword and Javelin; Red Ant Sword uses longsword stats. +5 to hit, 1d8+3 one-handed.'],
  ['Beetlekin','Shell Armor and Powerful Build are homebrew. Shell AC is an alternative to chain mail, not additive.'],
  ['Solo introduction','The Guardian and the Dry Grass: a lost lantern-bug asks for help beyond a patch of dry grass. Personal fears and choices belong to the player.']
