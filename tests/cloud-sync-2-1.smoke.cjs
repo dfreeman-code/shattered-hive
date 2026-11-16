@@ -104,6 +104,7 @@ async function bootBrowser(browser,width,initial,remote,options={}){
    // Expired refresh credentials must NEVER discard the saved campaign.
    {
      const {page,ctx,state,errors}=await bootBrowser(browser,1280,seed,seed,{expiresSoon:true,failRefresh:true});
+     await page.evaluate(()=>goto('settings'));
      await page.waitForFunction(()=>document.querySelector('#cloud-sync-status')?.textContent.includes('Cloud connection error'));
      assert.equal((await page.evaluate(k=>JSON.parse(localStorage.getItem(k)),DATA)).pcs.length,4);
      assert.equal(state.writes,0);
