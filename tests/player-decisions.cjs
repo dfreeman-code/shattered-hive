@@ -1,5 +1,16 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
+async function navigateSidebar(page,label){
+ const key=await page.evaluate(text=>Object.keys(sections).find(k=>sections[k].replace(/^[^ ]+ /,'')===text),label);
+ if(!key)throw Error('Missing sidebar route for '+label);
+ const group=await page.evaluate(k=>Object.entries(NAV_GROUPS).find(([,keys])=>keys.includes(k))?.[0]||'',key);
+ if(group){
+  const toggle=page.locator('#nav .nav-group-toggle[data-group="'+group+'"]');
+  if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
+ }
+ await page.locator('#nav button.nav-route[data-route="'+key+'"]').click();
+}
+
 const { spawn } = require('node:child_process');
 const fs = require('node:fs/promises');
 const http = require('node:http');
@@ -35,12 +46,12 @@ async function ready(url) {
   assert.match(migrated.campaign.description,/Vesper/);
   assert.ok(!migrated.quests.some(x=>x.id==='q1'),'Old starter quest must not appear active');
   assert.ok(!migrated.npcs.some(x=>x.id==='n7'),'Old villain must not appear active');
-  await page.getByRole('button',{name:/Story Archive/}).click();
+  await navigateSidebar(page,'Story Archive');
   assert.match(await page.locator('#app').innerText(),/Queen Aurelia & Mycora/);
   const [archiveDownload]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Export archived story'}).click()]);
   const archiveExport=JSON.parse(await fs.readFile(await archiveDownload.path(),'utf8'));
   assert.equal(archiveExport.archive.records.npcs.length,10);
-  await page.getByRole('button',{name:/Player Decisions/}).click();
+  await navigateSidebar(page,'Player Decisions');
   assert.match(await page.locator('#app').innerText(),/King Vesper, the Hollow King/);
   let state=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1'))||null);
   // Initial state is only committed after the first save. The UI must still show starter prompts.
@@ -53,7 +64,7 @@ async function ready(url) {
   await page.getByRole('button',{name:'Save record'}).click();
   assert.equal(await page.locator('#app .kpi').first().innerText(),'1');
   await page.reload();
-  await page.getByRole('button',{name:/Player Decisions/}).click();
+  await navigateSidebar(page,'Player Decisions');
   assert.match(await page.locator('#app').innerText(),/The heroes forgave Pip/);
   state=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
   assert.equal(state.decisions.length,10);
@@ -71,7 +82,7 @@ async function ready(url) {
   await page.locator('#search').fill('');
   assert.equal(await page.locator('#app article.card').count(),10);
   // Export/import persistence.
-  await page.getByRole('button',{name:/Settings/}).click();
+  await navigateSidebar(page,'Settings');
   const [download]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Export JSON'}).click()]);
   const exported=JSON.parse(await fs.readFile(await download.path(),'utf8'));
   assert.equal(exported.data.decisions.find(x=>x.id==='a1-pip').status,'Decided');
@@ -79,17 +90,17 @@ async function ready(url) {
   await page.evaluate(()=>localStorage.clear());
   await page.reload();
   await page.locator('#importer').setInputFiles({name:'backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(exported))});
-  await page.getByRole('button',{name:/Player Decisions/}).click();
+  await navigateSidebar(page,'Player Decisions');
   assert.match(await page.locator('#app').innerText(),/The heroes forgave Pip/);
   // Legacy backup import (without decisions) must preserve its other records.
   const legacy=structuredClone(exported);delete legacy.data.decisions;delete legacy.data.decisionPromptsInitialized;
-  await page.getByRole('button',{name:/Settings/}).click();
+  await navigateSidebar(page,'Settings');
   await page.locator('#importer').setInputFiles({name:'legacy.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(legacy))});
-  await page.getByRole('button',{name:/Player Decisions/}).click();
+  await navigateSidebar(page,'Player Decisions');
   assert.equal(await page.locator('#app article.card').count(),10);
   assert.equal(await page.locator('#app .kpi').first().innerText(),'0');
   for(const tab of ['Player Characters','NPCs','Quests','Battle Maps','Sessions']){
-   await page.getByRole('button',{name:new RegExp(tab)}).first().click();
+   await navigateSidebar(page,tab);
    assert.ok((await page.locator('#app').innerText()).length>20,tab+' should render');
   }
   assert.deepEqual(errors,[],'Browser console errors: '+errors.join('; '));
