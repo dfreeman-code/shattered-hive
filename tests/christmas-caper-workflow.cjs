@@ -426,6 +426,68 @@ async function ready(url){
   assert.equal(rangerAfter.pcs[1].notes,'Hand-selected armor');
   await rangerContext.close();
 
+
+  // Paladin checks use two synthetic Beetlekin PC records in a disposable browser.
+  const paladinContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const paladinPage=await paladinContext.newPage();
+  paladinPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
+  await paladinPage.goto('http://127.0.0.1:8767/index.html');
+  await paladinPage.evaluate(()=>{
+   const d=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+   d.pcs=[
+    {id:'test-paladin',name:'Test Beetle Guardian',class:'Unassigned',background:'',level:1,species:'Beetlekin',status:'Active',
+     hp:'',maxHp:'',ac:'',notes:'Keep the original player story intact',
+     bugHero:{power:'Protecting friends',gear:'Sword and shield',trait:'Brave',fear:'Dry Grass',dream:'Guard all insects',extra:'Orange mohawk'}},
+    {id:'custom-paladin',name:'Customized Beetle Protector',class:'Paladin',background:'Guard',level:1,species:'Beetlekin',status:'Active',
+     hp:14,maxHp:14,ac:16,notes:'Manual build must remain',bugHero:{power:'Protecting friends',gear:'Sword and shield'}}
+   ];
+   localStorage.setItem('shattered-hive-v1',JSON.stringify(d));
+  });
+  await paladinPage.reload();
+  await paladinPage.evaluate(()=>goto('sheet'));
+  await paladinPage.locator('.card.section select').first().selectOption('test-paladin');
+  await paladinPage.locator('#hero-build-workshop summary').click();
+  assert.match(await paladinPage.locator('#hero-build-workshop').innerText(),/Guardian and the Dry Grass/);
+  assert.match(await paladinPage.locator('#hero-build-workshop').innerText(),/WIS 13/);
+  const paladinState=()=>paladinPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  let ps=await paladinState();
+  assert.equal(ps.pcs[0].class,'Unassigned');
+  assert.ok(!ps.christmasPrologueDraft?.scenes?.['hero:test-paladin']);
+  await paladinPage.getByRole('button',{name:'Apply approved level-1 Paladin sheet'}).click();
+  ps=await paladinState();
+  assert.equal(ps.pcs[0].class,'Paladin');
+  assert.equal(ps.pcs[0].background,'Guard');
+  assert.equal(ps.pcs[0].hp,11);
+  assert.equal(ps.pcs[0].ac,18);
+  assert.equal(ps.pcs[0].notes,'Keep the original player story intact');
+  assert.deepEqual(ps.sheets['test-paladin'].scores,{STR:17,DEX:8,CON:13,INT:10,WIS:13,CHA:14});
+  assert.deepEqual(ps.sheets['test-paladin'].saves,['WIS','CHA']);
+  assert.equal(ps.sheets['test-paladin'].spellSlots['1'],2);
+  assert.equal(ps.sheets['test-paladin'].spellAbility,'CHA');
+  assert.equal(ps.sheets['test-paladin'].initiativeBonus,2);
+  assert.match(ps.sheets['test-paladin'].features,/Lay on Hands/);
+  assert.match(ps.sheets['test-paladin'].features,/Sacred Oath|oath/i);
+  assert.match(ps.sheets['test-paladin'].features,/do not stack/);
+  assert.equal(ps.campaign.session,0);
+  assert.equal(ps.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.ok(ps.decisions.every(d=>d.status==='Not decided'));
+  await paladinPage.locator('#hero-build-workshop summary').click();
+  await paladinPage.getByRole('button',{name:'Save suggested solo introduction draft'}).click();
+  ps=await paladinState();
+  assert.match(ps.christmasPrologueDraft.scenes['hero:test-paladin'].readAloud,/dry grass/);
+  assert.match(ps.christmasPrologueDraft.scenes['hero:test-paladin'].dmNotes,/orange mohawk/);
+  assert.equal(ps.pcs[0].bugHero.dream,'Guard all insects');
+  await paladinPage.reload();
+  await paladinPage.evaluate(()=>goto('sheet'));
+  await paladinPage.locator('.card.section select').first().selectOption('custom-paladin');
+  await paladinPage.locator('#hero-build-workshop summary').click();
+  assert.equal(await paladinPage.getByRole('button',{name:'Apply approved level-1 Paladin sheet'}).isDisabled(),true);
+  ps=await paladinState();
+  assert.equal(ps.pcs[1].hp,14);
+  assert.equal(ps.pcs[1].ac,16);
+  assert.equal(ps.pcs[1].notes,'Manual build must remain');
+  await paladinContext.close();
+
   const after=await read();
   assert.equal(after.campaign.session,0);
   assert.equal(after.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
