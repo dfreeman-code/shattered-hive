@@ -43,6 +43,8 @@ async function bootBrowser(browser,width,initial,remote,options={}){
    return json({message:'Unexpected '+path},404);
  });
  await ctx.addInitScript(({initial,session,meta})=>{
+   if(sessionStorage.getItem('__cloud21_seeded'))return;
+   sessionStorage.setItem('__cloud21_seeded','1');
    localStorage.setItem('shattered-hive-v1',JSON.stringify(initial));
    localStorage.setItem('shattered-hive-cloud-session-v1',JSON.stringify(session));
    if(meta)localStorage.setItem('shattered-hive-cloud-sync-meta-v1',JSON.stringify(meta));
