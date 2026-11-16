@@ -6,10 +6,12 @@
   var API_KEY = String(CONFIG.anonKey || '');
   var SESSION_KEY = 'shattered-hive-cloud-session-v1';
   var META_KEY = 'shattered-hive-cloud-sync-meta-v1';
+  var PENDING_KEY = 'shattered-hive-cloud-pending-v2-1';
   var configured = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(URL_BASE) &&
     (API_KEY.startsWith('sb_publishable_') || API_KEY.startsWith('eyJ'));
   var bridge = null, session = null, revision = 0, linked = false;
   var busy = false, blocked = false, timer = null, changedWhileBusy = false;
+  var refreshPromise = null, recoveryPreview = null;
   var status = configured ? 'Cloud sign-in is optional; browser saves continue working.' :
     'Cloud sync setup is not complete. Local browser saves still work.';
   var remoteAvailable = false;
@@ -25,9 +27,171 @@
   }
   function setMeta() {
     localStorage.setItem(META_KEY, JSON.stringify({
-      userId: session.user.id, revision: revision, fingerprint: fingerprint(getLocal())
+      userId: session.user.id, revision: revision, fingerprint: fingerprint(getLocal()),
+      lastSyncedAt: lastSyncedAt || new Date().toISOString()
     }));
+    clearPending();
   }
+
+  // Keep only small provenance metadata: the campaign itself is already durable in
+  // shattered-hive-v1. Never duplicate multi-megabyte campaign JSON in localStorage.
+  function pending() {
+    try { return JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); }
+    catch (_) { return null; }
+  }
+  function markPending() {
+    if (!bridge) return;
+    var m = meta(), p = pending(), localHash = fingerprint(getLocal());
+    if (m && m.fingerprint === localHash) { clearPending(); return; }
+    var v = {fingerprint:localHash, since:p && p.since || new Date().toISOString()};
+    try { localStorage.setItem(PENDING_KEY,JSON.stringify(v)); } catch (_) {}
+  }
+  function clearPending() { try { localStorage.removeItem(PENDING_KEY); } catch (_) {} }
+  function hasUnconfirmedEdits() {
+    if (!bridge) return false;
+    var m = meta(), p = pending(), hash = fingerprint(getLocal());
+    return !!((m && m.fingerprint !== hash) || (p && p.fingerprint === hash));
+  }
+  function lastConfirmedAt() {
+    var m = meta(); return lastSyncedAt || (m && m.lastSyncedAt) || null;
+  }
+  // Explicit, deterministic 3-way merge. Recursively merges distinct fields
+  // and arrays of records with unique stable IDs. Conflicts fail closed.
+  function equal(a,b) { return JSON.stringify(a) === JSON.stringify(b); }
+  function isRecord(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function recordArray(v) {
+    return Array.isArray(v) && v.every(function(x){return isRecord(x) && typeof x.id === 'string' && x.id.length>0;})
+      && new Set(v.map(function(x){return x.id;})).size === v.length;
+  }
+  function merge3(base,local,remote,path,conflicts) {
+    if (equal(local,remote)) return local;
+    if (equal(local,base)) return remote;
+    if (equal(remote,base)) return local;
+    if (isRecord(base) && isRecord(local) && isRecord(remote)) {
+      var keys = Array.from(new Set(Object.keys(base).concat(Object.keys(local),Object.keys(remote))));
+      var result = {};
+      keys.forEach(function(k){
+        var b=Object.prototype.hasOwnProperty.call(base,k),
+            l=Object.prototype.hasOwnProperty.call(local,k),
+            r=Object.prototype.hasOwnProperty.call(remote,k);
+        var label=path+'.'+k;
+        if (!b) {
+          if (l && !r) result[k]=local[k];
+          else if (!l && r) result[k]=remote[k];
+          else if (l && r) { if(equal(local[k],remote[k]))result[k]=local[k]; else conflicts.push(label); }
+        } else if (!l && !r) {
+          // both removed
+        } else if (!l) {
+          if (!equal(remote[k],base[k])) conflicts.push(label);
+        } else if (!r) {
+          if (!equal(local[k],base[k])) conflicts.push(label);
+        } else result[k]=merge3(base[k],local[k],remote[k],label,conflicts);
+      });
+      return result;
+    }
+    if (recordArray(base) && recordArray(local) && recordArray(remote)) {
+      var bm=new Map(base.map(function(x){return [x.id,x];}));
+      var lm=new Map(local.map(function(x){return [x.id,x];}));
+      var rm=new Map(remote.map(function(x){return [x.id,x];}));
+      var ordered=Array.from(new Set(remote.map(function(x){return x.id;}).concat(local.map(function(x){return x.id;}))));
+      var output=[];
+      ordered.forEach(function(id){
+        var b=bm.has(id),l=lm.has(id),r=rm.has(id),label=path+'['+id+']';
+        if (!b) {
+          if(l && !r)output.push(lm.get(id));
+          else if(!l && r)output.push(rm.get(id));
+          else if(l && r) { if(equal(lm.get(id),rm.get(id)))output.push(lm.get(id));else conflicts.push(label); }
+        } else if(!l && !r){
+          // both deleted
+        } else if(!l) {
+          if(!equal(rm.get(id),bm.get(id)))conflicts.push(label);
+        } else if(!r) {
+          if(!equal(lm.get(id),bm.get(id)))conflicts.push(label);
+        } else output.push(merge3(bm.get(id),lm.get(id),rm.get(id),label,conflicts));
+      });
+      return output;
+    }
+    conflicts.push(path);
+    return remote; // never written when any conflict exists
+  }
+  function describeChanges(base,next) {
+    var keys=Array.from(new Set(Object.keys(base).concat(Object.keys(next))));
+    return keys.filter(function(k){return !equal(base[k],next[k]);});
+  }
+  async function loadBaseRevision(wanted) {
+    var rows=await request('/rest/v1/shattered_hive_save_history?select=revision,payload&revision=eq.'+
+      encodeURIComponent(wanted)+'&limit=1','GET',undefined,true);
+    return Array.isArray(rows) && rows[0] ? rows[0].payload : null;
+  }
+  async function previewRecovery() {
+    if (busy || !session || !remoteAvailable) return;
+    recoveryPreview=null;
+    busy=true;renderStatus();
+    try {
+      var saved=meta(), localHash=fingerprint(getLocal());
+      if(!saved || saved.userId!==session.user.id || !Number.isSafeInteger(Number(saved.revision)) ||
+        Number(saved.revision)<1) return notify('No verified sync baseline for this browser. Export JSON and reconcile manually; cloud untouched.');
+      var remote=await readCloud(); validateDocument(remote.payload);
+      var base=await loadBaseRevision(Number(saved.revision));
+      if(!base) return notify('Original cloud revision is no longer in recovery history. Export JSON and reconcile manually; cloud untouched.');
+      var conflicts=[], merged=merge3(base,getLocal(),remote.payload,'campaign',conflicts);
+      if(conflicts.length) return notify('Recovery needs manual review: conflicting edits in '+
+        conflicts.slice(0,5).join(', ')+(conflicts.length>5?' and '+(conflicts.length-5)+' more':'')+
+        '. Export JSON. No data changed.');
+      validateDocument(merged);
+      var modified=describeChanges(remote.payload,merged),remoteChanged=describeChanges(base,remote.payload);
+      recoveryPreview={merged:merged,revision:Number(remote.revision),updatedAt:remote.updated_at,
+        localHash:localHash,changes:modified,remoteChanges:remoteChanged};
+      notify('Recovery preview ready. Local sections to preserve: '+
+        (modified.join(', ')||'none')+'. Cloud sections updated elsewhere: '+
+        (remoteChanged.join(', ')||'none')+'. Review and confirm before applying.');
+    } catch(e){ recoveryPreview=null;notify('Recovery preview failed: '+e.message+'. Local data untouched.'); }
+    finally{busy=false;renderStatus();}
+  }
+  async function applyRecovery() {
+    if(busy||!session||!recoveryPreview)return;
+    var p=recoveryPreview;
+    if(fingerprint(getLocal())!==p.localHash) {
+      recoveryPreview=null;return notify('Local edits changed since preview. Run preview again; nothing overwritten.');
+    }
+    if(!confirm('Merge reviewed changes with current cloud revision '+p.revision+
+      '? A JSON backup will download first. This replaces this browser with the merged version AFTER the cloud write is confirmed.'))return;
+    // Abort before writing if the backup cannot be produced.
+    try { bridge.exportBackup(); }catch(e){return notify('Backup export failed; recovery cancelled: '+e.message);}
+    busy=true;renderStatus();
+    try{
+      // Re-fetch remote and baseline immediately before the compare-and-swap write.
+      var current=await readCloud();
+      if(!current || Number(current.revision)!==p.revision) {
+        recoveryPreview=null;return notify('Cloud changed since recovery preview; no data overwritten. Preview again.');
+      }
+      if(fingerprint(getLocal())!==p.localHash) {
+        recoveryPreview=null;return notify('Local edits changed; recovery cancelled.');
+      }
+      var result=await request('/rest/v1/rpc/shattered_hive_store','POST',
+        {expected_revision:p.revision,document:p.merged},true);
+      if(result==null || !Number.isSafeInteger(Number(result))) {
+        recoveryPreview=null;linked=false;blocked=true;
+        return notify('Cloud version conflict. No data overwritten; preview again.');
+      }
+      revision=Number(result);remoteAvailable=true;historyLoaded=false;
+      // An in-flight local change must not be silently discarded.
+      if(fingerprint(getLocal())!==p.localHash || changedWhileBusy) {
+        recoveryPreview=null;linked=false;blocked=true;markPending();
+        return notify('Merged cloud successfully, but newer local edits need review. Export JSON and preview recovery again.');
+      }
+      linked=false;blocked=true;
+      bridge.replaceData(p.merged);
+      lastSyncedAt=new Date().toISOString();
+      setMeta();linked=true;blocked=false;recoveryPreview=null;
+      syncSuccess(lastSyncedAt);
+      notify('Recovery merged safely into cloud revision '+revision+'. Automatic sync resumed.');
+    } catch(e) {
+      linked=false;blocked=true;recoveryPreview=null;markPending();
+      notify('Recovery write could not be confirmed: '+e.message+'. Keep JSON backup and verify cloud revision before retrying.');
+    } finally {busy=false;changedWhileBusy=false;renderStatus();}
+  }
+
   function escapeHtml(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -39,16 +203,17 @@
     var parent = document.getElementById('cloud-sync-panel');
     if (parent) parent.outerHTML = settingsHtml();
     var indicator = document.getElementById('cloud-header-status');
+    var pendingEdits=hasUnconfirmedEdits();
     if (indicator) {
-      var attention = blocked || /failed|conflict|error|unsynchronized|not confirmed|blocked/i.test(status);
+      var attention = blocked || pendingEdits || /failed|conflict|error|unsynchronized|not confirmed|blocked/i.test(status);
       var label = !configured ? 'Cloud: not configured' :
         !session ? 'Cloud: signed out' : busy ? 'Cloud: syncing' :
-        attention ? 'Cloud: attention needed' :
+        attention ? (pendingEdits?'Cloud: unsynced edits':'Cloud: attention needed') :
         (timer || status.indexOf('waiting to sync') !== -1) ? 'Cloud: pending' :
         linked ? 'Cloud: synced' :
         'Cloud: connection needed';
       indicator.textContent = label;
-      indicator.title = status + (lastSyncedAt ? ' Last successful sync: ' + new Date(lastSyncedAt).toLocaleString() : '');
+      indicator.title = status + (pendingEdits?' Browser changes are not confirmed online. Export a backup.':'') + (lastConfirmedAt() ? ' Last successful sync: ' + new Date(lastConfirmedAt()).toLocaleString() : '');
       indicator.setAttribute('aria-label', indicator.title);
       indicator.dataset.state = !configured || !session ? 'offline' : attention ? 'warning' :
         (timer || status.indexOf('waiting to sync') !== -1) ? 'pending' : linked ? 'ok' : 'pending';
@@ -84,21 +249,33 @@
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
   async function ensureSession() {
-    if (!session) throw Error('Sign in first.');
-    if (session.expires_at > Date.now()/1000 + 90 && session.user) return;
-    var r = await fetch(URL_BASE + '/auth/v1/token?grant_type=refresh_token', {
-      method:'POST', headers: apiHeaders(false),
-      body:JSON.stringify({refresh_token: session.refresh_token}), cache:'no-store'
-    });
-    var v = await r.json();
-    if (!r.ok) { blocked = true; linked = false; throw Error('Cloud session expired. Please sign in again.'); }
-    remember(v);
-    if (!session.user) {
-      var u = await fetch(URL_BASE + '/auth/v1/user', {headers:apiHeaders(true),cache:'no-store'});
-      if (!u.ok) throw Error('Could not verify signed-in account.');
-      session.user = await u.json();
-      localStorage.setItem(SESSION_KEY,JSON.stringify(session));
-    }
+    if(!session)throw Error('Sign in first.');
+    if(session.expires_at>Date.now()/1000+300 && session.user)return;
+    if(refreshPromise)return refreshPromise;
+    // One refresh operation per browser window prevents rotating the same token twice.
+    refreshPromise=(async function(){
+      var old=session;
+      try {
+        var r=await fetch(URL_BASE+'/auth/v1/token?grant_type=refresh_token',{
+          method:'POST',headers:apiHeaders(false),
+          body:JSON.stringify({refresh_token:old.refresh_token}),cache:'no-store'
+        });
+        var v=await r.json();
+        if(!r.ok)throw Error('Cloud session expired. Please sign out and use a new sign-in link.');
+        if(session!==old)return; // another sign-in occurred while request was in flight
+        remember(v);
+        if(!session.user){
+          var u=await fetch(URL_BASE+'/auth/v1/user',{headers:apiHeaders(true),cache:'no-store'});
+          if(!u.ok)throw Error('Could not verify signed-in account.');
+          session.user=await u.json();localStorage.setItem(SESSION_KEY,JSON.stringify(session));
+        }
+      }catch(e){
+        blocked=true;linked=false;markPending();
+        notify('Cloud authentication needs attention. Browser data kept locally. '+e.message);
+        throw e;
+      }
+    })();
+    try{return await refreshPromise;}finally{refreshPromise=null;}
   }
   async function sendLink() {
     if (!configured) return notify('Configure the cloud project first.');
@@ -144,10 +321,12 @@
         if (saved && saved.userId === session.user.id && saved.fingerprint === localHash) {
           if (saved.revision === revision) {
             linked = true; blocked = false;
-            syncSuccess(remote.updated_at);
+            lastSyncedAt=remote.updated_at;
+            setMeta();syncSuccess(remote.updated_at);
             notify('Synced. This browser has the latest cloud campaign.');
           } else {
             bridge.replaceData(remote.payload);
+            lastSyncedAt=remote.updated_at;
             setMeta();
             linked = true; blocked = false;
             syncSuccess(remote.updated_at);
@@ -155,7 +334,8 @@
           }
         } else {
           // Never overwrite an unrecognized local save, even if the cloud is newer.
-          notify('Cloud campaign found. Export a local backup first, then choose Download cloud to this browser. Local data has NOT been overwritten.');
+          markPending();
+          notify('Cloud campaign found with unconfirmed local differences. Export JSON, then use Preview safe recovery. Never download cloud blindly.');
         }
       }
     } catch (e) { notify('Cloud connection error: ' + e.message); }
@@ -184,13 +364,15 @@
       syncSuccess(new Date().toISOString());
       // Keep the hash of exactly the revision uploaded. A new edit during the request must be sent next.
       var snapshotHash = fingerprint(snapshot);
-      localStorage.setItem(META_KEY,JSON.stringify({userId:session.user.id,revision:revision,fingerprint:snapshotHash}));
+      lastSyncedAt=new Date().toISOString();
+      localStorage.setItem(META_KEY,JSON.stringify({userId:session.user.id,revision:revision,fingerprint:snapshotHash,lastSyncedAt:lastSyncedAt}));
+      if(fingerprint(getLocal())===snapshotHash)clearPending();
       if (fingerprint(getLocal()) !== snapshotHash || changedWhileBusy) {
         changedWhileBusy = false;
         notify('Saved online; sending more recent edits...');
         queueSave();
       } else notify('Cloud up to date. Changes on this browser will sync automatically.');
-    } catch (e) { notify('Cloud upload failed (local save retained): ' + e.message); }
+    } catch (e) { markPending();notify('Cloud upload failed (local save retained): ' + e.message); }
     finally { busy = false; renderStatus(); if(changedWhileBusy && linked && !blocked){changedWhileBusy=false;queueSave();} }
   }
   async function download() {
@@ -208,6 +390,7 @@
       linked = false; blocked = true;
       revision = Number(remote.revision); remoteAvailable = true;
       bridge.replaceData(remote.payload);
+      lastSyncedAt=remote.updated_at;
       setMeta();
       linked = true; blocked = false;
       syncSuccess(remote.updated_at);
@@ -247,6 +430,7 @@
         linked = false; blocked = true;
         revision = Number(remote.revision);
         bridge.replaceData(remote.payload);
+        lastSyncedAt=remote.updated_at;
         setMeta();
       }
       linked = true; blocked = false; revision = Number(remote.revision);
@@ -261,7 +445,8 @@
     }
   }
   function queueSave() {
-    if (!session || !linked || blocked) return;
+    markPending();recoveryPreview=null;
+    if (!session || !linked || blocked){renderStatus();return;}
     status = 'Changes saved locally; waiting to sync…';
     if (busy) { changedWhileBusy = true; renderStatus(); return; }
     clearTimeout(timer);
@@ -274,7 +459,7 @@
     session = null; linked = false; blocked = false; revision = 0; remoteAvailable = false;
     historyRows = []; historyLoaded = false; lastSyncedAt = null;
     localStorage.removeItem(SESSION_KEY);
-    notify('Signed out of cloud sync. Browser saves continue normally.');
+    markPending();notify('Signed out of cloud sync. Browser saves continue normally.');
   }
 
   async function loadHistory() {
@@ -347,6 +532,11 @@
   function settingsHtml() {
     if (!configured) return '<div id="cloud-sync-panel"><p>Cloud sync has not been configured yet. Your browser data remains available. See the GitHub CLOUD_SYNC_SETUP.md instructions.</p></div>';
     var account = session && session.user ? escapeHtml(session.user.email || 'Signed-in user') : '';
+    var unsynced=hasUnconfirmedEdits();
+    var warning=unsynced?'<p role="alert" style="border:2px solid #ad5142;border-radius:8px;padding:12px"><b>Unsynced browser changes.</b> Your newest campaign data is not confirmed in the cloud. Export JSON before closing, signing out or using another device.</p>':'';
+    var last=lastConfirmedAt();
+    var stamp=last?'<p class="muted"><b>Last confirmed cloud save:</b> '+escapeHtml(new Date(last).toLocaleString())+'</p>':'<p class="muted">No confirmed cloud save time for this browser.</p>';
+    var backup='<button type="button" class="btn small secondary" onclick="SHCloud.exportLocalBackup()">Export browser backup</button> ';
     var buttons = '<button class="btn small secondary" type="button" onclick="SHCloud.refresh()">Check for cloud updates</button> ' +
       '<button class="btn small secondary" type="button" onclick="SHCloud.signOut()">Sign out</button>';
     if (!session) buttons = '<label for="cloud-email">Email address</label>' +
@@ -355,7 +545,8 @@
     else if (!remoteAvailable) buttons = '<p><b>' + account + '</b></p>' +
       '<button class="btn small" type="button" onclick="SHCloud.uploadFirst()">Upload this browser to cloud (first time)</button> ' + buttons;
     else buttons = '<p><b>' + account + '</b> · Cloud revision ' + revision + '</p>' +
-      (!linked ? '<button class="btn small" type="button" onclick="SHCloud.download()">Download cloud to this browser</button> ' : '<button class="btn small" type="button" onclick="SHCloud.uploadPending()">Sync changes now</button> ') + buttons;
+      (!linked ? '<button type="button" class="btn small" onclick="SHCloud.previewRecovery()">Preview safe recovery</button> <button type="button" class="btn small secondary" onclick="SHCloud.download()">Download cloud (replaces browser)</button> ' : '<button class="btn small" type="button" onclick="SHCloud.uploadPending()">Sync changes now</button> ') + buttons;
+    if(recoveryPreview)buttons+='<p><b>Preview:</b> '+escapeHtml(recoveryPreview.changes.join(', ')||'No local changes to add')+'</p><button class="btn small" type="button" onclick="SHCloud.applyRecovery()">Confirm reviewed recovery</button>';
     var historyMarkup = session && remoteAvailable ?
       '<div class="cloud-history"><h4>Recovery history</h4><p class="muted">Latest 30 cloud saves (older versions expire). Each restore exports a backup and creates a new revision.</p>' +
       '<button type="button" class="btn small secondary" onclick="SHCloud.loadHistory()">Load recovery history</button>' +
@@ -368,9 +559,9 @@
           '<button type="button" class="btn small secondary" ' + (!linked || blocked ? 'disabled ' : '') +
           'onclick="SHCloud.restoreRevision(' + v + ')">Restore</button></div>';
       }).join('') + '</div>' : '') + '</div>' : '';
-    return '<div id="cloud-sync-panel">' + buttons + '<p id="cloud-sync-status" class="muted" role="status" aria-live="polite">' +
+    return '<div id="cloud-sync-panel">' + warning + stamp + backup + buttons + '<p id="cloud-sync-status" class="muted" role="status" aria-live="polite">' +
       escapeHtml(status) + '</p>' +
-      (lastSyncedAt ? '<p class="muted"><b>Last confirmed cloud save:</b> ' + escapeHtml(new Date(lastSyncedAt).toLocaleString()) + '</p>' : '') +
+
       '<p class="muted">Every device must use the same email account. Cloud data is private to that account. Local JSON backups remain recommended.</p>' +
       historyMarkup + '</div>';
   }
@@ -390,11 +581,18 @@
         var stored = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
         if (stored && stored.access_token && stored.refresh_token) session = stored;
       }
+      lastSyncedAt=lastConfirmedAt();
       if (session) await connect();
       renderStatus();
     } catch (e) { notify('Cloud initialization failed (local data safe): ' + e.message); }
   }
-  setInterval(function(){if(session && linked && !busy && !timer && !blocked && document.visibilityState === 'visible')refresh();},60000);
+  // Renew auth even when syncing is blocked; pending local edits remain protected.
+  setInterval(function(){
+    if(!session || document.visibilityState!=='visible')return;
+    if(!refreshPromise && session.expires_at<=Date.now()/1000+300)
+      ensureSession().catch(function(){/* status already explains sign-in recovery */});
+    if(linked&&!busy&&!timer&&!blocked)refresh();
+  },60000);
   function suspendForReplacement(){
     if(!session || !linked)return;
     clearTimeout(timer);timer=null;linked=false;blocked=true;
@@ -405,6 +603,8 @@
     suspendForReplacement:suspendForReplacement,
     uploadFirst:function(){upload(true);}, uploadPending:function(){if(timer){clearTimeout(timer);timer=null;}upload(false);}, download:download, refresh:refresh,
     signOut:signOut, queueSave:queueSave,
+    previewRecovery:previewRecovery,applyRecovery:applyRecovery,
+    exportLocalBackup:function(){if(bridge)bridge.exportBackup();},
     isLinked:function(){return !!linked && !blocked;}
   };
 })();
