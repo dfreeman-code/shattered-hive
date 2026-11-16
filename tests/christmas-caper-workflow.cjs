@@ -248,6 +248,62 @@ async function ready(url){
   assert.equal(w.pcs[1].notes,'An existing build');
   await wizardContext.close();
 
+
+  // Rogue workshop uses fake local-only character data; no production saves touched.
+  const rogueContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const roguePage=await rogueContext.newPage();
+  roguePage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
+  await roguePage.goto('http://127.0.0.1:8767/index.html');
+  await roguePage.evaluate(()=>{
+    const d=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+    d.pcs=[
+     {id:'test-rogue',name:'Test Mantid Scout',class:'Unassigned',background:'',level:1,species:'Mantisborn',status:'Active',hp:'',maxHp:'',ac:'',
+       notes:'Original player history remains exactly as written',bugHero:{power:'Sneaking and climbing',gear:'Spear',dream:'Taste caramel popcorn',fear:'Deep Water',extra:'Strange Yellow markings'}},
+     {id:'test-rogue-existing',name:'Existing Mantid Scout',class:'Rogue',background:'Wayfarer',level:1,species:'Mantisborn',status:'Active',hp:12,maxHp:12,ac:15,
+       notes:'Keep my existing numbers',bugHero:{power:'Sneaking and climbing',gear:'Spear'}}
+    ];
+    localStorage.setItem('shattered-hive-v1',JSON.stringify(d));
+  });
+  await roguePage.reload();
+  await roguePage.evaluate(()=>goto('sheet'));
+  await roguePage.locator('.card.section select').first().selectOption('test-rogue');
+  await roguePage.locator('#hero-build-workshop summary').click();
+  assert.match(await roguePage.locator('#hero-build-workshop').innerText(),/The Caramel Trail/);
+  assert.match(await roguePage.locator('#hero-build-workshop').innerText(),/DEX 17/);
+  const rogueState=()=>roguePage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  let rs=await rogueState();
+  assert.equal(rs.pcs[0].class,'Unassigned','Preview must not assign class');
+  assert.ok(!rs.christmasPrologueDraft?.scenes?.['hero:test-rogue'],'Preview must not store decisions');
+  await roguePage.getByRole('button',{name:'Apply approved level-1 Rogue sheet'}).click();
+  rs=await rogueState();
+  assert.equal(rs.pcs[0].class,'Rogue');
+  assert.equal(rs.pcs[0].background,'Wayfarer');
+  assert.equal(rs.pcs[0].hp,10);
+  assert.equal(rs.pcs[0].ac,14);
+  assert.equal(rs.pcs[0].notes,'Original player history remains exactly as written');
+  assert.deepEqual(rs.sheets['test-rogue'].scores,{STR:8,DEX:17,CON:14,INT:12,WIS:14,CHA:10});
+  assert.deepEqual(rs.sheets['test-rogue'].saves,['DEX','INT']);
+  assert.deepEqual(rs.sheets['test-rogue'].expertise,['Stealth','Investigation']);
+  assert.match(rs.sheets['test-rogue'].features,/not a Finesse weapon/);
+  assert.equal(rs.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.equal(rs.campaign.session,0);
+  assert.ok(rs.decisions.every(x=>x.status==='Not decided'));
+  await roguePage.locator('#hero-build-workshop summary').click();
+  await roguePage.getByRole('button',{name:'Save suggested solo introduction draft'}).click();
+  rs=await rogueState();
+  assert.match(rs.christmasPrologueDraft.scenes['hero:test-rogue'].readAloud,/caramel popcorn/);
+  assert.match(rs.christmasPrologueDraft.scenes['hero:test-rogue'].dmNotes,/Strange Yellow markings|yellow markings/i);
+  await roguePage.reload();
+  await roguePage.evaluate(()=>goto('sheet'));
+  await roguePage.locator('.card.section select').first().selectOption('test-rogue-existing');
+  await roguePage.locator('#hero-build-workshop summary').click();
+  assert.equal(await roguePage.getByRole('button',{name:'Apply approved level-1 Rogue sheet'}).isDisabled(),true);
+  rs=await rogueState();
+  assert.equal(rs.pcs[1].hp,12);
+  assert.equal(rs.pcs[1].ac,15);
+  assert.equal(rs.pcs[1].notes,'Keep my existing numbers');
+  await rogueContext.close();
+
   const after=await read();
   assert.equal(after.campaign.session,0);
   assert.equal(after.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
