@@ -69,7 +69,7 @@ async function ready(url){
   assert.equal(exported.scenes.length,10);
   assert.equal(exported.scenes[9].rewards,'TEST ONLY scene 10 rewards');
 
-  await page.getByRole('button',{name:/Session Command Center/}).click();
+  await page.getByRole('button',{name:'Session Command Center',exact:true}).click();
   assert.match(await page.locator('#app').innerText(),/Session Command Center/);
   assert.match(await page.locator('#app').innerText(),/Session 1 — The Great Christmas Caper/);
   await page.locator('#cc-notes').fill('TEST ONLY: prep notebook');
