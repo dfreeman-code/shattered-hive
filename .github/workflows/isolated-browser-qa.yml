@@ -1,0 +1,38 @@
+name: Isolated browser QA
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'assets/**'
+      - 'tests/browser-smoke.cjs'
+      - '.github/workflows/isolated-browser-qa.yml'
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright in runner only
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Run isolated local browser smoke tests
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/shattered-hive-qa-server.log 2>&1 &
+          sleep 2
+          node tests/browser-smoke.cjs
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-browser-qa-results
+          path: |
+            qa-smoke-results.json
+            /tmp/shattered-hive-qa-server.log
+          if-no-files-found: ignore
