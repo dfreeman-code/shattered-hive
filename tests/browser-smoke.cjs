@@ -355,6 +355,51 @@ async function check(label, fn) {
   assert.equal(values.quick,13);
   assert.deepEqual([...values.links].sort(),Object.keys(await page.evaluate(()=>sections)).sort());
  });
+ await check('Tabletop quick cues prioritize narration dialogue checks choices and preserve draft data',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  await page.evaluate(()=>{adventureSpotlight='readAloud';adventureReadMode=false;goto('runner')});
+  const before=await page.evaluate(()=>JSON.stringify({
+   campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,sessions:db.sessions,
+   decisions:db.decisions,quests:db.quests,maps:db.maps,draft:db.adventureScriptDraft
+  }));
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  const quick=page.locator('.ar-priority-cues .ar-tab');
+  assert.equal(await quick.count(),5);
+  assert.deepEqual(await quick.allTextContents().then(xs=>xs.map(x=>x.replace(/[●○]/g,'').trim())),
+   ['Read aloud to players','NPC dialogue','Skill checks and consequences','Choices, branches and follow-ups','All sections']);
+  const other=page.locator('.ar-other-cues');
+  assert.equal(await other.count(),1);
+  assert.equal(await other.evaluate(e=>e.open),false);
+  await quick.nth(1).click();
+  assert.equal(await page.locator('.ar-reading-section').count(),1);
+  assert.equal(await page.locator('.ar-reading-section').getAttribute('aria-label'),'NPC dialogue');
+  await other.locator('summary').click();
+  assert.equal(await other.evaluate(e=>e.open),true);
+  assert.equal(await other.locator('button.ar-tab').count(),5);
+  await other.getByRole('button',{name:'Music / ambience cues'}).click();
+  assert.equal(await page.locator('.ar-reading-section').getAttribute('aria-label'),'Music / ambience cues');
+  assert.equal(await page.locator('.ar-other-cues').evaluate(e=>e.open),true,'Secondary cue remains expanded while selected');
+  await page.getByRole('button',{name:'All sections'}).click();
+  assert.equal(await page.locator('.ar-reading-section').count(),9);
+  await page.locator('.ar-scene').nth(1).click();
+  assert.equal(await page.locator('.ar-priority-cues .ar-tab').count(),5);
+  const after=await page.evaluate(()=>JSON.stringify({
+   campaign:db.campaign,pcs:db.pcs,npcs:db.npcs,sessions:db.sessions,
+   decisions:db.decisions,quests:db.quests,maps:db.maps,draft:db.adventureScriptDraft
+  }));
+  assert.equal(after,before,'Reading controls may not write campaign state');
+  await page.getByRole('button',{name:'Draft Editor'}).click();
+ });
+ await check('Tabletop quick cues fit narrow mobile viewports',async()=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>goto('runner'));
+  await page.getByRole('button',{name:'Tabletop View'}).click();
+  assert.equal(await page.locator('.ar-priority-cues .ar-tab').count(),5);
+  const dims=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
+  assert.ok(dims.scroll<=dims.width+5,'Mobile overflow: '+JSON.stringify(dims));
+  await page.setViewportSize({width:1365,height:900});
+  await page.getByRole('button',{name:'Draft Editor'}).click();
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
