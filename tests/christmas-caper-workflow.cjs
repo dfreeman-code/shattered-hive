@@ -364,6 +364,68 @@ async function ready(url){
   assert.equal(ws.pcs[1].notes,'My original equipment stays');
   await warlockContext.close();
 
+
+  // Ranger preview is exercised only using fake browser-local character records.
+  const rangerContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const rangerPage=await rangerContext.newPage();
+  rangerPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
+  await rangerPage.goto('http://127.0.0.1:8767/index.html');
+  await rangerPage.evaluate(()=>{
+    const data=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+    data.pcs=[
+      {id:'ranger-test',name:'Test Firefly Inventor',class:'Unassigned',background:'',level:1,species:'Firefly Folk',status:'Active',hp:'',maxHp:'',ac:'',
+        notes:'Original family inventor story must remain',bugHero:{power:'Archery and exploring',gear:'Tools and gadgets',fear:'Spiders',
+        dream:'Greatest inventor and tamer',trait:'Curious',extra:'Pet Scarlet Dwarf Dragonfly, Photuris Mysticalampas Firefly'}},
+      {id:'ranger-custom',name:'Customized Firefly Archer',class:'Ranger',background:'Guide',level:1,species:'Firefly Folk',status:'Active',hp:13,maxHp:13,ac:16,
+        notes:'Hand-selected armor',bugHero:{power:'Archery and exploring',gear:'Tools and gadgets'}}
+    ];
+    localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
+  });
+  await rangerPage.reload();
+  await rangerPage.evaluate(()=>goto('sheet'));
+  await rangerPage.locator('.card.section select').first().selectOption('ranger-test');
+  await rangerPage.locator('#hero-build-workshop summary').click();
+  assert.match(await rangerPage.locator('#hero-build-workshop').innerText(),/Sixfold Silver Thread/);
+  assert.match(await rangerPage.locator('#hero-build-workshop').innerText(),/Hunter’s Mark/);
+  const rangerState=()=>rangerPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  let rangerBefore=await rangerState();
+  assert.equal(rangerBefore.pcs[0].class,'Unassigned');
+  assert.ok(!rangerBefore.christmasPrologueDraft?.scenes?.['hero:ranger-test']);
+  await rangerPage.getByRole('button',{name:'Apply approved level-1 Ranger sheet'}).click();
+  let rangerAfter=await rangerState();
+  assert.equal(rangerAfter.pcs[0].class,'Ranger');
+  assert.equal(rangerAfter.pcs[0].background,'Guide');
+  assert.equal(rangerAfter.pcs[0].hp,12);
+  assert.equal(rangerAfter.pcs[0].ac,14);
+  assert.equal(rangerAfter.pcs[0].notes,'Original family inventor story must remain');
+  assert.deepEqual(rangerAfter.sheets['ranger-test'].scores,{STR:8,DEX:17,CON:14,INT:12,WIS:14,CHA:10});
+  assert.deepEqual(rangerAfter.sheets['ranger-test'].saves,['STR','DEX']);
+  assert.equal(rangerAfter.sheets['ranger-test'].spellAbility,'WIS');
+  assert.equal(rangerAfter.sheets['ranger-test'].spellSlots['1'],2);
+  assert.match(rangerAfter.sheets['ranger-test'].spellPrepared,/Hunter’s Mark always prepared/);
+  assert.match(rangerAfter.sheets['ranger-test'].features,/story companions only/);
+  assert.match(rangerAfter.sheets['ranger-test'].features,/Weapon Mastery/);
+  assert.equal(rangerAfter.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.equal(rangerAfter.campaign.session,0);
+  assert.ok(rangerAfter.decisions.every(d=>d.status==='Not decided'));
+  await rangerPage.locator('#hero-build-workshop summary').click();
+  await rangerPage.getByRole('button',{name:'Save suggested solo introduction draft'}).click();
+  rangerAfter=await rangerState();
+  assert.match(rangerAfter.christmasPrologueDraft.scenes['hero:ranger-test'].readAloud,/scarlet dragonfly/);
+  assert.match(rangerAfter.christmasPrologueDraft.scenes['hero:ranger-test'].dmNotes,/fear of spiders/);
+  assert.equal(rangerAfter.pcs[0].bugHero.extra,'Pet Scarlet Dwarf Dragonfly, Photuris Mysticalampas Firefly');
+  await rangerPage.reload();
+  await rangerPage.evaluate(()=>goto('sheet'));
+  await rangerPage.locator('.card.section select').first().selectOption('ranger-custom');
+  await rangerPage.locator('#hero-build-workshop summary').click();
+  assert.equal(await rangerPage.getByRole('button',{name:'Apply approved level-1 Ranger sheet'}).isDisabled(),true,
+    'Customized Ranger must not be overwritten');
+  rangerAfter=await rangerState();
+  assert.equal(rangerAfter.pcs[1].hp,13);
+  assert.equal(rangerAfter.pcs[1].ac,16);
+  assert.equal(rangerAfter.pcs[1].notes,'Hand-selected armor');
+  await rangerContext.close();
+
   const after=await read();
   assert.equal(after.campaign.session,0);
   assert.equal(after.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');

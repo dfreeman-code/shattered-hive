@@ -860,6 +860,118 @@ function heroWarlockLevelOnePreview(pc){
  (introExists?'<p class="muted">This hero already has a saved prologue, which is protected from replacement.</p>':'')+'</section>';
 }
 
+
+/* Optional Firefly Folk Ranger / Guide build for the inventing archer hero. */
+const HERO_RANGER_LEVEL1={
+ scores:{STR:8,DEX:17,CON:14,INT:12,WIS:14,CHA:10},
+ saves:['STR','DEX'],
+ skills:['Stealth','Survival','Animal Handling','Perception','Nature'],
+ mastery:['Longbow','Shortsword'],
+ prepared:['Cure Wounds','Ensnaring Strike'],
+ featCantrips:['Guidance','Druidcraft'],featSpell:'Speak with Animals'
+};
+function heroRangerIsCandidate(pc){
+ return heroBuildMatch(pc)?.cls==='Ranger'&&pc.species==='Firefly Folk'&&Number(pc.level||1)===1;
+}
+function heroRangerSheetUntouched(pc){
+ if(!heroRangerIsCandidate(pc))return false;
+ if(pc.class&&pc.class!=='Unassigned'&&pc.class!=='Ranger')return false;
+ if(pc.background&&pc.background!=='Guide')return false;
+ if(pc.subclass)return false;
+ if(['hp','maxHp','ac'].some(k=>pc[k]!==undefined&&pc[k]!==null&&pc[k]!==''))return false;
+ const sh=db.sheets?.[pc.id];
+ if(!sh)return true;
+ if(!sh.scores||Object.values(sh.scores).some(v=>Number(v)!==10))return false;
+ if(['saves','skills','expertise'].some(k=>(sh[k]||[]).length))return false;
+ if(Object.values(sh.spellSlots||{}).some(v=>Number(v)!==0))return false;
+ if(['spellAbility','spellPrepared','features','inventory','attacks','notes','proficiencies','speciesNotes','conditions','characterPortrait'].some(k=>String(sh[k]||'').trim()))return false;
+ if(['hp','ac','maxHp','currentHp'].some(k=>sh[k]!==undefined&&sh[k]!==null&&sh[k]!==''&&Number(sh[k])!==10))return false;
+ if(sh.hitDiceUsed||sh.deathSuccess||sh.deathFailure||sh.tempHp||sh.initiativeBonus||sh.passiveBonus)return false;
+ return true;
+}
+function heroRangerApplySheet(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroRangerIsCandidate(pc))return;
+ if(!heroRangerSheetUntouched(pc))return alert('Existing character-sheet details detected. Nothing was overwritten. Review the draft and enter changes individually.');
+ if(!confirm('Apply the proposed level-1 Firefly Folk Ranger/Guide build for '+pc.name+'? This fills starting scores, skills, spells, HP and AC after approval, without changing player-created pets, notes, identity or story decisions.'))return;
+ const sh=clone(db.sheets?.[pc.id]||defaultSheet(pc));
+ sh.scores={...HERO_RANGER_LEVEL1.scores};
+ sh.saves=[...HERO_RANGER_LEVEL1.saves];
+ sh.skills=[...HERO_RANGER_LEVEL1.skills];sh.expertise=[];
+ sh.spellAbility='WIS';sh.spellSlots={'1':2};
+ sh.spellPrepared='Ranger level-1 spells prepared (2): '+HERO_RANGER_LEVEL1.prepared.join(', ')+
+  '\nFavored Enemy: Hunter’s Mark always prepared in addition to the two Ranger spells, with 2 free casts per Long Rest. Further casts can expend level-1 slots; requires Concentration.'+
+  '\nGuide origin feat Magic Initiate (Druid), Wisdom: Guidance and Druidcraft cantrips; Speak with Animals (one free cast per Long Rest, additional casts using spell slots).'+
+  '\nFirefly Folk (homebrew): Guiding Glow gives Light cantrip and Faerie Fire once per Long Rest; use the species-chosen casting ability. Do not treat it as an extra Ranger prepared spell.'+
+  '\nRanger spell save DC 12 and spell attack +4 using WIS 14 and proficiency +2.';
+ sh.features='Ranger level 1 (2024): Spellcasting (2 prepared level-1 Ranger spells, 2 level-1 slots), Favored Enemy (Hunter’s Mark always prepared, cast free twice per Long Rest), Weapon Mastery (Longbow, Shortsword).\n'+
+  'Guide origin: Stealth, Survival, Cartographer’s Tools, Magic Initiate (Druid). Standard array prior to background: DEX 15, CON 14, WIS 13, INT 12, CHA 10, STR 8; add +2 DEX and +1 WIS.\n'+
+  'Firefly Folk homebrew: Living Lantern (bright light 10 ft, dim another 10 ft), Guiding Glow (Light cantrip, Faerie Fire once per Long Rest).\n'+
+  'The player-created dragonfly and firefly companions are story companions only until the DM approves specific statistics or a later subclass; no free companion attacks or Beast Master abilities at level 1.\n'+
+  'The tool belt, goggles and inventions are narrative unless specific mechanical equipment is approved.';
+ sh.inventory='Guide background option A: Shortbow, 20 Arrows, Cartographer’s Tools, Bedroll, Quiver, Tent, Traveler’s Clothes and 3 GP.\n'+
+  'Ranger class starting equipment: select an official class equipment option with the player; longbow and suitable armor are recommended, but no free duplicate weapons, money or armor should be assumed.\n'+
+  'Player’s goggles, overalls, nettle arrows, tool belt, inventions, pet Scarlet Dwarf Dragonfly and Photuris Mysticalampas Firefly are preserved as character concepts. Companion mechanics require separate DM agreement.';
+ sh.proficiencies='Ranger: Strength and Dexterity saving throws; light armor, medium armor, shields; simple and martial weapons. Ranger class skills: Animal Handling, Perception, Nature.\n'+
+  'Guide: Stealth, Survival, Cartographer’s Tools. Magic Initiate (Druid): Wisdom spellcasting chosen for this build.\n'+
+  'Weapon Mastery: Longbow, Shortsword. Choose other languages according to campaign rules.';
+ sh.attacks='Longbow (if selected in starting gear): +5 to hit, 1d8+3 piercing, ranged (150/600 ft). Shortbow (Guide): +5 to hit, 1d6+3 piercing, ranged (80/320 ft).\n'+
+  'Hunter’s Mark adds 1d6 Force damage on a hit while the spell lasts (Concentration); no extra attack at level 1. Nettle arrows are flavor unless DM assigns new effects.';
+ sh.currentHp=12;sh.maxHp=12;sh.ac=14;sh.speed=30;sh.hitDiceUsed=0;
+ pc.class='Ranger';pc.background='Guide';pc.hp=12;pc.maxHp=12;pc.ac=14;pc.constitution=2;
+ db.sheets ||= {};db.sheets[pc.id]=sh;
+ save();render();toast('Ranger build applied; review armor, spells and companion details');
+}
+function heroRangerPrologueDraft(pc){
+ const name=String(pc.name||'the brilliant Firefly'),hero=pc.bugHero||{};
+ return {
+  readAloud:'In a workshop built beneath the shell of a fallen walnut, '+name+
+   ' adjusts a brass lens while snow curls around an oversized human-world screw. Goggles, a bow, and carefully sorted nettle arrows hang beside sketches of impossible inventions.\n\nA tiny scarlet dragonfly darts through the door, circling above a silvery thread it has found. The thread glows with six pinpoints of light. Far beyond the workshop, bells begin ringing in Hearthhollow. Then, across the floor, the thread twitches as though it has a destination.\n\n'+name+', what would you like to investigate first?',
+  dmNotes:'A 3–5 minute introduction. The player described a curious Firefly Folk archer, gifted inventor and aspiring creature tamer, with a fear of spiders. They supplied a Scarlet Dwarf Dragonfly, a Photuris Mysticalampas Firefly and an impressive college history. Ask the player to describe how they met their companions and what invention they are most proud of; do not write those answers for them. The characters’ appearance and companions are existing player concepts, not automatic extra combatants. End with an invitation toward Hearthhollow.',
+  npcDialogue:'A passing field courier, if needed: “Doctor! The lantern festival is starting—and something has been making the village lights flicker. Have you seen any strange threads?”',
+  checks:'No check required to notice the silvery thread or reach Hearthhollow. Optional DC 11 Investigation to observe the thread reacts to distant bell tones; DC 11 Nature to identify an unusual shimmer. The firefly light, archery tools, mapmaking skills and inventive solutions can help without forcing the use of class resources.',
+  encounters:'One gentle workshop puzzle or conversation; no mandatory combat, forced damage, companion danger or invented companion attacks. The pet dragonfly is not required to fetch the clue successfully.',
+  clues:'Six silvery lights pulse along the thread, foreshadowing the Starheart and the Christmas mystery without identifying Vesper or forcing any interpretation.',
+  choices:'Study the thread, ask a companion to investigate, build a measuring device, visit the festival, or attempt something else. The player decides whether the thread is kept and what their companions do.',
+  music:'Playful mechanical clicks, warm walnut-workshop ambience, airy firefly tones, and distant winter bells fading toward the village.',
+  rewards:'A personal question and a reason to approach Hearthhollow. The silver thread is only acquired if the player chooses to retrieve it. No automatic treasure, XP, companion upgrade or recorded player choice.'
+ };
+}
+function heroRangerApplyPrologue(id){
+ const pc=db.pcs.find(x=>String(x.id)===String(id));
+ if(!pc||!heroRangerIsCandidate(pc))return;
+ const key='hero:'+pc.id;
+ if(db.christmasPrologueDraft?.scenes?.[key])return alert('This hero already has a saved introduction. The existing draft was not overwritten.');
+ if(!confirm('Save The Sixfold Silver Thread as a proposed solo opening for '+pc.name+'? No player choices or game progress will be recorded.'))return;
+ db.christmasPrologueDraft ||= {scenes:{}};
+ db.christmasPrologueDraft.scenes ||= {};
+ db.christmasPrologueDraft.scenes[key]=heroRangerPrologueDraft(pc);
+ save();render();toast('Ranger solo introduction draft saved');
+}
+function heroRangerLevelOnePreview(pc){
+ if(!heroRangerIsCandidate(pc))return '';
+ const eligible=heroRangerSheetUntouched(pc);
+ const introExists=!!db.christmasPrologueDraft?.scenes?.['hero:'+pc.id];
+ const rows=[
+  ['Scores','STR 8 · DEX 17 · CON 14 · INT 12 · WIS 14 · CHA 10'],
+  ['Combat','12 HP · AC 14 in leather armor · Initiative +3 · Proficiency +2'],
+  ['Ranger magic','Wisdom spell attack +4 · Save DC 12 · two level-1 spell slots · Cure Wounds and Ensnaring Strike prepared'],
+  ['Favored Enemy','Hunter’s Mark always prepared, two free casts per Long Rest, separate from the Ranger’s two prepared spells'],
+  ['Guide feat','Magic Initiate (Druid): Guidance and Druidcraft; Speak with Animals once free per Long Rest. Background skills Stealth and Survival; Cartographer’s Tools'],
+  ['Ranger skills and weapons','Animal Handling, Perception and Nature; Longbow and Shortsword masteries. Shortbow supplied by Guide background equipment'],
+  ['Firefly Folk traits','Living Lantern and Guiding Glow (Light, Faerie Fire) are existing homebrew; no free additional class spells'],
+  ['Companions and inventions','The player-created Scarlet Dwarf Dragonfly and Photuris Mysticalampas Firefly remain story companions with no invented combat abilities'],
+  ['Solo introduction','The Sixfold Silver Thread: a companion brings a strange glowing thread to the workshop, inviting scientific curiosity and a trip to Hearthhollow']
+ ];
+ return '<section class="hero-wizard-draft hero-ranger-draft" aria-label="Level 1 Ranger detailed draft"><h4>Level-1 Firefly Folk Ranger sheet — proposed, not applied</h4>'+
+ '<div class="hero-build-grid">'+rows.map(([label,value])=>'<div><b>'+esc(label)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
+ '<p class="muted">2024 Ranger: two 1st-level slots and two prepared class spells at level 1; Hunter’s Mark is always prepared separately. Companion stats and crafted gadgets require DM approval. AC 14 assumes leather armor; review class starting equipment before accepting this selection.</p>'+
+ '<div class="actions"><button class="btn secondary" type="button" onclick="heroRangerApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Ranger sheet</button>'+
+ '<button class="btn secondary" type="button" onclick="heroRangerApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
+ (!eligible?'<p class="muted">Automatic setup is unavailable because existing customized values need manual review. No character sheet data is replaced.</p>':'')+
+ (introExists?'<p class="muted">A previous introduction draft is saved and protected from replacement.</p>':'')+'</section>';
+}
+
 function heroBuildWorkshop(pc){
  const proposal=heroBuildMatch(pc);
  if(!proposal)return '';
@@ -874,7 +986,7 @@ function heroBuildWorkshop(pc){
  return '<details class="card hero-build-workshop" id="hero-build-workshop"><summary>Character Build Workshop · '+esc(proposal.cls)+' (draft)</summary>'+
   '<p class="muted">Suggestions based on this hero’s original Bug Hero Creator answers. Review with the player first. No ability scores, spell selections, equipment, notes or existing character data are changed automatically.</p>'+
   '<div class="hero-build-grid">'+fields.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
-  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+heroWarlockLevelOnePreview(pc)+
+  heroWizardLevelOnePreview(pc)+heroRogueLevelOnePreview(pc)+heroWarlockLevelOnePreview(pc)+heroRangerLevelOnePreview(pc)+
   '<div class="actions"><button type="button" class="btn secondary" onclick="heroBuildApprove('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>'+(current===proposal.cls?'Confirm background only':'Apply approved class and background')+'</button></div>'+
   (!eligible?'<p class="muted">This hero already has a different class. Change it manually only if the player approves.</p>':'')+
   '<p class="muted">2024 rules reference: D&D Beyond Basic Rules (Character Classes and Character Origins). Subclasses begin at level 3. Custom insect species traits remain unchanged.</p></details>';
