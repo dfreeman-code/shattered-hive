@@ -2280,7 +2280,7 @@ const PC_MINIATURE_ASSETS={
 };
 function pcMiniatureAsset(rec){
  if(!rec)return null;
- const normalized=String(rec.name||'').replace(/\\s+/g,' ').replace(/\\s*\\.\\s*/g,'.').trim().toLowerCase();
+ const normalized=String(rec.name||'').replace(/\s+/g,' ').replace(/\s*\.\s*/g,'.').trim().toLowerCase();
  const def=Object.entries(PC_MINIATURE_ASSETS).find(([name])=>name.toLowerCase()===normalized)?.[1];
  if(!def||String(rec.species||'').toLowerCase()!==def.species.toLowerCase()||String(rec.class||'').toLowerCase()!==def.className.toLowerCase())return null;
  return {
