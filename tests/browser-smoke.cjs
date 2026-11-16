@@ -151,7 +151,7 @@ async function check(label, fn) {
   assert.equal(await page.evaluate(()=>page),'runner');
   assert.equal(await page.evaluate(()=>adventurePreviewIndex),previous.scene);
   await page.evaluate(()=>goto('maps'));
-  await page.getByRole('button',{name:'Session Command Center'}).click();
+  await page.getByRole('group',{name:'DM session shortcuts'}).getByRole('button',{name:'Session Command Center',exact:true}).click();
   assert.equal(await page.evaluate(()=>page),'command');
   const after=await page.evaluate(()=>({
     session:db.campaign.session, decisions:JSON.stringify(db.decisions||[]), quests:JSON.stringify(db.quests||[])
