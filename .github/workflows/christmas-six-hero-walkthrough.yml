@@ -1,0 +1,33 @@
+name: Christmas Caper six-hero end-to-end walkthrough
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'assets/**'
+      - 'tests/christmas-six-hero-walkthrough.cjs'
+      - '.github/workflows/christmas-six-hero-walkthrough.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  six-hero-walkthrough:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Run isolated six-hero DM walkthrough
+        run: node tests/christmas-six-hero-walkthrough.cjs
+      - name: Upload walkthrough report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: christmas-six-hero-walkthrough
+          path: christmas-six-hero-walkthrough-results.json
+          if-no-files-found: ignore
