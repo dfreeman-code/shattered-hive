@@ -26,6 +26,35 @@ async function ready(url){
   assert.equal(initial.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
   assert.equal(initial.quests.find(x=>x.id==='vesper-adventure-1').status,'Available');
   assert.ok(initial.decisions.every(x=>x.status==='Not decided'));
+  assert.equal(initial.christmasEncounterPrepVersion,1,'Christmas prep should initialize safely');
+  assert.equal(initial.encounters.filter(x=>x.id.startsWith('caper-encounter-')).length,4);
+  assert.equal(initial.music.filter(x=>x.id.startsWith('caper-music-')).length,3);
+  // A complete six-PC party is preserved without requiring access to real user characters.
+  await page.evaluate(()=>{
+    const key='shattered-hive-v1',data=JSON.parse(localStorage.getItem(key));
+    data.pcs=Array.from({length:6},(_,i)=>({id:'test-hero-'+i,name:'Test Hero '+(i+1),class:'Fighter',species:'Beetlekin',level:1,status:'Active'}));
+    localStorage.setItem(key,JSON.stringify(data));
+  });
+  await page.reload();
+  const sixBefore=(await read()).pcs.map(p=>({...p}));
+  await page.getByRole('button',{name:/Adventure Runner/}).click();
+  assert.match(await page.locator('#app').innerText(),/Party:\\s*6 character records/);
+  await page.locator('.ar-scene').nth(3).click();
+  assert.match(await page.locator('#app').innerText(),/Frozen Berry Crossing/);
+  await page.locator('.ar-scene').nth(6).click();
+  assert.match(await page.locator('#app').innerText(),/Hollowroot Guardian/);
+  await page.getByRole('button',{name:'Open Encounter Library'}).click();
+  assert.match(await page.locator('#app').innerText(),/Hungry Snow-Tuft Mites/);
+  await page.getByRole('button',{name:/Adventure Runner/}).click();
+  await page.getByRole('button',{name:'Open Music Cues'}).click();
+  assert.match(await page.locator('#app').innerText(),/Session 1: The Great Christmas Caper/);
+  await page.getByRole('button',{name:/Combat Tracker/}).first().click();
+  assert.equal(await page.locator('#combatPcSelect option').count(),7);
+  assert.match(await page.locator('#combatPresetSelect').innerText(),/Snow-Tuft Mite/);
+  assert.match(await page.locator('#combatPresetSelect').innerText(),/Hollowroot Guardian/);
+  assert.deepEqual((await read()).pcs,sixBefore,'No test party member may be altered by prep UI');
+  await page.getByRole('button',{name:/Adventure Runner/}).click();
+
 
   await page.getByRole('button',{name:/Adventure Runner/}).click();
   assert.match(await page.locator('#app').innerText(),/PRE-CAMPAIGN DRAFT/);
