@@ -216,7 +216,7 @@ async function check(label, fn) {
   await page.locator('#ar-encounter-search').fill('QA-Only-Snow-tuft-163');
   assert.equal(await page.locator('#ar-quick-encounter option').count(),2);
   await page.locator('#ar-quick-encounter').selectOption('qa-search-mites');
-  assert.match(await page.locator('#ar-reference-detail').innerText(),/Snow-tuft mites/);
+  assert.match(await page.locator('#ar-reference-detail').innerText(),/QA-Only-Snow-tuft-163 mites/);
   await page.locator('#ar-npc-search').fill('no-match-qa-xyz');
   assert.equal(await page.locator('#ar-quick-npc option').count(),1);
   assert.match(await page.locator('#ar-npc-count').innerText(),/^0 of /);
