@@ -320,8 +320,13 @@ async function check(label, fn) {
   assert.ok(styles.linkSize>=14);
   assert.match(styles.titleFont,/Georgia|serif/);
   await page.locator('#nav .nav-route[data-route="command"]').focus();
-  const focus=await page.locator('#nav .nav-route[data-route="command"]').evaluate(el=>getComputedStyle(el).outlineStyle);
-  assert.notEqual(focus,'none');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  const focus=await page.locator('#nav .nav-route[data-route="command"]').evaluate(el=>({
+   visible:el.matches(':focus-visible'),outline:getComputedStyle(el).outlineStyle
+  }));
+  assert.equal(focus.visible,true,'Keyboard navigation must show focus-visible state');
+  assert.notEqual(focus.outline,'none');
  });
  await check('Theme preserves compact desktop and mobile scene navigation',async()=>{
   await page.evaluate(()=>goto('runner'));
