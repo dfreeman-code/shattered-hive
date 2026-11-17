@@ -368,7 +368,7 @@ async function ready(url){
   await warlockContext.close();
 
 
-  // Ranger preview is exercised only using fake browser-local character records.
+  // Ranger preview uses disposable local-only Dr. Newton Sparknic fixtures, including a protected customized record.
   const rangerContext=await browser.newContext({viewport:{width:1280,height:800}});
   const rangerPage=await rangerContext.newPage();
   rangerPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
@@ -376,10 +376,10 @@ async function ready(url){
   await rangerPage.evaluate(()=>{
     const data=JSON.parse(localStorage.getItem('shattered-hive-v1'));
     data.pcs=[
-      {id:'ranger-test',name:'Test Firefly Inventor',class:'Unassigned',background:'',level:1,species:'Firefly Folk',status:'Active',hp:'',maxHp:'',ac:'',
+      {id:'ranger-test',name:'Dr.Newton Sparknic',class:'Unassigned',background:'',level:1,species:'Firefly Folk',status:'Active',hp:'',maxHp:'',ac:'',
         notes:'Original family inventor story must remain',bugHero:{power:'Archery and exploring',gear:'Tools and gadgets',fear:'Spiders',
         dream:'Greatest inventor and tamer',trait:'Curious',extra:'Pet Scarlet Dwarf Dragonfly, Photuris Mysticalampas Firefly'}},
-      {id:'ranger-custom',name:'Customized Firefly Archer',class:'Ranger',background:'Guide',level:1,species:'Firefly Folk',status:'Active',hp:13,maxHp:13,ac:16,
+      {id:'ranger-custom',name:'Dr.Newton Sparknic',class:'Ranger',background:'Guide',level:1,species:'Firefly Folk',status:'Active',hp:13,maxHp:13,ac:16,
         notes:'Hand-selected armor',bugHero:{power:'Archery and exploring',gear:'Tools and gadgets'}}
     ];
     localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
@@ -390,6 +390,8 @@ async function ready(url){
   await rangerPage.locator('#hero-build-workshop summary').click();
   assert.match(await rangerPage.locator('#hero-build-workshop').innerText(),/Sixfold Silver Thread/);
   assert.match(await rangerPage.locator('#hero-build-workshop').innerText(),/Hunter’s Mark/);
+  assert.match(await rangerPage.locator('#hero-build-workshop').innerText(),/AC 15/);
+  assert.match(await rangerPage.locator('#hero-build-workshop').innerText(),/10 GP/);
   const rangerState=()=>rangerPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
   let rangerBefore=await rangerState();
   assert.equal(rangerBefore.pcs[0].class,'Unassigned');
@@ -399,7 +401,7 @@ async function ready(url){
   assert.equal(rangerAfter.pcs[0].class,'Ranger');
   assert.equal(rangerAfter.pcs[0].background,'Guide');
   assert.equal(rangerAfter.pcs[0].hp,12);
-  assert.equal(rangerAfter.pcs[0].ac,14);
+  assert.equal(rangerAfter.pcs[0].ac,15);
   assert.equal(rangerAfter.pcs[0].notes,'Original family inventor story must remain');
   assert.deepEqual(rangerAfter.sheets['ranger-test'].scores,{STR:8,DEX:17,CON:14,INT:12,WIS:14,CHA:10});
   assert.deepEqual(rangerAfter.sheets['ranger-test'].saves,['STR','DEX']);
@@ -408,6 +410,8 @@ async function ready(url){
   assert.match(rangerAfter.sheets['ranger-test'].spellPrepared,/Hunter’s Mark always prepared/);
   assert.match(rangerAfter.sheets['ranger-test'].features,/story companions only/);
   assert.match(rangerAfter.sheets['ranger-test'].features,/Weapon Mastery/);
+  assert.match(rangerAfter.sheets['ranger-test'].inventory,/Studded Leather Armor/);
+  assert.match(rangerAfter.sheets['ranger-test'].inventory,/40 Arrows, two Quivers, and 10 GP/);
   assert.equal(rangerAfter.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
   assert.equal(rangerAfter.campaign.session,0);
   assert.ok(rangerAfter.decisions.every(d=>d.status==='Not decided'));
