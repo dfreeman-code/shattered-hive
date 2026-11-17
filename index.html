@@ -2651,7 +2651,7 @@ function tabletopPage(board,m,ms,player){
   ?`<button type="button" class="btn secondary small" onclick="mapSetView('dm')">⚙ DM View</button>`
   :`<button type="button" class="btn secondary small" onclick="mapSetView('player')">◉ Player View</button>`;
  const grid=player?'':'<button type="button" class="btn secondary small" onclick="mapGridToggle()">'+(ms.showGrid?'▦ Hide grid':'▤ Show grid')+'</button>';
- const autoFog=player?'':mapAutoFogControl()+mapVisionControls(m)+mapLightingControls(m);
+ const autoFog=player?'':mapAutoFogCompactControl()+mapVisionControls(m)+mapLightingControls(m);
  const selected=player?'Player-safe presentation · No DM controls':(ms.selected?esc(tokenLabel(m.tokens.find(t=>t.id===ms.selected)||{name:'Token'}))+' selected · Drag, click a square, or use arrows':'DM tabletop · Select a token to move it');
  return '<section class="tabletop-shell" role="region" aria-label="Full-screen tabletop"><div class="tabletop-toolbar"><strong>✿ Tabletop · '+esc(m.name)+'</strong><label>Scene '+select+'</label>'+miniTokenSizeControl()+autoFog+grid+toggle+(player?'':livePlayerDisplayButton())+'<span class="tabletop-spacer"></span><button type="button" class="btn secondary small" onclick="tabletopExit()">✕ Exit tabletop</button></div><div class="tabletop-map-stage" style="--tabletop-ratio:'+(mapCols(m)/mapRows(m))+'">'+board+'</div><div class="tabletop-foot">'+selected+' · Esc exits tabletop</div></section>';
 }
@@ -2697,6 +2697,8 @@ function mapPaintWall(idx,erase){const m=currentMap(),cells=new Set(mapWallCells
 // Player characters reveal their traveled grid cells and immediate surroundings.
 function mapAutoFogEnabled(m){return m.autoRevealOnPcMove!==false}
 function mapAutoFogToggle(checked){let m=currentMap();m.autoRevealOnPcMove=!!checked;save();render()}
+// The full-screen tabletop toolbar needs a short label; the full explanation remains in the Fog panel.
+function mapAutoFogCompactControl(){const on=mapAutoFogEnabled(currentMap());return '<label class="tabletop-fog-compact" title="Reveal nearby terrain automatically when player characters move"><input type="checkbox" '+(on?'checked ':'')+'onchange="mapAutoFogToggle(this.checked)"> Auto-reveal fog</label>'}
 function mapAutoFogControl(){const on=mapAutoFogEnabled(currentMap());return '<label class="hero-ready-check fog-toggle-choice"><input type="checkbox" '+(on?'checked ':'')+'onchange="mapAutoFogToggle(this.checked)"><span class="fog-toggle-copy"><strong>Reveal fog as heroes move</strong><span>Moving a player character uncovers its path and nearby terrain automatically.</span></span></label>'}
 function mapRevealPcTravel(m,fromX,fromY,toX,toY){
  const cols=mapCols(m),rows=mapRows(m),revealed=mapFog(m),seen=new Set(revealed);
