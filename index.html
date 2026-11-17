@@ -51,6 +51,31 @@
 .fog-options{display:grid;gap:10px}
 .fog-control-group .hero-ready-check{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:transparent;cursor:pointer}
 .fog-control-group .hero-ready-check input{margin-top:4px;flex:none}
+/* Fit tabletop to its actual remaining stage height even if toolbar wraps. */
+@supports (height: 100cqh){
+ .tabletop-map-stage{container-type:size}
+ .tabletop-shell .tabletop-map-stage .map-board{
+  width:min(calc(100cqw - 24px),calc((100cqh - 60px) * var(--tabletop-ratio,1)));
+  max-height:calc(100cqh - 60px)
+ }
+}
+/* Readable, touch-friendly Fog of War choices. Scope only to this panel. */
+.fog-control-panel .fog-toggle-choice{
+ display:flex;align-items:flex-start;gap:14px;min-height:72px;
+ padding:14px 16px;border:1px solid #a6b8a3;border-radius:11px;
+ background:#f0f5eb;color:#1c3527;cursor:pointer;line-height:1.45
+}
+.fog-control-panel .fog-toggle-choice:hover{background:#e4eedc;border-color:#597b5c}
+.fog-control-panel .fog-toggle-choice:focus-within{outline:3px solid #426a4a;outline-offset:2px}
+.fog-control-panel .fog-toggle-choice input[type="checkbox"]{
+ appearance:auto;-webkit-appearance:checkbox;
+ width:24px;height:24px;min-width:24px;min-height:24px;
+ flex:0 0 24px;margin:2px 0 0;accent-color:#285f3a;cursor:pointer
+}
+.fog-control-panel .fog-toggle-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fog-control-panel .fog-toggle-copy strong{font-size:17px;font-weight:750;line-height:1.3;color:#193724}
+.fog-control-panel .fog-toggle-copy>span{font-size:15px;line-height:1.5;color:#314a39}
+@media(max-width:650px){.fog-control-panel .fog-toggle-choice{padding:12px;gap:12px}}
 .fog-control-group select{max-width:260px;margin:6px 0 0}
 .fog-control-group .actions{margin:9px 0;display:flex;flex-wrap:wrap;gap:8px}
 .fog-help-note{font-size:12px;color:var(--muted);line-height:1.55;margin:0}
@@ -2234,7 +2259,7 @@ function mapTokenVisionSet(key,value){const t=currentMap().tokens.find(x=>x.id==
  save();render()}
 function mapLightingControls(m){if(!mapVisionEnabled(m))return '';
  const enabled=mapLightingEnabled(m),ambient=mapAmbient(m);
- return '<label class="hero-ready-check"><input type="checkbox" '+(enabled?'checked ':'')+'onchange="mapLightingToggle(this.checked)"> Use ambient light and character vision (opt-in)</label>'+
+ return '<label class="hero-ready-check fog-toggle-choice"><input type="checkbox" '+(enabled?'checked ':'')+'onchange="mapLightingToggle(this.checked)"><span class="fog-toggle-copy"><strong>Use lighting and Darkvision</strong><span>Let darkness, carried lights, and each hero’s assigned Darkvision control what the party sees.</span></span></label>'+
  (enabled?'<label>Ambient light <select aria-label="Ambient lighting" onchange="mapAmbientSet(this.value)">'+
  ['bright','dim','dark'].map(x=>'<option value="'+x+'"'+(ambient===x?' selected':'')+'>'+({bright:'Bright Light',dim:'Dim Light',dark:'Darkness'}[x])+'</option>').join('')+'</select></label><p class="map-file-note">Bright and dim light allow ordinary sight (dim light affects Perception in D&D). Darkness limits sight to illuminated areas or a PC’s explicitly assigned Darkvision. No wall or vision settings are inferred from map art.</p>':'')}
 function mapTokenVisionControls(t){if(t.kind!=='pc'||!mapLightingEnabled(currentMap()))return '';
@@ -2634,7 +2659,7 @@ function tabletopPage(board,m,ms,player){
   ?`<button type="button" class="btn secondary small" onclick="mapSetView('dm')">⚙ DM View</button>`
   :`<button type="button" class="btn secondary small" onclick="mapSetView('player')">◉ Player View</button>`;
  const grid=player?'':'<button type="button" class="btn secondary small" onclick="mapGridToggle()">'+(ms.showGrid?'▦ Hide grid':'▤ Show grid')+'</button>';
- const autoFog=player?'':mapAutoFogControl()+mapVisionControls(m)+mapLightingControls(m);
+ const autoFog=player?'':mapAutoFogCompactControl()+mapVisionControls(m)+mapLightingControls(m);
  const selected=player?'Player-safe presentation · No DM controls':(ms.selected?esc(tokenLabel(m.tokens.find(t=>t.id===ms.selected)||{name:'Token'}))+' selected · Drag, click a square, or use arrows':'DM tabletop · Select a token to move it');
  return '<section class="tabletop-shell" role="region" aria-label="Full-screen tabletop"><div class="tabletop-toolbar"><strong>✿ Tabletop · '+esc(m.name)+'</strong><label>Scene '+select+'</label>'+miniTokenSizeControl()+autoFog+grid+toggle+(player?'':livePlayerDisplayButton())+'<span class="tabletop-spacer"></span><button type="button" class="btn secondary small" onclick="tabletopExit()">✕ Exit tabletop</button></div><div class="tabletop-map-stage" style="--tabletop-ratio:'+(mapCols(m)/mapRows(m))+'">'+board+'</div><div class="tabletop-foot">'+selected+' · Esc exits tabletop</div></section>';
 }
@@ -2674,13 +2699,15 @@ function mapFogPanel(m,ms){
 }
 function mapSetFogTool(v){mapState().fogTool=['hide','reveal','wall','erasewall'].includes(v)?v:'off';render()}
 function mapVisionToggle(on){let m=currentMap();m.fogVision2=!!on;save();render()}
-function mapVisionControls(m){return '<label class="hero-ready-check"><input type="checkbox" '+(mapVisionEnabled(m)?'checked ':'')+'onchange="mapVisionToggle(this.checked)"> Wall-aware vision (4-square radius) + dim explored terrain (opt-in)</label>'+
+function mapVisionControls(m){return '<label class="hero-ready-check fog-toggle-choice"><input type="checkbox" '+(mapVisionEnabled(m)?'checked ':'')+'onchange="mapVisionToggle(this.checked)"><span class="fog-toggle-copy"><strong>Wall-aware vision</strong><span>Stop vision at walls you paint. Reveal nearby terrain and keep explored areas dim when the party moves away.</span></span></label>'+
  (mapVisionEnabled(m)?'<div class="actions"><button class="btn secondary" onclick="mapSetFogTool(\'wall\')">▦ Paint vision blockers</button><button class="btn secondary" onclick="mapSetFogTool(\'erasewall\')">⌫ Erase blockers</button><span class="muted">'+mapWallCells(m).length+' blocking squares</span></div>':'')}
 function mapPaintWall(idx,erase){const m=currentMap(),cells=new Set(mapWallCells(m));if(erase)cells.delete(idx);else cells.add(idx);m.fogWalls=[...cells].sort((a,b)=>a-b);save();render()}
 // Player characters reveal their traveled grid cells and immediate surroundings.
 function mapAutoFogEnabled(m){return m.autoRevealOnPcMove!==false}
 function mapAutoFogToggle(checked){let m=currentMap();m.autoRevealOnPcMove=!!checked;save();render()}
-function mapAutoFogControl(){const on=mapAutoFogEnabled(currentMap());return '<label class="hero-ready-check"><input type="checkbox" '+(on?'checked ':'')+'onchange="mapAutoFogToggle(this.checked)"> Reveal fog as PCs move (1-square surroundings)</label>'}
+// The full-screen tabletop toolbar needs a short label; the full explanation remains in the Fog panel.
+function mapAutoFogCompactControl(){const on=mapAutoFogEnabled(currentMap());return '<label class="tabletop-fog-compact" title="Reveal nearby terrain automatically when player characters move"><input type="checkbox" '+(on?'checked ':'')+'onchange="mapAutoFogToggle(this.checked)"> Auto-reveal fog</label>'}
+function mapAutoFogControl(){const on=mapAutoFogEnabled(currentMap());return '<label class="hero-ready-check fog-toggle-choice"><input type="checkbox" '+(on?'checked ':'')+'onchange="mapAutoFogToggle(this.checked)"><span class="fog-toggle-copy"><strong>Reveal fog as heroes move</strong><span>Moving a player character uncovers its path and nearby terrain automatically.</span></span></label>'}
 function mapRevealPcTravel(m,fromX,fromY,toX,toY){
  const cols=mapCols(m),rows=mapRows(m),revealed=mapFog(m),seen=new Set(revealed);
  let x=fromX,y=fromY,dx=Math.abs(toX-fromX),dy=Math.abs(toY-fromY);
