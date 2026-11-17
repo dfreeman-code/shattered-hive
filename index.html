@@ -2500,7 +2500,7 @@ function livePlayerSnapshot(){
  // Explicitly choose the PLAYER asset; never forward DM art, markers, notes or campaign records.
  const image=m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'';
  const safeImage=/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?$/i.test(image)?image:'';
- return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,revealed,tokens},notice:''};
+ return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens},notice:''};
 }
 function initLivePlayerDisplay(){
  if(!('BroadcastChannel' in window))return {available:false,publish(){},open(){alert('This browser does not support live tab updates. Please use a current Chrome, Edge or Firefox browser.')}};
@@ -2514,8 +2514,9 @@ function initLivePlayerDisplay(){
  function open(){
   const url=new URL('player-display.html',location.href);
   url.hash='session='+encodeURIComponent(session);
-  const tab=window.open(url.href,'_blank','noopener');
-  if(!tab)alert('Allow pop-ups for this site, then click Open Player Display again.');
+  window.open(url.href,'_blank','noopener');
+  // Browsers legitimately return null for a successful noopener window.open.
+  // The viewer reports connectivity via the authenticated channel handshake.
   publish();
  }
  // Periodically resend only the player-safe projection; also allows recovery after refresh.
