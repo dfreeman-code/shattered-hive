@@ -2201,9 +2201,9 @@ function mapVisionRay(m,x0,y0,x1,y1,blocked){
 function mapVisibleFrom(m,x,y){
  const cols=mapCols(m),rows=mapRows(m),blocked=new Set(mapWallCells(m)),result=new Set();
  if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=cols||y>=rows)return result;
- for(let yy=Math.max(0,y-1);yy<=Math.min(rows-1,y+1);yy++)
-  for(let xx=Math.max(0,x-1);xx<=Math.min(cols-1,x+1);xx++)
-   if(mapVisionRay(m,x,y,xx,yy,blocked))result.add(yy*cols+xx);
+ for(let yy=Math.max(0,y-4);yy<=Math.min(rows-1,y+4);yy++)
+  for(let xx=Math.max(0,x-4);xx<=Math.min(cols-1,x+4);xx++)
+   if((xx-x)**2+(yy-y)**2<=16&&mapVisionRay(m,x,y,xx,yy,blocked))result.add(yy*cols+xx);
  return result;
 }
 function mapCurrentVisible(m){
@@ -2603,7 +2603,7 @@ function mapSetShared(v){currentMap().playerShared=!!v;save();render()}
 function mapSwitchPlayer(id){if(mapPlayerScenes().some(m=>m.id===id)){mapState().active=id;mapState().selected=null;save();render()}}
 function mapSetFogTool(v){mapState().fogTool=['hide','reveal','wall','erasewall'].includes(v)?v:'off';render()}
 function mapVisionToggle(on){let m=currentMap();m.fogVision2=!!on;save();render()}
-function mapVisionControls(m){return '<label class="hero-ready-check"><input type="checkbox" '+(mapVisionEnabled(m)?'checked ':'')+'onchange="mapVisionToggle(this.checked)"> Wall-aware vision + dim explored terrain (opt-in)</label>'+
+function mapVisionControls(m){return '<label class="hero-ready-check"><input type="checkbox" '+(mapVisionEnabled(m)?'checked ':'')+'onchange="mapVisionToggle(this.checked)"> Wall-aware vision (4-square radius) + dim explored terrain (opt-in)</label>'+
  (mapVisionEnabled(m)?'<div class="actions"><button class="btn secondary" onclick="mapSetFogTool(\'wall\')">▦ Paint vision blockers</button><button class="btn secondary" onclick="mapSetFogTool(\'erasewall\')">⌫ Erase blockers</button><span class="muted">'+mapWallCells(m).length+' blocking squares</span></div>':'')}
 function mapPaintWall(idx,erase){const m=currentMap(),cells=new Set(mapWallCells(m));if(erase)cells.delete(idx);else cells.add(idx);m.fogWalls=[...cells].sort((a,b)=>a-b);save();render()}
 // Player characters reveal their traveled grid cells and immediate surroundings.
@@ -2615,8 +2615,9 @@ function mapRevealPcTravel(m,fromX,fromY,toX,toY){
  let x=fromX,y=fromY,dx=Math.abs(toX-fromX),dy=Math.abs(toY-fromY);
  const sx=fromX<toX?1:-1,sy=fromY<toY?1:-1;let err=dx-dy;
  while(true){
-  for(let yy=Math.max(0,y-1);yy<=Math.min(rows-1,y+1);yy++)
-   for(let xx=Math.max(0,x-1);xx<=Math.min(cols-1,x+1);xx++)if(!mapVisionEnabled(m)||mapVisionRay(m,x,y,xx,yy,new Set(mapWallCells(m))))seen.add(yy*cols+xx);
+  if(mapVisionEnabled(m)){for(const cell of mapVisibleFrom(m,x,y))seen.add(cell)}
+  else for(let yy=Math.max(0,y-1);yy<=Math.min(rows-1,y+1);yy++)
+   for(let xx=Math.max(0,x-1);xx<=Math.min(cols-1,x+1);xx++)seen.add(yy*cols+xx);
   if(x===toX&&y===toY)break;
   const e2=2*err;
   if(e2>-dy){err-=dy;x+=sx}
