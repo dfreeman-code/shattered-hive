@@ -1,0 +1,26 @@
+name: Wide battle map display browser tests
+on:
+  push:
+    branches: [feature/wide-battle-map-display]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/wide-battle-map-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wide-map-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Verify wide map aspect ratio, token scale, movement, and DM privacy
+        run: node tests/wide-battle-map-smoke.cjs
