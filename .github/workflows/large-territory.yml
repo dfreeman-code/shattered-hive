@@ -1,0 +1,27 @@
+name: Four-times-larger map territories
+on:
+  push:
+    branches: [feature/large-explorable-map-territories]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'player-display.html'
+      - 'tests/large-territory-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  expansion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Verify larger explorable map territory
+        run: node tests/large-territory-smoke.cjs
