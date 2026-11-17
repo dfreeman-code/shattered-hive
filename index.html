@@ -2206,7 +2206,7 @@ function mapCols(m){return Number.isInteger(m?.cols)&&m.cols>=4&&m.cols<=100?m.c
 function mapRows(m){return Number.isInteger(m?.rows)&&m.rows>=4&&m.rows<=100?m.rows:MAP_ROWS}
 function mapIndex(m,x,y){return y*mapCols(m)+x}
 function mapSideExpansion(m){
- if(!m||m.wideSidesV1)return false;
+ if(!m||m.wideSidesV1||m.territoryV1)return false;
  const oldCols=mapCols(m),rows=mapRows(m),side=Math.round(oldCols*.25),cols=oldCols+2*side;
  if(!side||cols>100)return false;
  const shiftIndex=i=>Number.isInteger(i)&&i>=0&&i<oldCols*rows?Math.floor(i/oldCols)*cols+(i%oldCols)+side:null;
@@ -2262,6 +2262,7 @@ function mapArtCenter(m){
 function mapExpandAllSides(){
  const ms=mapState();
  if(ms.wideSidesEnabled)return alert('The maps are already expanded.');
+ if([...ms.scenes,...ms.archivedScenes].some(m=>m.territoryV1))return alert('The new large territory expansion is active. The older side-width operation cannot be combined with it.');
  if(!confirm('Add 25% more playable columns to BOTH sides of every map? This remaps tokens, fog, blockers and DM markers. Export a campaign JSON backup first. Continue?'))return;
  let count=0,skipped=0;
  for(const m of [...ms.scenes,...ms.archivedScenes])mapSideExpansion(m)?count++:skipped++;
@@ -2875,7 +2876,7 @@ if(player)return `${heading}<div class="map-player-panel"><label for="player-map
 return `${heading}
 <div class="map-toolbar card section"><div class="field"><label for="map-picker">Location / scene</label><select id="map-picker" onchange="mapSwitch(this.value)">${mapOptions()}</select></div><div class="field"><label>Display</label><button class="btn secondary" onclick="mapGridToggle()">${ms.showGrid?'▦ Hide grid':'▤ Show grid'}</button></div>${miniTokenSizeControl()}${mapInspectControls()}<div class="field"><label>Map space</label>${mapWideButton()}${tabletopButton()}${livePlayerDisplayButton()}</div><div class="field"><label>Map tools</label><div class="actions"><button class="btn secondary" onclick="mapRename()">Rename</button><button class="btn secondary" onclick="mapClear()">Clear tokens</button><button class="btn danger" onclick="mapDelete()">Delete map</button></div></div></div>
 <div class="card section map-territory-expansion"><h3>Explore a much larger world</h3><p class="map-file-note">Double the width and height of each map for <strong>four times the playable territory</strong>. Existing illustrated scenes, discoveries, tokens, fog, and secret markers remain together in the center. New outer regions start under fog until explored.</p><p class="map-file-note">Example: 46 × 30 → <b>92 × 60</b> squares. Use Zoom + Pan to explore the new territory, and export a campaign JSON backup first.</p><button type="button" class="btn secondary" onclick="mapExpandTerritories()" ${[...mapState().scenes,...mapState().archivedScenes].every(m=>!!m.territoryV1)?'disabled':''}>🌿 ${[...mapState().scenes,...mapState().archivedScenes].every(m=>!!m.territoryV1)?'Maps expanded':'Make maps 4× larger'}</button></div>
-<div class="card section"><h3>Map canvas width</h3><p class="map-file-note">Add 25% new playable terrain to both the left and right edges of every existing and archived map. Keeps the original artwork and tokens aligned in the center; added sides feature illustrated scenery designed for each location.</p><button type="button" class="btn secondary" onclick="mapExpandAllSides()" ${mapState().wideSidesEnabled?'disabled':''}>${mapState().wideSidesEnabled?'✓ All maps expanded':'↔ Expand all map sides +25% each'}</button></div>
+<div class="card section"><h3>Map canvas width</h3><p class="map-file-note">Add 25% new playable terrain to both the left and right edges of every existing and archived map. Keeps the original artwork and tokens aligned in the center; added sides feature illustrated scenery designed for each location.</p><button type="button" class="btn secondary" onclick="mapExpandAllSides()" ${mapState().wideSidesEnabled||[...mapState().scenes,...mapState().archivedScenes].some(m=>!!m.territoryV1)?'disabled':''}>${mapState().wideSidesEnabled?'✓ All maps expanded':'↔ Expand all map sides +25% each'}</button></div>
 <div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the original artwork’s ${mapArtCenter(m)?m.wideSidesV1.originalCols:mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
 ${mapFogPanel(m,ms)}
 <p class="muted" style="margin:12px 0"><b>${esc(m.name)}</b> — ${esc(m.desc||MAP_THEME_NAMES[m.theme]||'Custom map')} · ${mapCols(m)} × ${mapRows(m)} cells · 5 feet per cell (abstract bug scale)</p>
