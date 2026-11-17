@@ -25,3 +25,5 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Test character-linked image tokens (isolated data, mock image responses)
         run: node tests/miniature-token-smoke.cjs
+      - name: Verify the actual 12 PNGs are committed (required before merging)
+        run: node tests/miniature-assets-check.cjs
