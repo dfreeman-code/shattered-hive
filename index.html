@@ -2725,7 +2725,7 @@ function livePlayerSnapshot(){
  // Explicitly choose the PLAYER asset; never forward DM art, markers, notes or campaign records.
  const panorama=mapPanoramaAsset(m);
  const image=panorama||(m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'');
- const safeImage=image.startsWith('assets/maps/panoramic/')?(/^[a-z0-9-]+[.]svg$/i.test(image.slice('assets/maps/panoramic/'.length))?image:''):/^assets\\/maps\\/[a-z0-9_-]+\\.(?:png|svg)(?:\\?v=[0-9]+)?$/i.test(image)?image:'';
+ const safeImage=panorama||(/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?$/i.test(image)?image:'');
  return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:panorama?null:mapArtCenter(m),sideArt:panorama?'':mapWideSideArt(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
 }
 function initLivePlayerDisplay(){
