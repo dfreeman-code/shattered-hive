@@ -21,6 +21,9 @@
 .map-board.is-fog-edit .map-fog{pointer-events:auto;cursor:crosshair;z-index:6}
 .map-board.is-player-view .map-fog{z-index:6}.map-board.is-fog-edit .fog-cell,.map-board.is-fog-edit .fog-clear{pointer-events:auto}
 .fog-clear{background:transparent;pointer-events:none}
+.fog-memory{background:#0b1713a8;pointer-events:none}
+.map-board:not(.is-player-view) .fog-wall-mark{outline:2px dashed #f5a94b;outline-offset:-2px}
+.map-board.is-player-view .fog-wall-mark{outline:none}
 .map-board.is-fog-edit .fog-cell{opacity:.8}.map-board.is-fog-edit .fog-clear:hover,.map-board.is-fog-edit .fog-cell:hover{outline:3px solid #f9ce63;outline-offset:-3px;background-color:#e7c86c44}
 .map-board.is-player-view{border-color:#9ab69a;cursor:default}.map-board.is-player-view .map-token{cursor:default}
 .map-board.is-player-view .map-token.map-hidden{display:none}
@@ -2178,8 +2181,47 @@ function findTokenRecord(t){return t.kind==='pc'?db.pcs.find(x=>x.id===t.ref):t.
 function tokenLabel(t){return findTokenRecord(t)?.name||t.name||'Unknown character'}
 function tokenTheme(t){return t.kind==='pc'?'pc':t.kind==='npc'?'npc':'monster'}
 function mapFog(m){if(!Array.isArray(m.revealed))m.revealed=Array.from({length:mapRows(m)*mapCols(m)},(_,i)=>i);return m.revealed}
-function mapVisibleToken(t,m,mode){return mode!=='player'||(t.kind==='pc'||(t.showToPlayers===true))&&mapFog(m).includes(mapIndex(m,t.x,t.y))}
-function mapFogTiles(m){let visible=new Set(mapFog(m));return Array.from({length:mapCols(m)*mapRows(m)},(_,i)=>`<div data-fog-cell="${i}" class="${visible.has(i)?'fog-clear':'fog-cell'}"></div>`).join('')}
+// Opt-in tabletop vision: explored terrain is persistent, current sight is recalculated.
+function mapVisionEnabled(m){return m.fogVision2===true}
+function mapWallCells(m){return Array.isArray(m.fogWalls)?m.fogWalls.filter(n=>Number.isInteger(n)&&n>=0&&n<mapCols(m)*mapRows(m)):[]}
+function mapVisionRay(m,x0,y0,x1,y1,blocked){
+ const cols=mapCols(m),dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;
+ let x=x0,y=y0,err=dx-dy;
+ while(x!==x1||y!==y1){
+  const e2=2*err,oldX=x,oldY=y;
+  if(e2>-dy){err-=dy;x+=sx}
+  if(e2<dx){err+=dx;y+=sy}
+  // Conservative corner rule: two solid orthogonal cells close a diagonal gap.
+  if(x!==oldX&&y!==oldY&&blocked.has(oldY*cols+x)&&blocked.has(y*cols+oldX))return false;
+  if(x===x1&&y===y1)return true; // the blocking wall itself can be seen
+  if(blocked.has(y*cols+x))return false;
+ }
+ return true;
+}
+function mapVisibleFrom(m,x,y){
+ const cols=mapCols(m),rows=mapRows(m),blocked=new Set(mapWallCells(m)),result=new Set();
+ if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=cols||y>=rows)return result;
+ for(let yy=Math.max(0,y-1);yy<=Math.min(rows-1,y+1);yy++)
+  for(let xx=Math.max(0,x-1);xx<=Math.min(cols-1,x+1);xx++)
+   if(mapVisionRay(m,x,y,xx,yy,blocked))result.add(yy*cols+xx);
+ return result;
+}
+function mapCurrentVisible(m){
+ if(!mapVisionEnabled(m))return new Set(mapFog(m));
+ const result=new Set();
+ for(const t of m.tokens||[])if(t.kind==='pc')for(const cell of mapVisibleFrom(m,t.x,t.y))result.add(cell);
+ return result;
+}
+function mapVisibleToken(t,m,mode){
+ if(mode!=='player')return true;
+ if(t.kind!=='pc'&&t.showToPlayers!==true)return false;
+ const idx=mapIndex(m,t.x,t.y);
+ return mapVisionEnabled(m)?mapCurrentVisible(m).has(idx):mapFog(m).includes(idx);
+}
+function mapFogTiles(m){
+ const explored=new Set(mapFog(m)),current=mapCurrentVisible(m),vision=mapVisionEnabled(m),walls=new Set(mapWallCells(m));
+ return Array.from({length:mapCols(m)*mapRows(m)},(_,i)=>`<div data-fog-cell="${i}" class="${vision?(current.has(i)?'fog-clear':explored.has(i)?'fog-memory':'fog-cell'):(explored.has(i)?'fog-clear':'fog-cell')}${walls.has(i)?' fog-wall-mark':''}"></div>`).join('');
+}
 function mapCustomBackground(m,mode='dm'){if(m.id.startsWith('caper-'))return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/great-christmas-caper-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} ${mode==='dm'?'DM':'player'} map">`;if(m.id==='evergarden-home-hive')return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" alt="${mode==='dm'?'Dungeon Master':'Player-safe'} Home Hive map">`;return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/home-hive-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
 function mapArtwork(theme){let deco='';
  if(theme==='village')deco=`
@@ -2484,7 +2526,7 @@ function livePlayerSnapshot(){
  const ms=mapState(),m=currentMap();
  if(!m||!mapAvailable(m))return {version:1,scene:null,notice:'The DM has not shared this map.'};
  const cols=mapCols(m),rows=mapRows(m),revealed=mapFog(m).filter(i=>Number.isInteger(i)&&i>=0&&i<cols*rows);
- const visible=new Set(revealed);
+ const visible=mapCurrentVisible(m);
  const tokens=m.tokens.filter(t=>(t.kind==='pc'||t.showToPlayers===true)&&visible.has(mapIndex(m,t.x,t.y))).map(t=>{
   const appearance=pcTokenAppearance(t),art=pcTokenArt(t);
   return {
@@ -2500,7 +2542,7 @@ function livePlayerSnapshot(){
  // Explicitly choose the PLAYER asset; never forward DM art, markers, notes or campaign records.
  const image=m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'';
  const safeImage=/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?$/i.test(image)?image:'';
- return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens},notice:''};
+ return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
 }
 function initLivePlayerDisplay(){
  if(!('BroadcastChannel' in window))return {available:false,publish(){},open(){alert('This browser does not support live tab updates. Please use a current Chrome, Edge or Firefox browser.')}};
@@ -2535,7 +2577,7 @@ function tabletopPage(board,m,ms,player){
   ?`<button type="button" class="btn secondary small" onclick="mapSetView('dm')">⚙ DM View</button>`
   :`<button type="button" class="btn secondary small" onclick="mapSetView('player')">◉ Player View</button>`;
  const grid=player?'':'<button type="button" class="btn secondary small" onclick="mapGridToggle()">'+(ms.showGrid?'▦ Hide grid':'▤ Show grid')+'</button>';
- const autoFog=player?'':mapAutoFogControl();
+ const autoFog=player?'':mapAutoFogControl()+mapVisionControls(m);
  const selected=player?'Player-safe presentation · No DM controls':(ms.selected?esc(tokenLabel(m.tokens.find(t=>t.id===ms.selected)||{name:'Token'}))+' selected · Drag, click a square, or use arrows':'DM tabletop · Select a token to move it');
  return '<section class="tabletop-shell" role="region" aria-label="Full-screen tabletop"><div class="tabletop-toolbar"><strong>✿ Tabletop · '+esc(m.name)+'</strong><label>Scene '+select+'</label>'+miniTokenSizeControl()+autoFog+grid+toggle+(player?'':livePlayerDisplayButton())+'<span class="tabletop-spacer"></span><button type="button" class="btn secondary small" onclick="tabletopExit()">✕ Exit tabletop</button></div><div class="tabletop-map-stage" style="--tabletop-ratio:'+(mapCols(m)/mapRows(m))+'">'+board+'</div><div class="tabletop-foot">'+selected+' · Esc exits tabletop</div></section>';
 }
@@ -2549,7 +2591,7 @@ if(player)return `${heading}<div class="map-player-panel"><label for="player-map
 return `${heading}
 <div class="map-toolbar card section"><div class="field"><label for="map-picker">Location / scene</label><select id="map-picker" onchange="mapSwitch(this.value)">${mapOptions()}</select></div><div class="field"><label>Display</label><button class="btn secondary" onclick="mapGridToggle()">${ms.showGrid?'▦ Hide grid':'▤ Show grid'}</button></div>${miniTokenSizeControl()}<div class="field"><label>Map space</label>${mapWideButton()}${tabletopButton()}${livePlayerDisplayButton()}</div><div class="field"><label>Map tools</label><div class="actions"><button class="btn secondary" onclick="mapRename()">Rename</button><button class="btn secondary" onclick="mapClear()">Clear tokens</button><button class="btn danger" onclick="mapDelete()">Delete map</button></div></div></div>
 <div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the active map’s ${mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
-<div class="card section"><div class="headrow"><h3>Fog of war</h3><span class="pill">${mapFog(m).length}/${mapCols(m)*mapRows(m)} squares revealed</span></div>${mapAutoFogControl()}<div class="actions"><button class="btn ${ms.fogTool==='reveal'?'':'secondary'}" onclick="mapSetFogTool('reveal')">☀ Reveal squares</button><button class="btn ${ms.fogTool==='hide'?'':'secondary'}" onclick="mapSetFogTool('hide')">☁ Hide squares</button><button class="btn ${ms.fogTool==='off'?'':'secondary'}" onclick="mapSetFogTool('off')">↖ Move tokens</button><button class="btn secondary" onclick="mapFogAll(false)">Hide all</button><button class="btn secondary" onclick="mapFogAll(true)">Reveal all</button></div><p class="map-file-note">Use Reveal or Hide and click or drag over squares to paint visibility. DM view shows the covered terrain for editing; Player View hides it. Each map has its own fog. When enabled, moving a PC reveals crossed squares and their immediate surroundings; this does not detect walls, so use manual fog controls for secret rooms.</p></div>
+<div class="card section"><div class="headrow"><h3>Fog of war</h3><span class="pill">${mapFog(m).length}/${mapCols(m)*mapRows(m)} squares revealed</span></div>${mapAutoFogControl()}${mapVisionControls(m)}<div class="actions"><button class="btn ${ms.fogTool==='reveal'?'':'secondary'}" onclick="mapSetFogTool('reveal')">☀ Reveal squares</button><button class="btn ${ms.fogTool==='hide'?'':'secondary'}" onclick="mapSetFogTool('hide')">☁ Hide squares</button><button class="btn ${ms.fogTool==='off'?'':'secondary'}" onclick="mapSetFogTool('off')">↖ Move tokens</button><button class="btn secondary" onclick="mapFogAll(false)">Hide all</button><button class="btn secondary" onclick="mapFogAll(true)">Reveal all</button></div><p class="map-file-note">Use Reveal or Hide and click or drag over squares to paint visibility. DM view shows the covered terrain for editing; Player View hides it. Each map has its own fog. When enabled, moving a PC reveals crossed squares and their immediate surroundings; this does not detect walls, so use manual fog controls for secret rooms.</p></div>
 <p class="muted" style="margin:12px 0"><b>${esc(m.name)}</b> — ${esc(m.desc||MAP_THEME_NAMES[m.theme]||'Custom map')} · ${mapCols(m)} × ${mapRows(m)} cells · 5 feet per cell (abstract bug scale)</p>
 <div class="map-layout ${mapWidePreference?'is-wide':''}"><div class="map-board-wrap">${board}<p class="muted" style="font-size:12px;margin-top:8px">${ms.fogTool==='off'?'Drag tokens, select and click a destination square, or use arrow keys.':'Fog paint mode active: click or drag the map to reveal or hide areas.'} In DM View, obscured terrain is darkened; Player View conceals it.</p></div>
 <div class="map-sidebar"><div class="card map-view-settings"><h3>Map views</h3><div class="map-mode-buttons"><button class="btn ${player?'secondary':''}" onclick="mapSetView('dm')">⚙ DM View</button><button class="btn ${player?'':'secondary'}" onclick="mapSetView('player')">◉ Player View</button></div><label class="map-share-label"><input type="checkbox" ${mapAvailable(m)?'checked':''} onchange="mapSetShared(this.checked)"> Share this map in Player View</label><p class="map-file-note">Choose DM View for hidden markers and Player View for the clean map. Sharing affects the map list, not the artwork.</p>${m.id==='evergarden-home-hive'?'<div class="map-dm-key"><b>DM marker key</b><span><strong>S</strong> Secret / passage</span><span><strong>C</strong> Clue</span><span><strong>T</strong> Trap / hazard</span><span><strong>E</strong> Enemy entry</span><span><strong>U</strong> Future upgrade plot</span><small>These colored markers appear only in DM View.</small></div>':''}</div>${dmMarkerControls(m)}<div class="card"><h3>Add character token</h3><label for="map-roster">Existing character</label><select id="map-roster"><option value="">Choose a PC or NPC...</option>${available.map(r=>`<option value="${esc(r.k+':'+r.id)}">${r.k==='pc'?'⭐ PC':'● NPC'} — ${esc(r.n)}</option>`).join('')}</select><button class="btn" style="width:100%;margin-top:9px" onclick="mapAddRecord()">Place character on map</button><div class="toolbar"><button class="btn secondary" onclick="mapAddCustom()">＋ Monster / custom token</button></div></div>
@@ -2559,7 +2601,11 @@ return `${heading}
 function mapSetView(v){let ms=mapState();if(v==='dm'&&ms.viewMode==='player'&&!confirm('Return to DM View? Hidden maps, tokens and notes may become visible on this screen.'))return;if(v==='player'&&!mapAvailable(currentMap()))currentMap().playerShared=true;ms.viewMode=v==='player'?'player':'dm';ms.fogTool='off';save();render()}
 function mapSetShared(v){currentMap().playerShared=!!v;save();render()}
 function mapSwitchPlayer(id){if(mapPlayerScenes().some(m=>m.id===id)){mapState().active=id;mapState().selected=null;save();render()}}
-function mapSetFogTool(v){mapState().fogTool=['hide','reveal'].includes(v)?v:'off';render()}
+function mapSetFogTool(v){mapState().fogTool=['hide','reveal','wall','erasewall'].includes(v)?v:'off';render()}
+function mapVisionToggle(on){let m=currentMap();m.fogVision2=!!on;save();render()}
+function mapVisionControls(m){return '<label class="hero-ready-check"><input type="checkbox" '+(mapVisionEnabled(m)?'checked ':'')+'onchange="mapVisionToggle(this.checked)"> Wall-aware vision + dim explored terrain (opt-in)</label>'+
+ (mapVisionEnabled(m)?'<div class="actions"><button class="btn secondary" onclick="mapSetFogTool(\'wall\')">▦ Paint vision blockers</button><button class="btn secondary" onclick="mapSetFogTool(\'erasewall\')">⌫ Erase blockers</button><span class="muted">'+mapWallCells(m).length+' blocking squares</span></div>':'')}
+function mapPaintWall(idx,erase){const m=currentMap(),cells=new Set(mapWallCells(m));if(erase)cells.delete(idx);else cells.add(idx);m.fogWalls=[...cells].sort((a,b)=>a-b);save();render()}
 // Player characters reveal their traveled grid cells and immediate surroundings.
 function mapAutoFogEnabled(m){return m.autoRevealOnPcMove!==false}
 function mapAutoFogToggle(checked){let m=currentMap();m.autoRevealOnPcMove=!!checked;save();render()}
@@ -2570,7 +2616,7 @@ function mapRevealPcTravel(m,fromX,fromY,toX,toY){
  const sx=fromX<toX?1:-1,sy=fromY<toY?1:-1;let err=dx-dy;
  while(true){
   for(let yy=Math.max(0,y-1);yy<=Math.min(rows-1,y+1);yy++)
-   for(let xx=Math.max(0,x-1);xx<=Math.min(cols-1,x+1);xx++)seen.add(yy*cols+xx);
+   for(let xx=Math.max(0,x-1);xx<=Math.min(cols-1,x+1);xx++)if(!mapVisionEnabled(m)||mapVisionRay(m,x,y,xx,yy,new Set(mapWallCells(m))))seen.add(yy*cols+xx);
   if(x===toX&&y===toY)break;
   const e2=2*err;
   if(e2>-dy){err-=dy;x+=sx}
@@ -2580,7 +2626,7 @@ function mapRevealPcTravel(m,fromX,fromY,toX,toY){
 }
 
 function mapFogAll(reveal){currentMap().revealed=reveal?Array.from({length:mapRows(currentMap())*mapCols(currentMap())},(_,i)=>i):[];save();render()}
-function mapPaintFog(idx){let m=currentMap(),ms=mapState();if(ms.fogTool==='off'||idx<0||idx>=mapRows(m)*mapCols(m))return;let fog=mapFog(m),has=fog.includes(idx);if(ms.fogTool==='reveal'&&!has)fog.push(idx);if(ms.fogTool==='hide'&&has)m.revealed=fog.filter(i=>i!==idx);let cell=document.querySelector(`[data-fog-cell="${idx}"]`);if(cell)cell.className=ms.fogTool==='reveal'?'fog-clear':'fog-cell';save()}
+function mapPaintFog(idx){let m=currentMap(),ms=mapState();if(ms.fogTool==='off'||idx<0||idx>=mapRows(m)*mapCols(m))return;if(ms.fogTool==='wall'||ms.fogTool==='erasewall'){mapPaintWall(idx,ms.fogTool==='erasewall');return}let fog=mapFog(m),has=fog.includes(idx);if(ms.fogTool==='reveal'&&!has)fog.push(idx);if(ms.fogTool==='hide'&&has)m.revealed=fog.filter(i=>i!==idx);let cell=document.querySelector(`[data-fog-cell="${idx}"]`);if(cell)cell.className=ms.fogTool==='reveal'?'fog-clear':'fog-cell';save()}
 function mapTokenVisibility(visible){let t=currentMap().tokens.find(x=>x.id===mapState().selected);if(t&&t.kind!=='pc'){t.showToPlayers=!!visible;save();render()}}
 async function mapUploadImage(event){let file=event.target.files?.[0];event.target.value='';if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type))return alert('Choose a PNG, JPG or WebP image.');if(file.size>2*1024*1024)return alert('Choose an image smaller than 2 MB.');let target=currentMap();let previous=target.imageData;try{let data=await new Promise((resolve,reject)=>{let r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(Error('Unable to read image'));r.readAsDataURL(file)});target.imageData=data;localStorage.setItem(KEY,JSON.stringify(db));render();toast('Map background saved')}catch(err){target.imageData=previous;alert('Could not save map image. Try a smaller compressed image or export a backup to free storage.')}}
 function mapRemoveImage(){delete currentMap().imageData;save();render();toast('Illustrated theme restored')}
