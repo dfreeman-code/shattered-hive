@@ -1,6 +1,11 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
+const {spawn}=require('node:child_process');
+const http=require('node:http');
+async function ready(){for(let i=0;i<50;i++){try{await new Promise((ok,bad)=>http.get('http://127.0.0.1:8000/',r=>{r.resume();r.statusCode===200?ok():bad(Error('HTTP '+r.statusCode))}).on('error',bad));return}catch{await new Promise(r=>setTimeout(r,200))}}throw Error('App server did not start')}
 (async()=>{
+ const server=spawn('python3',['-m','http.server','8000','--bind','127.0.0.1'],{stdio:'ignore'});
+ await ready();
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const page=await browser.newPage();
  const failures=[];
@@ -39,5 +44,5 @@ const assert=require('node:assert/strict');
   assert.equal(await page.locator('#map-board').evaluate(el=>el.style.getPropertyValue('--mini-pc-token-width')),'4%');
   assert.deepEqual(failures,[]);
   console.log('PASS: miniature token sizes in both views, persistence, preview link, no campaign mutations');
- }finally{await browser.close();}
+ }finally{await browser.close();server.kill();}
 })().catch(err=>{console.error(err);process.exitCode=1});
