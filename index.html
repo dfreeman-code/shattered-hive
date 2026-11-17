@@ -2234,9 +2234,10 @@ function mapVisibleFrom(m,x,y,viewer=null,lit=null){
  const cols=mapCols(m),rows=mapRows(m),blocked=new Set(mapWallCells(m)),result=new Set();
  const lighting=mapLightingEnabled(m),ambient=mapAmbient(m),light=lighting?(lit||mapLitSquares(m)):null,darkvision=lighting?mapDarkvisionSquares(viewer||{}):0;
  if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=cols||y>=rows)return result;
- for(let yy=Math.max(0,y-4);yy<=Math.min(rows-1,y+4);yy++)
-  for(let xx=Math.max(0,x-4);xx<=Math.min(cols-1,x+4);xx++)
-   if((xx-x)**2+(yy-y)**2<=16&&mapVisionRay(m,x,y,xx,yy,blocked)&&(!lighting||ambient!=='dark'||light.has(yy*cols+xx)||(darkvision>0&&(xx-x)**2+(yy-y)**2<=darkvision*darkvision)))result.add(yy*cols+xx);
+ const radius=lighting&&ambient==='dark'?Math.max(4,darkvision):4;
+ for(let yy=Math.max(0,y-radius);yy<=Math.min(rows-1,y+radius);yy++)
+  for(let xx=Math.max(0,x-radius);xx<=Math.min(cols-1,x+radius);xx++)
+   if((xx-x)**2+(yy-y)**2<=radius*radius&&mapVisionRay(m,x,y,xx,yy,blocked)&&(!lighting||ambient!=='dark'||light.has(yy*cols+xx)||(darkvision>0&&(xx-x)**2+(yy-y)**2<=darkvision*darkvision)))result.add(yy*cols+xx);
  return result;
 }
 function mapCurrentVisible(m){
