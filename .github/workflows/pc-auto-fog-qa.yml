@@ -1,0 +1,26 @@
+name: PC movement auto fog browser tests
+on:
+  push:
+    branches: [feature/pc-movement-auto-fog-reveal]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/pc-auto-fog-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pc-auto-fog:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Test PC movement fog and live Player Display
+        run: node tests/pc-auto-fog-smoke.cjs
