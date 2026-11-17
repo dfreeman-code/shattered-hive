@@ -2346,7 +2346,16 @@ function mapWideSideArt(m){
  const slug=m.id==='evergarden-home-hive'?'home-hive':slugs.includes(m.asset)?m.asset:'theme-'+(MAP_THEME_NAMES[m.theme]?m.theme:'blank');
  return 'assets/maps/expansions/'+slug+'.svg';
 }
+// Public full-canvas scenery; narrative markers remain private overlay data.
+function mapPanoramaAsset(m){
+ if(!mapArtCenter(m)||m.imageData||m.panoramicArtEnabled===false)return '';
+ const slugs=['home-hive','great-christmas-caper','frosted-root-tunnels','spider-silk-crossing','mushroom-market','forgotten-garden-shed','caper-tree-base','caper-gift-maze','caper-tinsel-crossing','caper-starlight-shrine','caper-frozen-berry','caper-glass-doors'];
+ const slug=m.id==='evergarden-home-hive'?'home-hive':slugs.includes(m.asset)?m.asset:'theme-'+(MAP_THEME_NAMES[m.theme]?m.theme:'blank');
+ return 'assets/maps/panoramic/'+slug+'.svg';
+}
+function mapPanoramaToggle(on){if(mapState().viewMode==='player')return;currentMap().panoramicArtEnabled=!!on;save();render()}
 function mapCustomBackground(m,mode='dm'){
+ const panorama=mapPanoramaAsset(m);if(panorama)return '<img class="map-custom-image" src="'+panorama+'" alt="'+esc(m.name)+' panoramic terrain">';
  const c=mapArtCenter(m),art=mapOriginalBackground(m,mode);
  return c?'<img class="map-side-illustration" src="'+mapWideSideArt(m)+'" alt="" aria-hidden="true"><div class="map-art-center" style="left:'+c.left+'%;width:'+c.width+'%">'+art+'</div>':art;
 }
@@ -2667,9 +2676,10 @@ function livePlayerSnapshot(){
   };
  });
  // Explicitly choose the PLAYER asset; never forward DM art, markers, notes or campaign records.
- const image=m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'';
- const safeImage=/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?$/i.test(image)?image:'';
- return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:mapArtCenter(m),sideArt:mapWideSideArt(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
+ const panorama=mapPanoramaAsset(m);
+ const image=panorama||(m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'');
+ const safeImage=image.startsWith('assets/maps/panoramic/')?(/^[a-z0-9-]+[.]svg$/i.test(image.slice('assets/maps/panoramic/'.length))?image:''):/^assets\\/maps\\/[a-z0-9_-]+\\.(?:png|svg)(?:\\?v=[0-9]+)?$/i.test(image)?image:'';
+ return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:panorama?null:mapArtCenter(m),sideArt:panorama?'':mapWideSideArt(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
 }
 function initLivePlayerDisplay(){
  if(!('BroadcastChannel' in window))return {available:false,publish(){},open(){alert('This browser does not support live tab updates. Please use a current Chrome, Edge or Firefox browser.')}};
@@ -2718,6 +2728,7 @@ if(player)return `${heading}<div class="map-player-panel"><label for="player-map
 return `${heading}
 <div class="map-toolbar card section"><div class="field"><label for="map-picker">Location / scene</label><select id="map-picker" onchange="mapSwitch(this.value)">${mapOptions()}</select></div><div class="field"><label>Display</label><button class="btn secondary" onclick="mapGridToggle()">${ms.showGrid?'▦ Hide grid':'▤ Show grid'}</button></div>${miniTokenSizeControl()}<div class="field"><label>Map space</label>${mapWideButton()}${tabletopButton()}${livePlayerDisplayButton()}</div><div class="field"><label>Map tools</label><div class="actions"><button class="btn secondary" onclick="mapRename()">Rename</button><button class="btn secondary" onclick="mapClear()">Clear tokens</button><button class="btn danger" onclick="mapDelete()">Delete map</button></div></div></div>
 <div class="card section"><h3>Map canvas width</h3><p class="map-file-note">Add 25% new playable terrain to both the left and right edges of every existing and archived map. Keeps the original artwork and tokens aligned in the center; added sides feature illustrated scenery designed for each location.</p><button type="button" class="btn secondary" onclick="mapExpandAllSides()" ${mapState().wideSidesEnabled?'disabled':''}>${mapState().wideSidesEnabled?'✓ All maps expanded':'↔ Expand all map sides +25% each'}</button></div>
+<div class="card section"><h3>Full panoramic artwork</h3><label class="hero-ready-check"><input type="checkbox" ${m.panoramicArtEnabled!==false?'checked':''} ${!mapArtCenter(m)||!!m.imageData?'disabled':''} onchange="mapPanoramaToggle(this.checked)"> Use redesigned full-width battlefield</label><p class="map-file-note">A new continuous illustration across the entire expanded map. Uncheck to restore the original centered artwork. Uploaded custom images are unchanged. Existing tokens, fog, and DM-only clues stay in place.</p></div>
 <div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the original artwork’s ${mapArtCenter(m)?m.wideSidesV1.originalCols:mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
 ${mapFogPanel(m,ms)}
 <p class="muted" style="margin:12px 0"><b>${esc(m.name)}</b> — ${esc(m.desc||MAP_THEME_NAMES[m.theme]||'Custom map')} · ${mapCols(m)} × ${mapRows(m)} cells · 5 feet per cell (abstract bug scale)</p>
