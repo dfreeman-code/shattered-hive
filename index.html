@@ -33,6 +33,29 @@
 .map-visibility-tools button{font-size:12px}
 .map-mode-buttons{display:flex;gap:7px;flex-wrap:wrap}
 .map-file-note{font-size:12px;color:var(--muted);margin:6px 0}
+/* Fog of War control-panel layout only; map mechanics remain unchanged. */
+.fog-control-panel{display:grid;gap:14px}
+.fog-control-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.fog-control-head h3{margin:0;font-size:20px}
+.fog-control-head .pill{white-space:nowrap}
+.fog-progress{height:7px;border-radius:10px;background:#cbd7c7;overflow:hidden}
+.fog-progress>span{display:block;height:100%;background:#5c8663;border-radius:inherit;transition:width .15s ease}
+.fog-control-group{padding:12px 14px;border:1px solid var(--line);border-radius:12px;min-width:0;background:var(--panel)}
+.fog-control-group h4{margin:0 0 7px;font-size:15px}
+.fog-control-group .map-file-note{line-height:1.45}
+.fog-tool-grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.fog-tool-grid .fog-action{flex:1 1 150px;min-height:40px}
+.fog-tool-grid .fog-action.is-active{background:var(--green);color:white;border-color:var(--green)}
+.fog-secondary-actions{display:flex;flex-wrap:wrap;gap:8px}
+.fog-secondary-actions .btn{flex:1 1 110px}
+.fog-options{display:grid;gap:10px}
+.fog-control-group .hero-ready-check{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:transparent;cursor:pointer}
+.fog-control-group .hero-ready-check input{margin-top:4px;flex:none}
+.fog-control-group select{max-width:260px;margin:6px 0 0}
+.fog-control-group .actions{margin:9px 0;display:flex;flex-wrap:wrap;gap:8px}
+.fog-help-note{font-size:12px;color:var(--muted);line-height:1.55;margin:0}
+@media(max-width:650px){.fog-control-group{padding:11px}.fog-tool-grid .fog-action{flex:1 1 110px}}
+
 @media(max-width:700px){.map-player-panel{padding:9px}.map-mode-buttons button{flex:1}}
 
 /* Evergarden map-specific grids, gridless player art and true square tactical boards. */
@@ -2625,7 +2648,7 @@ if(player)return `${heading}<div class="map-player-panel"><label for="player-map
 return `${heading}
 <div class="map-toolbar card section"><div class="field"><label for="map-picker">Location / scene</label><select id="map-picker" onchange="mapSwitch(this.value)">${mapOptions()}</select></div><div class="field"><label>Display</label><button class="btn secondary" onclick="mapGridToggle()">${ms.showGrid?'▦ Hide grid':'▤ Show grid'}</button></div>${miniTokenSizeControl()}<div class="field"><label>Map space</label>${mapWideButton()}${tabletopButton()}${livePlayerDisplayButton()}</div><div class="field"><label>Map tools</label><div class="actions"><button class="btn secondary" onclick="mapRename()">Rename</button><button class="btn secondary" onclick="mapClear()">Clear tokens</button><button class="btn danger" onclick="mapDelete()">Delete map</button></div></div></div>
 <div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the active map’s ${mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
-<div class="card section"><div class="headrow"><h3>Fog of war</h3><span class="pill">${mapFog(m).length}/${mapCols(m)*mapRows(m)} squares revealed</span></div>${mapAutoFogControl()}${mapVisionControls(m)}${mapLightingControls(m)}<div class="actions"><button class="btn ${ms.fogTool==='reveal'?'':'secondary'}" onclick="mapSetFogTool('reveal')">☀ Reveal squares</button><button class="btn ${ms.fogTool==='hide'?'':'secondary'}" onclick="mapSetFogTool('hide')">☁ Hide squares</button><button class="btn ${ms.fogTool==='off'?'':'secondary'}" onclick="mapSetFogTool('off')">↖ Move tokens</button><button class="btn secondary" onclick="mapFogAll(false)">Hide all</button><button class="btn secondary" onclick="mapFogAll(true)">Reveal all</button></div><p class="map-file-note">Use Reveal or Hide and click or drag over squares to paint visibility. DM view shows the covered terrain for editing; Player View hides it. Each map has its own fog. When enabled, moving a PC reveals crossed squares and their immediate surroundings; this does not detect walls, so use manual fog controls for secret rooms.</p></div>
+${mapFogPanel(m,ms)}
 <p class="muted" style="margin:12px 0"><b>${esc(m.name)}</b> — ${esc(m.desc||MAP_THEME_NAMES[m.theme]||'Custom map')} · ${mapCols(m)} × ${mapRows(m)} cells · 5 feet per cell (abstract bug scale)</p>
 <div class="map-layout ${mapWidePreference?'is-wide':''}"><div class="map-board-wrap">${board}<p class="muted" style="font-size:12px;margin-top:8px">${ms.fogTool==='off'?'Drag tokens, select and click a destination square, or use arrow keys.':'Fog paint mode active: click or drag the map to reveal or hide areas.'} In DM View, obscured terrain is darkened; Player View conceals it.</p></div>
 <div class="map-sidebar"><div class="card map-view-settings"><h3>Map views</h3><div class="map-mode-buttons"><button class="btn ${player?'secondary':''}" onclick="mapSetView('dm')">⚙ DM View</button><button class="btn ${player?'':'secondary'}" onclick="mapSetView('player')">◉ Player View</button></div><label class="map-share-label"><input type="checkbox" ${mapAvailable(m)?'checked':''} onchange="mapSetShared(this.checked)"> Share this map in Player View</label><p class="map-file-note">Choose DM View for hidden markers and Player View for the clean map. Sharing affects the map list, not the artwork.</p>${m.id==='evergarden-home-hive'?'<div class="map-dm-key"><b>DM marker key</b><span><strong>S</strong> Secret / passage</span><span><strong>C</strong> Clue</span><span><strong>T</strong> Trap / hazard</span><span><strong>E</strong> Enemy entry</span><span><strong>U</strong> Future upgrade plot</span><small>These colored markers appear only in DM View.</small></div>':''}</div>${dmMarkerControls(m)}<div class="card"><h3>Add character token</h3><label for="map-roster">Existing character</label><select id="map-roster"><option value="">Choose a PC or NPC...</option>${available.map(r=>`<option value="${esc(r.k+':'+r.id)}">${r.k==='pc'?'⭐ PC':'● NPC'} — ${esc(r.n)}</option>`).join('')}</select><button class="btn" style="width:100%;margin-top:9px" onclick="mapAddRecord()">Place character on map</button><div class="toolbar"><button class="btn secondary" onclick="mapAddCustom()">＋ Monster / custom token</button></div></div>
@@ -2635,6 +2658,20 @@ return `${heading}
 function mapSetView(v){let ms=mapState();if(v==='dm'&&ms.viewMode==='player'&&!confirm('Return to DM View? Hidden maps, tokens and notes may become visible on this screen.'))return;if(v==='player'&&!mapAvailable(currentMap()))currentMap().playerShared=true;ms.viewMode=v==='player'?'player':'dm';ms.fogTool='off';save();render()}
 function mapSetShared(v){currentMap().playerShared=!!v;save();render()}
 function mapSwitchPlayer(id){if(mapPlayerScenes().some(m=>m.id===id)){mapState().active=id;mapState().selected=null;save();render()}}
+// Presentation-only grouping of existing fog actions; no new persistence or mechanics.
+function mapFogPanel(m,ms){
+ const total=mapCols(m)*mapRows(m),explored=mapFog(m).length,percent=Math.round(explored/total*100);
+ const tool=(key,icon,label)=>'<button type="button" class="btn secondary fog-action'+(ms.fogTool===key?' is-active':'')+'" aria-pressed="'+(ms.fogTool===key)+'" onclick="mapSetFogTool(\\''+key+'\\')">'+icon+' '+label+'</button>';
+ return `<section class="card section fog-control-panel" aria-labelledby="fog-panel-title">
+ <div class="fog-control-head"><div><h3 id="fog-panel-title">☁ Fog of War</h3><p class="map-file-note">Control what the adventurers can see</p></div><span class="pill" aria-label="${explored} of ${total} squares explored">${explored} / ${total} explored</span></div>
+ <div class="fog-progress" role="progressbar" aria-label="Explored terrain" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div>
+ <div class="fog-control-group"><h4>1. Map tools</h4><p class="map-file-note">Choose a tool, then click or drag on the map.</p><div class="fog-tool-grid">${tool('off','↖','Move tokens')}${tool('reveal','☀','Reveal terrain')}${tool('hide','☁','Cover terrain')}</div>
+ <div class="fog-secondary-actions"><button type="button" class="btn secondary" onclick="mapFogAll(false)">Hide all</button><button type="button" class="btn secondary" onclick="mapFogAll(true)">Reveal all</button></div></div>
+ <div class="fog-control-group"><h4>2. Automatic exploration</h4><div class="fog-options">${mapAutoFogControl()}${mapVisionControls(m)}</div>${mapVisionEnabled(m)?'<p class="map-file-note">Paint blockers on walls and closed passages. Remembered terrain stays dim after the party leaves.</p>':''}</div>
+ <div class="fog-control-group"><h4>3. Lighting & vision</h4>${mapVisionEnabled(m)?mapLightingControls(m):'<p class="map-file-note">Enable wall-aware vision above to configure ambient light and character Darkvision.</p>'}</div>
+ <p class="fog-help-note">Fog settings apply to this map only. The DM can always reveal or cover squares manually. Vision blockers are painted on the grid, not detected from artwork.</p>
+ </section>`;
+}
 function mapSetFogTool(v){mapState().fogTool=['hide','reveal','wall','erasewall'].includes(v)?v:'off';render()}
 function mapVisionToggle(on){let m=currentMap();m.fogVision2=!!on;save();render()}
 function mapVisionControls(m){return '<label class="hero-ready-check"><input type="checkbox" '+(mapVisionEnabled(m)?'checked ':'')+'onchange="mapVisionToggle(this.checked)"> Wall-aware vision (4-square radius) + dim explored terrain (opt-in)</label>'+
