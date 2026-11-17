@@ -18,7 +18,7 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((ok,bad)=>htt
    const ms=mapState();ms.viewMode='dm';ms.active='evergarden-home-hive';
    currentMap().tokens.push({id:'display-mini',kind:'pc',ref:'display-test-hero',name:'Vismund Cygnus',x:9,y:12,hp:8});
    currentMap().tokens.push({id:'display-monster',kind:'monster',name:'Mite',x:14,y:15});
-   render();
+   goto('maps');
   });
   assert.equal(await page.locator('#map-mini-token-size').inputValue(),'standard');
   const before=await page.evaluate(()=>({position:currentMap().tokens.find(t=>t.id==='display-mini'),data:JSON.stringify(db)}));
