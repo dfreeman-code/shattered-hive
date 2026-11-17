@@ -1,0 +1,26 @@
+name: Fog 2 lighting and Darkvision browser tests
+on:
+  push:
+    branches: [feature/fog-2-lighting-darkvision]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/fog-2-lighting-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lighting:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Test lighting
+        run: node tests/fog-2-lighting-smoke.cjs
