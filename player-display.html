@@ -34,6 +34,7 @@ main{display:flex;flex:1;min-height:0;align-items:center;justify-content:center;
 .fog{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));pointer-events:none;z-index:4}
 .fog div{background:#0b1713}
 .fog div.revealed{background:transparent}
+.fog div.explored{background:#0b1713ad}
 footer{text-align:center;padding:6px 12px;background:#203b30;color:#d4ddcc;font-size:12px;min-height:30px}
 @media(max-width:700px){.brand{font-size:16px}.board{width:min(calc(100vw - 10px),calc((100dvh - 148px)*var(--ratio,1)))}header{padding:7px}main{padding:5px}}
 </style>
@@ -69,6 +70,7 @@ function playerRender(packet){
  const cols=Number(scene.cols),rows=Number(scene.rows);
  if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<4||cols>100||rows<4||rows>100)return;
  const reveal=new Set((Array.isArray(scene.revealed)?scene.revealed:[]).filter(x=>Number.isInteger(x)&&x>=0&&x<cols*rows));
+ const visible=Array.isArray(scene.visibleNow)?new Set(scene.visibleNow.filter(x=>Number.isInteger(x)&&x>=0&&x<cols*rows)):reveal;
  const board=document.createElement('div');board.className='board';board.id='live-board';
  board.style.setProperty('--cols',String(cols));board.style.setProperty('--rows',String(rows));board.style.setProperty('--ratio',String(cols/rows));
  board.dataset.theme=String(scene.theme||'blank').slice(0,32);
@@ -82,7 +84,7 @@ function playerRender(packet){
  const tokens=document.createElement('div');tokens.className='tokens';
  for(const t of Array.isArray(scene.tokens)?scene.tokens:[]){
   if(!t||!Number.isInteger(t.x)||!Number.isInteger(t.y)||t.x<0||t.x>=cols||t.y<0||t.y>=rows)continue;
-  if(!reveal.has(t.y*cols+t.x))continue; // defense in depth; never reveal a token under fog
+  if(!visible.has(t.y*cols+t.x))continue; // never show a creature only remembered from exploration
   const el=document.createElement('div');el.className='token'+(t.kind==='pc'?'':' other');
   el.style.left=((t.x+.5)/cols*100)+'%';el.style.top=((t.y+.5)/rows*100)+'%';
   if(/^#[0-9a-f]{6}$/i.test(t.bg||''))el.style.backgroundColor=t.bg;
@@ -93,7 +95,7 @@ function playerRender(packet){
   tokens.append(el);
  }
  const fog=document.createElement('div');fog.className='fog';const cells=document.createDocumentFragment();
- for(let i=0;i<cols*rows;i++){const cell=document.createElement('div');if(reveal.has(i))cell.className='revealed';cells.append(cell)}
+ for(let i=0;i<cols*rows;i++){const cell=document.createElement('div');if(visible.has(i))cell.className='revealed';else if(reveal.has(i))cell.className='explored';cells.append(cell)}
  fog.append(cells);board.append(art,grid,tokens,fog);
  stage.replaceChildren(board);
  footer.textContent=String(scene.name||'Shared map').slice(0,100)+' · '+cols+' × '+rows+' · Player-safe display';
