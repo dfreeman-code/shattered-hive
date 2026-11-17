@@ -79,7 +79,7 @@ function playerRender(packet){
  const selected=sizes[scene.tokenSize]||sizes.standard;
  board.style.setProperty('--hero-width',selected[0]);board.style.setProperty('--hero-max',selected[1]);
  const art=document.createElement('div');art.className='art';const src=safeAsset(scene.image);
- if(src){const img=document.createElement('img');img.src=src;img.alt='';img.draggable=false;art.append(img)}
+ if(src){const img=document.createElement('img');img.src=src;img.alt='';img.draggable=false;const c=scene.artCenter;if(c&&Number.isFinite(c.left)&&Number.isFinite(c.width)&&c.left>=0&&c.width>0&&c.left+c.width<=100.001){img.style.position='absolute';img.style.top='0';img.style.height='100%';img.style.left=c.left+'%';img.style.width=c.width+'%'}art.append(img)}
  const grid=document.createElement('div');grid.className='grid';if(!scene.grid)grid.style.display='none';
  const tokens=document.createElement('div');tokens.className='tokens';
  for(const t of Array.isArray(scene.tokens)?scene.tokens:[]){
