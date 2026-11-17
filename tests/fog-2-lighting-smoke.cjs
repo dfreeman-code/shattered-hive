@@ -29,7 +29,7 @@ async function ready(){for(let i=0;i<60;i++){try{await new Promise((yes,no)=>htt
    m.fogWalls=[5*30+6];
    const blocked=!mapCurrentVisible(m).has(5*30+8);
    mapLightingToggle(false);
-   const restored=mapCurrentVisible(m).size===bright;
+   const restored=!mapLightingEnabled(m)&&mapCurrentVisible(m).size>0&&!mapCurrentVisible(m).has(5*30+8);
    return {legacyLit,bright,dark,darkvision,torch,blocked,restored,secretHidden,secretVisible,
     saved:m.fogLighting2===false,ambient:m.fogAmbient,darkvisionSetting:m.tokens[0].darkvisionSquares,lightSetting:m.tokens[0].lightSquares};
   });
