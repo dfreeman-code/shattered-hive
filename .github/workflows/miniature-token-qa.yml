@@ -1,11 +1,12 @@
 name: Miniature PC token browser test
 on:
   push:
-    branches: [feature/character-miniature-image-tokens]
+    branches: [feature/character-miniature-image-tokens, feature/miniature-token-display-controls]
   pull_request:
     paths:
       - 'index.html'
       - 'tests/miniature-token-smoke.cjs'
+      - 'tests/miniature-display-smoke.cjs'
       - 'assets/hero-tokens/**'
   workflow_dispatch:
 permissions:
@@ -25,5 +26,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Test character-linked image tokens (isolated data, mock image responses)
         run: node tests/miniature-token-smoke.cjs
+      - name: Test miniature size controls and full-size portrait view
+        run: node tests/miniature-display-smoke.cjs
       - name: Verify the actual 12 PNGs are committed (required before merging)
         run: node tests/miniature-assets-check.cjs
