@@ -898,7 +898,7 @@ const HERO_WARLOCK_LEVEL1={
  invocation:'Pact of the Blade'
 };
 function heroWarlockIsCandidate(pc){
- return heroBuildMatch(pc)?.cls==='Warlock'&&pc.species==='Spiderkin'&&Number(pc.level||1)===1;
+ return String(pc.name||'').trim().toLowerCase()==='snoop bugg'&&heroBuildMatch(pc)?.cls==='Warlock'&&pc.species==='Spiderkin'&&Number(pc.level||1)===1;
 }
 function heroWarlockSheetUntouched(pc){
  if(!heroWarlockIsCandidate(pc))return false;
@@ -934,10 +934,10 @@ function heroWarlockApplySheet(id){
   '\nSpell save DC 13, spell attack +5 at Charisma 17 and proficiency +2.';
  sh.features='Warlock level 1: Pact Magic, 1 Eldritch Invocation: Pact of the Blade (conjure or bond a melee weapon as a Bonus Action, use Charisma for attack and damage, gain proficiency with that pact weapon, use it as a focus).\n'+
   'Charlatan: Deception and Sleight of Hand; Forgery Kit. Skilled origin feat: choose three extra skills—suggest Athletics, Perception and Stealth. Background +2 Charisma / +1 Constitution.\n'+
-  'Spiderkin (homebrew): Spider Climb (climbing speed equals walking speed; ceilings), Silk Thread (20 ft; proficiency bonus uses per Long Rest; supports 50 lb).\n'+
+  'Spiderkin (approved campaign homebrew): Spider Climb (30-ft climbing speed, including ceilings); Silk Thread (up to 20 ft, supports 50 lb, 2 uses per Long Rest at level 1).\n'+
   'Patron identity, promises and future subclass remain unresolved for player/DM discussion. A subclass is chosen at level 3, not level 1.';
  sh.inventory='Warlock class equipment option A: Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb), Book of Occult Lore, Scholar’s Pack, 15 GP.\n'+
-  'Charlatan background equipment option A: Forgery Kit, Costume, Fine Clothes, 15 GP.\n'+
+  'Charlatan background equipment option A: Forgery Kit, Costume, Fine Clothes, 15 GP. Total starting currency: 30 GP.\n'+
   'Pact of the Blade can conjure a scimitar as the chosen bonded weapon. Two daggers match the player concept. Gold and platinum armor, fire-ant shield and toenail scimitar are visual concepts; shield proficiency or extra armor proficiency is NOT automatically granted. Confirm any physical items and their effects with the DM.';
  sh.proficiencies='Warlock: Wisdom and Charisma saving throws; light armor; simple weapons. Skills Arcana and Intimidation (Warlock), Deception and Sleight of Hand (Charlatan), Athletics, Perception, Stealth (Skilled origin feat). Forgery Kit.\n'+
   'Pact of the Blade: proficiency with the bonded weapon; it can be a scimitar and use CHA for attacks and damage. Does not automatically grant shield training or weapon mastery.';
@@ -987,12 +987,13 @@ function heroWarlockLevelOnePreview(pc){
   ['Martial invocation','Pact of the Blade at level 1: pact scimitar with Charisma +5 to hit, 1d6+3 damage; no weapon mastery or additional attack'],
   ['Charlatan origin','Skilled feat (three additional skills), Deception, Sleight of Hand, Forgery Kit; suggested +2 CHA / +1 CON'],
   ['Saves and skills','WIS/CHA saves; Arcana, Intimidation, Deception, Sleight of Hand, Athletics, Perception, Stealth'],
-  ['Spiderkin','Spider Climb and Silk Thread (existing homebrew; DM review). Fire-ant shield and ornate armor do not grant free mechanical proficiencies.'],
+  ['Spiderkin','Approved campaign homebrew: Spider Climb (30-ft climbing speed, including ceilings) and Silk Thread (20-ft silk line supporting 50 lb, two uses per Long Rest at level 1).'],
+  ['Equipment','Warlock and Charlatan option A: leather armor, sickle, two daggers, orb focus, occult lore book, Scholar’s Pack, forgery kit, costume, fine clothes and 30 GP. Pact scimitar is conjured; ornate armor and fire-ant shield are cosmetic without extra proficiencies.'],
   ['Patron mystery','The Patron’s Favorite: an unknown voice, a mirrored scimitar and six mysterious lights; the player determines how they respond. Patron identity and level-3 subclass remain open.']
  ];
- return '<section class="hero-wizard-draft hero-warlock-draft" aria-label="Level 1 Warlock detailed draft"><h4>Level-1 martial Spiderkin Warlock sheet — proposed, not applied</h4>'+
+ return '<section class="hero-wizard-draft hero-warlock-draft" aria-label="Level 1 Warlock detailed draft"><h4>Snoop Bugg — approved Level-1 Spiderkin Warlock proposal (not applied)</h4>'+
  '<div class="hero-build-grid">'+rows.map(([label,value])=>'<div><b>'+esc(label)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
- '<p class="muted">Warlock (2024): 1 invocation and 1 Pact Magic slot at level 1; patron subclass at level 3. A pact scimitar is valid, while shield proficiency is not automatically granted. All homebrew traits and equipment flavor require DM approval.</p>'+
+ '<p class="muted">Warlock (2024): 1 invocation and 1 Pact Magic slot at level 1; patron subclass at level 3. A pact scimitar is valid, while shield proficiency is not automatically granted. Spiderkin homebrew is approved for this campaign; equipment accessories remain cosmetic unless separately approved.</p>'+
  '<div class="actions"><button class="btn secondary" type="button" onclick="heroWarlockApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Warlock sheet</button>'+
  '<button class="btn secondary" type="button" onclick="heroWarlockApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
  (!eligible?'<p class="muted">Automatic sheet setup is disabled because existing values require individual review. Nothing was overwritten.</p>':'')+
