@@ -409,6 +409,24 @@ main:has(.map-layout.is-wide){max-width:1740px}
 
 /* Wide layout genuinely increases the visible canvas in addition to zoom. */
 .map-layout.is-wide .map-inspect-viewport,.map-player-stage.is-wide .map-inspect-viewport{max-height:none}
+
+/* Fully playable surrounding landscape, deliberately separate from old artwork. */
+.map-territory-surround{position:absolute;inset:0;pointer-events:none;opacity:.98;
+ background:
+ radial-gradient(ellipse at 17% 22%,#b4c99380 0 9%,transparent 24%),
+ radial-gradient(ellipse at 89% 85%,#c2a87970 0 10%,transparent 26%),
+ radial-gradient(ellipse at 82% 21%,#638b7860 0 8%,transparent 24%),
+ radial-gradient(ellipse at 14% 83%,#b4a88b78 0 12%,transparent 28%),
+ repeating-radial-gradient(ellipse at 50% 50%,transparent 0 31px,#f1e6bf12 32px 34px,transparent 35px 72px),
+ repeating-linear-gradient(145deg,#44644522 0 4px,transparent 5px 74px);
+ background-color:#779b7b}
+.theme-christmas .map-territory-surround,.theme-puddle .map-territory-surround{background-color:#a9c8cb;filter:saturate(.7)}
+.theme-tunnel .map-territory-surround,.theme-log .map-territory-surround{background-color:#7d6853}
+.theme-ornament .map-territory-surround{background-color:#b7b2c6}
+.map-territory-core{position:absolute;overflow:hidden;pointer-events:none;box-shadow:0 0 40px #0e28152a}
+.map-territory-core>.map-side-illustration{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+.map-territory-core>.map-art-center{top:0;bottom:0}
+
 /* Non-destructive map camera: large playable board inside a fixed inspection viewport. */
 .map-inspect-viewport{position:relative;display:block;width:100%;aspect-ratio:var(--inspect-ratio,1);max-height:min(78vh,810px);min-height:230px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#819d81 #20392d22;background:#162820;isolation:isolate;border-radius:13px}
 .map-inspect-viewport>.map-board{display:block;flex:none;margin:0;max-width:none;max-height:none}
@@ -2188,7 +2206,7 @@ function mapCols(m){return Number.isInteger(m?.cols)&&m.cols>=4&&m.cols<=100?m.c
 function mapRows(m){return Number.isInteger(m?.rows)&&m.rows>=4&&m.rows<=100?m.rows:MAP_ROWS}
 function mapIndex(m,x,y){return y*mapCols(m)+x}
 function mapSideExpansion(m){
- if(!m||m.wideSidesV1)return false;
+ if(!m||m.wideSidesV1||m.territoryV1)return false;
  const oldCols=mapCols(m),rows=mapRows(m),side=Math.round(oldCols*.25),cols=oldCols+2*side;
  if(!side||cols>100)return false;
  const shiftIndex=i=>Number.isInteger(i)&&i>=0&&i<oldCols*rows?Math.floor(i/oldCols)*cols+(i%oldCols)+side:null;
@@ -2201,13 +2219,50 @@ function mapSideExpansion(m){
  m.cols=cols;m.wideSidesV1={originalCols:oldCols,sideCols:side};
  return true;
 }
+
+// Optional world-scale map expansion. Never edit coordinates until a DM approves the change.
+function mapTerritoryCore(m){
+ const t=m?.territoryV1;
+ if(!t||!Number.isInteger(t.originalCols)||!Number.isInteger(t.originalRows)||!Number.isInteger(t.left)||!Number.isInteger(t.top)||t.left<0||t.top<0||t.originalCols+t.left>mapCols(m)||t.originalRows+t.top>mapRows(m))return null;
+ return {left:t.left/mapCols(m)*100,top:t.top/mapRows(m)*100,width:t.originalCols/mapCols(m)*100,height:t.originalRows/mapRows(m)*100};
+}
+function mapTerritoryExpand(m){
+ if(!m||m.territoryV1)return false;
+ const cols=mapCols(m),rows=mapRows(m),newCols=cols*2,newRows=rows*2;
+ if(newCols>100||newRows>100)return false;
+ const left=Math.floor(cols/2),top=Math.floor(rows/2);
+ const remap=a=>[...new Set(a.filter(x=>Number.isInteger(x)&&x>=0&&x<cols*rows)
+   .map(i=>(Math.floor(i/cols)+top)*newCols+(i%cols)+left))].sort((a,b)=>a-b);
+ // Legacy maps with no fog array historically showed the full original map.
+ const explored=Array.isArray(m.revealed)?m.revealed:Array.from({length:cols*rows},(_,i)=>i);
+ m.revealed=remap(explored);
+ if(Array.isArray(m.fogWalls))m.fogWalls=remap(m.fogWalls);
+ for(const t of Array.isArray(m.tokens)?m.tokens:[]){if(Number.isFinite(t.x))t.x+=left;if(Number.isFinite(t.y))t.y+=top}
+ for(const marker of Array.isArray(m.dmMarkers)?m.dmMarkers:[]){if(Number.isFinite(marker.x))marker.x+=left;if(Number.isFinite(marker.y))marker.y+=top}
+ m.cols=newCols;m.rows=newRows;
+ m.territoryV1={originalCols:cols,originalRows:rows,left,top};
+ return true;
+}
+function mapExpandTerritories(){
+ if(mapState().viewMode==='player')return;
+ const ms=mapState(),all=[...ms.scenes,...ms.archivedScenes].filter(m=>!m.territoryV1);
+ if(!all.length)return alert('All maps have already been expanded.');
+ const overflow=all.filter(m=>mapCols(m)*2>100||mapRows(m)*2>100);
+ if(overflow.length)return alert(overflow.length+' map(s) exceed the supported 100 × 100 grid limit when doubled. No maps were changed. Please resize those maps separately first.');
+ if(!confirm('Expand all '+all.length+' current and archived maps to twice their width and height (4× the playable area)? Existing art and all tokens, markers and fog will be moved together to the center. Please export a campaign JSON backup first. Continue?'))return;
+ let changed=0;for(const m of all)if(mapTerritoryExpand(m))changed++;
+ ms.territoryExpansionV1=true;
+ mapInspectScrollX=0;mapInspectScrollY=0;
+ save();render();toast(changed+' maps expanded to four times the playable area');
+}
 function mapArtCenter(m){
- const o=m?.wideSidesV1?.originalCols,side=m?.wideSidesV1?.sideCols,cols=mapCols(m);
+ const o=m?.wideSidesV1?.originalCols,side=m?.wideSidesV1?.sideCols,cols=m?.territoryV1?.originalCols||mapCols(m);
  return Number.isInteger(o)&&Number.isInteger(side)&&o+2*side===cols?{left:side/cols*100,width:o/cols*100}:null;
 }
 function mapExpandAllSides(){
  const ms=mapState();
  if(ms.wideSidesEnabled)return alert('The maps are already expanded.');
+ if([...ms.scenes,...ms.archivedScenes].some(m=>m.territoryV1))return alert('The new large territory expansion is active. The older side-width operation cannot be combined with it.');
  if(!confirm('Add 25% more playable columns to BOTH sides of every map? This remaps tokens, fog, blockers and DM markers. Export a campaign JSON backup first. Continue?'))return;
  let count=0,skipped=0;
  for(const m of [...ms.scenes,...ms.archivedScenes])mapSideExpansion(m)?count++:skipped++;
@@ -2364,7 +2419,10 @@ function mapWideSideArt(m){
 }
 function mapCustomBackground(m,mode='dm'){
  const c=mapArtCenter(m),art=mapOriginalBackground(m,mode);
- return c?'<img class="map-side-illustration" src="'+mapWideSideArt(m)+'" alt="" aria-hidden="true"><div class="map-art-center" style="left:'+c.left+'%;width:'+c.width+'%">'+art+'</div>':art;
+ const content=c?'<img class="map-side-illustration" src="'+mapWideSideArt(m)+'" alt="" aria-hidden="true"><div class="map-art-center" style="left:'+c.left+'%;width:'+c.width+'%">'+art+'</div>':art;
+ const core=mapTerritoryCore(m);
+ if(!core)return content;
+ return '<div class="map-territory-surround" aria-hidden="true"></div><div class="map-territory-core" style="left:'+core.left+'%;top:'+core.top+'%;width:'+core.width+'%;height:'+core.height+'%">'+content+'</div>';
 }
 function mapArtwork(theme){let deco='';
  if(theme==='village')deco=`
@@ -2769,7 +2827,7 @@ function livePlayerSnapshot(){
  // Explicitly choose the PLAYER asset; never forward DM art, markers, notes or campaign records.
  const image=m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'';
  const safeImage=/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?$/i.test(image)?image:'';
- return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:mapArtCenter(m),sideArt:mapWideSideArt(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
+ return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:mapArtCenter(m),sideArt:mapWideSideArt(m),territory:mapTerritoryCore(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
 }
 function initLivePlayerDisplay(){
  if(!('BroadcastChannel' in window))return {available:false,publish(){},open(){alert('This browser does not support live tab updates. Please use a current Chrome, Edge or Firefox browser.')}};
@@ -2817,7 +2875,8 @@ let heading=`<div class="headrow"><div><h2>🗺 Battle Maps & Tokens</h2><p clas
 if(player)return `${heading}<div class="map-player-panel"><label for="player-map-picker">Shared map</label><select id="player-map-picker" onchange="mapSwitchPlayer(this.value)">${mapPlayerScenes().map(x=>`<option value="${esc(x.id)}" ${x.id===m.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select><b>Player View — ${esc(m.name)}</b><p style="margin:4px 0 0">Only revealed terrain, PCs and NPCs marked visible are shown. Use DM View to control the map. This is a presentation mode, not a secure separate player account.</p></div><div class="map-player-stage ${mapWidePreference?'is-wide':''}"><div class="map-adjacent-view-switch">${miniTokenSizeControl()}${mapWideButton()}${mapInspectControls()}${tabletopButton()}${player?'':livePlayerDisplayButton()}<b>Map display:</b><button class="btn small secondary" onclick="mapSetView('dm')">⚙ Switch to DM View</button></div>${mapInspectWrap(board,m)}</div><div class="actions" style="margin-top:12px"><button class="btn secondary" onclick="mapSetView('dm')">Return to DM controls</button></div>`;
 return `${heading}
 <div class="map-toolbar card section"><div class="field"><label for="map-picker">Location / scene</label><select id="map-picker" onchange="mapSwitch(this.value)">${mapOptions()}</select></div><div class="field"><label>Display</label><button class="btn secondary" onclick="mapGridToggle()">${ms.showGrid?'▦ Hide grid':'▤ Show grid'}</button></div>${miniTokenSizeControl()}${mapInspectControls()}<div class="field"><label>Map space</label>${mapWideButton()}${tabletopButton()}${livePlayerDisplayButton()}</div><div class="field"><label>Map tools</label><div class="actions"><button class="btn secondary" onclick="mapRename()">Rename</button><button class="btn secondary" onclick="mapClear()">Clear tokens</button><button class="btn danger" onclick="mapDelete()">Delete map</button></div></div></div>
-<div class="card section"><h3>Map canvas width</h3><p class="map-file-note">Add 25% new playable terrain to both the left and right edges of every existing and archived map. Keeps the original artwork and tokens aligned in the center; added sides feature illustrated scenery designed for each location.</p><button type="button" class="btn secondary" onclick="mapExpandAllSides()" ${mapState().wideSidesEnabled?'disabled':''}>${mapState().wideSidesEnabled?'✓ All maps expanded':'↔ Expand all map sides +25% each'}</button></div>
+<div class="card section map-territory-expansion"><h3>Explore a much larger world</h3><p class="map-file-note">Double the width and height of each map for <strong>four times the playable territory</strong>. Existing illustrated scenes, discoveries, tokens, fog, and secret markers remain together in the center. New outer regions start under fog until explored.</p><p class="map-file-note">Example: 46 × 30 → <b>92 × 60</b> squares. Use Zoom + Pan to explore the new territory, and export a campaign JSON backup first.</p><button type="button" class="btn secondary" onclick="mapExpandTerritories()" ${[...mapState().scenes,...mapState().archivedScenes].every(m=>!!m.territoryV1)?'disabled':''}>🌿 ${[...mapState().scenes,...mapState().archivedScenes].every(m=>!!m.territoryV1)?'Maps expanded':'Make maps 4× larger'}</button></div>
+<div class="card section"><h3>Map canvas width</h3><p class="map-file-note">Add 25% new playable terrain to both the left and right edges of every existing and archived map. Keeps the original artwork and tokens aligned in the center; added sides feature illustrated scenery designed for each location.</p><button type="button" class="btn secondary" onclick="mapExpandAllSides()" ${mapState().wideSidesEnabled||[...mapState().scenes,...mapState().archivedScenes].some(m=>!!m.territoryV1)?'disabled':''}>${mapState().wideSidesEnabled?'✓ All maps expanded':'↔ Expand all map sides +25% each'}</button></div>
 <div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the original artwork’s ${mapArtCenter(m)?m.wideSidesV1.originalCols:mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
 ${mapFogPanel(m,ms)}
 <p class="muted" style="margin:12px 0"><b>${esc(m.name)}</b> — ${esc(m.desc||MAP_THEME_NAMES[m.theme]||'Custom map')} · ${mapCols(m)} × ${mapRows(m)} cells · 5 feet per cell (abstract bug scale)</p>
@@ -2877,7 +2936,7 @@ async function mapUploadImage(event){let file=event.target.files?.[0];event.targ
 function mapRemoveImage(){delete currentMap().imageData;save();render();toast('Illustrated theme restored')}
 function mapSwitch(id){mapInspectScrollX=0;mapInspectScrollY=0;mapState().active=id;mapState().selected=null;mapState().selectedDmMarker=null;save();render()}
 function mapGridToggle(){mapState().showGrid=!mapState().showGrid;save();render()}
-function mapNew(){let name=prompt('Map name (for example, Great Bloom Festival):');if(!name?.trim())return;let theme=prompt('Theme: village, christmas, puddle, tunnel, ornament, log, blank','blank');if(theme===null)return;theme=theme.trim().toLowerCase();if(!MAP_THEME_NAMES[theme])theme='blank';let scene={id:uid(),name:name.trim().slice(0,100),theme,desc:'Custom scene',tokens:[]};if(mapState().wideSidesEnabled)mapSideExpansion(scene);mapState().scenes.push(scene);mapState().active=scene.id;mapState().selected=null;save();render();toast('Map created')}
+function mapNew(){let name=prompt('Map name (for example, Great Bloom Festival):');if(!name?.trim())return;let theme=prompt('Theme: village, christmas, puddle, tunnel, ornament, log, blank','blank');if(theme===null)return;theme=theme.trim().toLowerCase();if(!MAP_THEME_NAMES[theme])theme='blank';let scene={id:uid(),name:name.trim().slice(0,100),theme,desc:'Custom scene',tokens:[]};if(mapState().wideSidesEnabled)mapSideExpansion(scene);if(mapState().territoryExpansionV1)mapTerritoryExpand(scene);mapState().scenes.push(scene);mapState().active=scene.id;mapState().selected=null;save();render();toast('Map created')}
 function mapRename(){let m=currentMap(),s=prompt('New name',m.name);if(!s?.trim())return;m.name=s.trim().slice(0,100);save();render()}
 function mapDelete(){let m=currentMap();if(mapState().scenes.length===1)return alert('Keep at least one map.');if(!confirm('Delete map "'+m.name+'" and its tokens?'))return;mapState().scenes=mapState().scenes.filter(x=>x.id!==m.id);mapState().active=mapState().scenes[0].id;mapState().selected=null;save();render()}
 function mapClear(){if(!confirm('Remove all tokens from this map? Character records will not be deleted.'))return;currentMap().tokens=[];mapState().selected=null;save();render()}

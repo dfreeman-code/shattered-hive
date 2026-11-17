@@ -37,6 +37,11 @@ main{display:flex;flex:1;min-height:0;align-items:center;justify-content:center;
 .fog div.explored{background:#0b1713ad}
 footer{text-align:center;padding:6px 12px;background:#203b30;color:#d4ddcc;font-size:12px;min-height:30px}
 @media(max-width:700px){.brand{font-size:16px}.board{width:min(calc(100vw - 10px),calc((100dvh - 148px)*var(--ratio,1)))}header{padding:7px}main{padding:5px}}
+.territory-art{background-color:#779b7b;background-image:radial-gradient(ellipse at 17% 22%,#b4c99380 0 9%,transparent 24%),radial-gradient(ellipse at 89% 85%,#c2a87970 0 10%,transparent 26%),radial-gradient(ellipse at 82% 21%,#638b7860 0 8%,transparent 24%),repeating-linear-gradient(145deg,#44644522 0 4px,transparent 5px 74px)}
+.board[data-theme="christmas"] .territory-art,.board[data-theme="puddle"] .territory-art{background-color:#a9c8cb}
+.board[data-theme="tunnel"] .territory-art,.board[data-theme="log"] .territory-art{background-color:#7d6853}
+.board[data-theme="ornament"] .territory-art{background-color:#b7b2c6}
+.territory-core{overflow:hidden;box-shadow:0 0 40px #0e28152a}
 </style>
 </head>
 <body>
@@ -82,6 +87,14 @@ function playerRender(packet){
  if(sideArt){const extra=document.createElement('img');extra.src=sideArt;extra.alt='';extra.draggable=false;extra.style.position='absolute';extra.style.inset='0';extra.style.width='100%';extra.style.height='100%';extra.style.objectFit='fill';art.append(extra)}
  const src=safeAsset(scene.image);
  if(src){const img=document.createElement('img');img.src=src;img.alt='';img.draggable=false;const c=scene.artCenter;if(c&&Number.isFinite(c.left)&&Number.isFinite(c.width)&&c.left>=0&&c.width>0&&c.left+c.width<=100.001){img.style.position='absolute';img.style.top='0';img.style.height='100%';img.style.left=c.left+'%';img.style.width=c.width+'%'}art.append(img)}
+ // Keep the original player-safe illustration aligned inside the larger landscape.
+ const core=scene.territory;
+ if(core&&['left','top','width','height'].every(k=>typeof core[k]==='number'&&Number.isFinite(core[k]))&&core.left>=0&&core.top>=0&&core.width>0&&core.height>0&&core.left+core.width<=100.01&&core.top+core.height<=100.01){
+  const inner=document.createElement('div');inner.className='territory-core';
+  inner.style.position='absolute';inner.style.left=core.left+'%';inner.style.top=core.top+'%';inner.style.width=core.width+'%';inner.style.height=core.height+'%';
+  while(art.firstChild)inner.append(art.firstChild);
+  art.classList.add('territory-art');art.append(inner);
+ }
  const grid=document.createElement('div');grid.className='grid';if(!scene.grid)grid.style.display='none';
  const tokens=document.createElement('div');tokens.className='tokens';
  for(const t of Array.isArray(scene.tokens)?scene.tokens:[]){
