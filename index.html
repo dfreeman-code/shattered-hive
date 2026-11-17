@@ -1349,7 +1349,17 @@ function heroReviewToggle(id,key,checked){
  db.heroReadiness ||= {};
  db.heroReadiness[id] ||= {};
  db.heroReadiness[id][key]=!!checked;
- save();render();
+ save();
+ // Update only the counts: re-rendering the sheet would destroy the open <details>
+ // and move focus away from the checkbox after every acknowledgement.
+ const row=[...document.querySelectorAll('#hero-party-readiness .hero-ready-card')].find(el=>el.dataset.heroId===String(id));
+ const count=row?.querySelector('.hero-review-count');
+ if(count)count.textContent=HERO_REVIEW_FIELDS.filter(([field])=>heroReviewState(pc)[field]).length+'/'+HERO_REVIEW_FIELDS.length;
+ const total=document.getElementById('hero-review-total');
+ if(total){
+  const party=christmasIntroHeroes();
+  total.textContent=party.filter(hero=>HERO_REVIEW_FIELDS.every(([field])=>!!heroReviewState(hero)[field])).length+'/'+party.length+' reviewed';
+ }
 }
 function heroReadinessPanel(){
  const party=christmasIntroHeroes();
@@ -1366,15 +1376,15 @@ function heroReadinessPanel(){
    facts.spellsOrAttacks?'Abilities entered':'Spells/attacks pending',
    facts.soloSaved?'Solo draft saved':'Solo draft not saved'
   ];
-  return '<details class="hero-ready-card"><summary><strong>'+esc(pc.name||'Unnamed hero')+'</strong><span>'+
-   esc(pc.species||'')+' · '+esc(pc.class||'Unassigned')+' · Review '+approved+'/'+HERO_REVIEW_FIELDS.length+
+  return '<details class="hero-ready-card" data-hero-id="'+esc(pc.id)+'"><summary><strong>'+esc(pc.name||'Unnamed hero')+'</strong><span>'+
+   esc(pc.species||'')+' · '+esc(pc.class||'Unassigned')+' · Review <span class="hero-review-count">'+approved+'/'+HERO_REVIEW_FIELDS.length+'</span>'+
    '</span></summary><p class="muted">'+esc(status.join(' · '))+'</p><div class="hero-ready-checks">'+cells+'</div>'+
    '<button type="button" class="btn small secondary" onclick="selectedSheetPC='+esc(JSON.stringify(pc.id))+';goto(\'sheet\')">Open character sheet</button></details>';
  }).join('');
  const completed=party.filter(pc=>HERO_REVIEW_FIELDS.every(([key])=>!!heroReviewState(pc)[key])).length;
  return '<section class="card hero-party-readiness" id="hero-party-readiness"><div class="headrow"><div><h3>Six-Hero Pre-Session Review</h3>'+
   '<p class="muted">Review the six players’ existing sheets and solo scenes before Starfall Eve. These acknowledgements do not change character stats, script content, session status or game progress.</p></div>'+
-  '<b>'+completed+'/'+party.length+' reviewed</b></div>'+
+  '<b id="hero-review-total">'+completed+'/'+party.length+' reviewed</b></div>'+
   '<div class="hero-ready-list">'+rows+'</div>'+
   '<p class="muted">Recorded fields show what is present, not whether it is rule-approved. Only the DM can check the five review items for each hero. No review item is marked automatically.</p></section>';
 }
