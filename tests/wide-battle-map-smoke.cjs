@@ -46,9 +46,9 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((ok,bad)=>htt
   assert.equal(await page.locator('.map-dm-marker').count(),0,'DM marker leaked to Player View');
   assert.equal(await page.locator('[data-token="wide-map-tok"]').count(),1);
   await page.reload();await page.evaluate(()=>goto('maps'));
-  assert.equal(await page.locator('.map-layout.is-wide').count(),1,'Wide preference did not persist');
+  assert.equal(await page.locator('.map-layout.is-wide, .map-player-stage.is-wide').count(),1,'Wide preference did not persist');
   await page.locator('.map-wide-toggle').click();
-  assert.equal(await page.locator('.map-layout.is-wide').count(),0,'Could not return to standard');
+  assert.equal(await page.locator('.map-layout.is-wide, .map-player-stage.is-wide').count(),0,'Could not return to standard');
   await page.setViewportSize({width:690,height:820});
   await page.locator('.map-wide-toggle').click();
   const small=await page.locator('#map-board').evaluate(el=>{const b=el.getBoundingClientRect();return b.width/b.height});
