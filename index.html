@@ -51,6 +51,14 @@
 .fog-options{display:grid;gap:10px}
 .fog-control-group .hero-ready-check{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:transparent;cursor:pointer}
 .fog-control-group .hero-ready-check input{margin-top:4px;flex:none}
+/* Fit tabletop to its actual remaining stage height even if toolbar wraps. */
+@supports (height: 100cqh){
+ .tabletop-map-stage{container-type:size}
+ .tabletop-map-stage .map-board{
+  width:min(calc(100cqw - 24px),calc((100cqh - 20px) * var(--tabletop-ratio,1)));
+  max-height:calc(100cqh - 20px)
+ }
+}
 /* Readable, touch-friendly Fog of War choices. Scope only to this panel. */
 .fog-control-panel .fog-toggle-choice{
  display:flex;align-items:flex-start;gap:14px;min-height:72px;
