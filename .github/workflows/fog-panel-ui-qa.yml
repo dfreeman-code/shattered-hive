@@ -1,0 +1,26 @@
+name: Fog of War panel UI browser tests
+on:
+  push:
+    branches: [feature/fog-panel-ui-organization]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/fog-panel-ui-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fog-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Run UI regression
+        run: node tests/fog-panel-ui-smoke.cjs
