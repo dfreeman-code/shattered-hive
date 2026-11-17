@@ -2198,18 +2198,51 @@ function mapVisionRay(m,x0,y0,x1,y1,blocked){
  }
  return true;
 }
-function mapVisibleFrom(m,x,y){
+// Phase 2: optional ambient lighting; no automatic species assumptions.
+function mapLightingEnabled(m){return mapVisionEnabled(m)&&m.fogLighting2===true}
+function mapAmbient(m){return ['bright','dim','dark'].includes(m.fogAmbient)?m.fogAmbient:'bright'}
+function mapDarkvisionSquares(t){let v=t.darkvisionSquares; if(v==null){const pc=findTokenRecord(t);v=pc?.sheet?.darkvisionSquares??pc?.darkvisionSquares??0}return [0,4,8,12].includes(Number(v))?Number(v):0}
+function mapLightSquares(t){return [0,2,4,8,12].includes(Number(t.lightSquares))?Number(t.lightSquares):0}
+function mapLightingToggle(on){currentMap().fogLighting2=!!on;save();render()}
+function mapAmbientSet(value){if(!['bright','dim','dark'].includes(value))return;currentMap().fogAmbient=value;save();render()}
+function mapTokenVisionSet(key,value){const t=currentMap().tokens.find(x=>x.id===mapState().selected);if(!t||t.kind!=='pc')return;
+ const n=Number(value);if(key==='darkvisionSquares'&&[0,4,8,12].includes(n))t.darkvisionSquares=n;
+ if(key==='lightSquares'&&[0,2,4,8,12].includes(n))t.lightSquares=n;
+ save();render()}
+function mapLightingControls(m){if(!mapVisionEnabled(m))return '';
+ const enabled=mapLightingEnabled(m),ambient=mapAmbient(m);
+ return '<label class="hero-ready-check"><input type="checkbox" '+(enabled?'checked ':'')+'onchange="mapLightingToggle(this.checked)"> Use ambient light and character vision (opt-in)</label>'+
+ (enabled?'<label>Ambient light <select aria-label="Ambient lighting" onchange="mapAmbientSet(this.value)">'+
+ ['bright','dim','dark'].map(x=>'<option value="'+x+'"'+(ambient===x?' selected':'')+'>'+({bright:'Bright Light',dim:'Dim Light',dark:'Darkness'}[x])+'</option>').join('')+'</select></label><p class="map-file-note">Bright and dim light allow ordinary sight (dim light affects Perception in D&D). Darkness limits sight to illuminated areas or a PC’s explicitly assigned Darkvision. No wall or vision settings are inferred from map art.</p>':'')}
+function mapTokenVisionControls(t){if(t.kind!=='pc'||!mapLightingEnabled(currentMap()))return '';
+ return '<div class="field"><label>Darkvision <select aria-label="Selected PC Darkvision" onchange="mapTokenVisionSet(\'darkvisionSquares\',this.value)">'+
+ [0,4,8,12].map(n=>'<option value="'+n+'"'+(mapDarkvisionSquares(t)===n?' selected':'')+'>'+ (n?n*5+' ft':'None')+'</option>').join('')+
+ '</select></label><label>Carried light radius <select aria-label="Selected PC light radius" onchange="mapTokenVisionSet(\'lightSquares\',this.value)">'+
+ [0,2,4,8,12].map(n=>'<option value="'+n+'"'+(mapLightSquares(t)===n?' selected':'')+'>'+(n?n*5+' ft':'None')+'</option>').join('')+
+ '</select></label></div>'}
+function mapLitSquares(m){
+ const cols=mapCols(m),rows=mapRows(m),walls=new Set(mapWallCells(m)),lit=new Set();
+ for(const t of m.tokens||[]){
+  const rad=mapLightSquares(t);if(!rad)continue;
+  for(let y=Math.max(0,t.y-rad);y<=Math.min(rows-1,t.y+rad);y++)
+   for(let x=Math.max(0,t.x-rad);x<=Math.min(cols-1,t.x+rad);x++)
+    if((x-t.x)**2+(y-t.y)**2<=rad*rad&&mapVisionRay(m,t.x,t.y,x,y,walls))lit.add(y*cols+x);
+ }
+ return lit;
+}
+function mapVisibleFrom(m,x,y,viewer=null,lit=null){
  const cols=mapCols(m),rows=mapRows(m),blocked=new Set(mapWallCells(m)),result=new Set();
+ const lighting=mapLightingEnabled(m),ambient=mapAmbient(m),light=lighting?(lit||mapLitSquares(m)):null,darkvision=lighting?mapDarkvisionSquares(viewer||{}):0;
  if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=cols||y>=rows)return result;
  for(let yy=Math.max(0,y-4);yy<=Math.min(rows-1,y+4);yy++)
   for(let xx=Math.max(0,x-4);xx<=Math.min(cols-1,x+4);xx++)
-   if((xx-x)**2+(yy-y)**2<=16&&mapVisionRay(m,x,y,xx,yy,blocked))result.add(yy*cols+xx);
+   if((xx-x)**2+(yy-y)**2<=16&&mapVisionRay(m,x,y,xx,yy,blocked)&&(!lighting||ambient!=='dark'||light.has(yy*cols+xx)||(darkvision>0&&(xx-x)**2+(yy-y)**2<=darkvision*darkvision)))result.add(yy*cols+xx);
  return result;
 }
 function mapCurrentVisible(m){
  if(!mapVisionEnabled(m))return new Set(mapFog(m));
- const result=new Set();
- for(const t of m.tokens||[])if(t.kind==='pc')for(const cell of mapVisibleFrom(m,t.x,t.y))result.add(cell);
+ const result=new Set(),lit=mapLightingEnabled(m)?mapLitSquares(m):null;
+ for(const t of m.tokens||[])if(t.kind==='pc')for(const cell of mapVisibleFrom(m,t.x,t.y,t,lit))result.add(cell);
  return result;
 }
 function mapVisibleToken(t,m,mode){
@@ -2577,7 +2610,7 @@ function tabletopPage(board,m,ms,player){
   ?`<button type="button" class="btn secondary small" onclick="mapSetView('dm')">⚙ DM View</button>`
   :`<button type="button" class="btn secondary small" onclick="mapSetView('player')">◉ Player View</button>`;
  const grid=player?'':'<button type="button" class="btn secondary small" onclick="mapGridToggle()">'+(ms.showGrid?'▦ Hide grid':'▤ Show grid')+'</button>';
- const autoFog=player?'':mapAutoFogControl()+mapVisionControls(m);
+ const autoFog=player?'':mapAutoFogControl()+mapVisionControls(m)+mapLightingControls(m);
  const selected=player?'Player-safe presentation · No DM controls':(ms.selected?esc(tokenLabel(m.tokens.find(t=>t.id===ms.selected)||{name:'Token'}))+' selected · Drag, click a square, or use arrows':'DM tabletop · Select a token to move it');
  return '<section class="tabletop-shell" role="region" aria-label="Full-screen tabletop"><div class="tabletop-toolbar"><strong>✿ Tabletop · '+esc(m.name)+'</strong><label>Scene '+select+'</label>'+miniTokenSizeControl()+autoFog+grid+toggle+(player?'':livePlayerDisplayButton())+'<span class="tabletop-spacer"></span><button type="button" class="btn secondary small" onclick="tabletopExit()">✕ Exit tabletop</button></div><div class="tabletop-map-stage" style="--tabletop-ratio:'+(mapCols(m)/mapRows(m))+'">'+board+'</div><div class="tabletop-foot">'+selected+' · Esc exits tabletop</div></section>';
 }
@@ -2591,11 +2624,11 @@ if(player)return `${heading}<div class="map-player-panel"><label for="player-map
 return `${heading}
 <div class="map-toolbar card section"><div class="field"><label for="map-picker">Location / scene</label><select id="map-picker" onchange="mapSwitch(this.value)">${mapOptions()}</select></div><div class="field"><label>Display</label><button class="btn secondary" onclick="mapGridToggle()">${ms.showGrid?'▦ Hide grid':'▤ Show grid'}</button></div>${miniTokenSizeControl()}<div class="field"><label>Map space</label>${mapWideButton()}${tabletopButton()}${livePlayerDisplayButton()}</div><div class="field"><label>Map tools</label><div class="actions"><button class="btn secondary" onclick="mapRename()">Rename</button><button class="btn secondary" onclick="mapClear()">Clear tokens</button><button class="btn danger" onclick="mapDelete()">Delete map</button></div></div></div>
 <div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the active map’s ${mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
-<div class="card section"><div class="headrow"><h3>Fog of war</h3><span class="pill">${mapFog(m).length}/${mapCols(m)*mapRows(m)} squares revealed</span></div>${mapAutoFogControl()}${mapVisionControls(m)}<div class="actions"><button class="btn ${ms.fogTool==='reveal'?'':'secondary'}" onclick="mapSetFogTool('reveal')">☀ Reveal squares</button><button class="btn ${ms.fogTool==='hide'?'':'secondary'}" onclick="mapSetFogTool('hide')">☁ Hide squares</button><button class="btn ${ms.fogTool==='off'?'':'secondary'}" onclick="mapSetFogTool('off')">↖ Move tokens</button><button class="btn secondary" onclick="mapFogAll(false)">Hide all</button><button class="btn secondary" onclick="mapFogAll(true)">Reveal all</button></div><p class="map-file-note">Use Reveal or Hide and click or drag over squares to paint visibility. DM view shows the covered terrain for editing; Player View hides it. Each map has its own fog. When enabled, moving a PC reveals crossed squares and their immediate surroundings; this does not detect walls, so use manual fog controls for secret rooms.</p></div>
+<div class="card section"><div class="headrow"><h3>Fog of war</h3><span class="pill">${mapFog(m).length}/${mapCols(m)*mapRows(m)} squares revealed</span></div>${mapAutoFogControl()}${mapVisionControls(m)}${mapLightingControls(m)}<div class="actions"><button class="btn ${ms.fogTool==='reveal'?'':'secondary'}" onclick="mapSetFogTool('reveal')">☀ Reveal squares</button><button class="btn ${ms.fogTool==='hide'?'':'secondary'}" onclick="mapSetFogTool('hide')">☁ Hide squares</button><button class="btn ${ms.fogTool==='off'?'':'secondary'}" onclick="mapSetFogTool('off')">↖ Move tokens</button><button class="btn secondary" onclick="mapFogAll(false)">Hide all</button><button class="btn secondary" onclick="mapFogAll(true)">Reveal all</button></div><p class="map-file-note">Use Reveal or Hide and click or drag over squares to paint visibility. DM view shows the covered terrain for editing; Player View hides it. Each map has its own fog. When enabled, moving a PC reveals crossed squares and their immediate surroundings; this does not detect walls, so use manual fog controls for secret rooms.</p></div>
 <p class="muted" style="margin:12px 0"><b>${esc(m.name)}</b> — ${esc(m.desc||MAP_THEME_NAMES[m.theme]||'Custom map')} · ${mapCols(m)} × ${mapRows(m)} cells · 5 feet per cell (abstract bug scale)</p>
 <div class="map-layout ${mapWidePreference?'is-wide':''}"><div class="map-board-wrap">${board}<p class="muted" style="font-size:12px;margin-top:8px">${ms.fogTool==='off'?'Drag tokens, select and click a destination square, or use arrow keys.':'Fog paint mode active: click or drag the map to reveal or hide areas.'} In DM View, obscured terrain is darkened; Player View conceals it.</p></div>
 <div class="map-sidebar"><div class="card map-view-settings"><h3>Map views</h3><div class="map-mode-buttons"><button class="btn ${player?'secondary':''}" onclick="mapSetView('dm')">⚙ DM View</button><button class="btn ${player?'':'secondary'}" onclick="mapSetView('player')">◉ Player View</button></div><label class="map-share-label"><input type="checkbox" ${mapAvailable(m)?'checked':''} onchange="mapSetShared(this.checked)"> Share this map in Player View</label><p class="map-file-note">Choose DM View for hidden markers and Player View for the clean map. Sharing affects the map list, not the artwork.</p>${m.id==='evergarden-home-hive'?'<div class="map-dm-key"><b>DM marker key</b><span><strong>S</strong> Secret / passage</span><span><strong>C</strong> Clue</span><span><strong>T</strong> Trap / hazard</span><span><strong>E</strong> Enemy entry</span><span><strong>U</strong> Future upgrade plot</span><small>These colored markers appear only in DM View.</small></div>':''}</div>${dmMarkerControls(m)}<div class="card"><h3>Add character token</h3><label for="map-roster">Existing character</label><select id="map-roster"><option value="">Choose a PC or NPC...</option>${available.map(r=>`<option value="${esc(r.k+':'+r.id)}">${r.k==='pc'?'⭐ PC':'● NPC'} — ${esc(r.n)}</option>`).join('')}</select><button class="btn" style="width:100%;margin-top:9px" onclick="mapAddRecord()">Place character on map</button><div class="toolbar"><button class="btn secondary" onclick="mapAddCustom()">＋ Monster / custom token</button></div></div>
-<div class="card"><h3>Selected token</h3>${t?`<p><b>${esc(tokenLabel(t))}</b> <span class="pill">${esc(t.kind.toUpperCase())}</span></p><p>Grid: <b>${t.x+1}, ${t.y+1}</b></p>${pcMiniPortrait(t)}<label><input type="checkbox" ${t.kind==='pc'||t.showToPlayers===true?'checked':''} ${t.kind==='pc'?'disabled':''} onchange="mapTokenVisibility(this.checked)"> Visible in Player View ${t.kind==='pc'?'(PCs always visible)':''}</label><div class="formgrid"><div class="field"><label>Current HP (optional)</label><input type="number" min="0" id="map-hp" value="${esc(t.hp??'')}" placeholder="—" onchange="mapTokenValue('hp',this.value)"></div><div class="field"><label>Condition / note</label><input id="map-condition" value="${esc(t.condition||'')}" placeholder="e.g. Prone" onchange="mapTokenValue('condition',this.value)"></div></div><div class="actions"><button class="btn small secondary" onclick="mapCenterToken()">Center</button><button class="btn small danger" onclick="mapRemoveToken()">Remove token</button></div>`:`<p class="muted">Select any token to see its grid position, control visibility or update HP.</p>`}</div>
+<div class="card"><h3>Selected token</h3>${t?`<p><b>${esc(tokenLabel(t))}</b> <span class="pill">${esc(t.kind.toUpperCase())}</span></p><p>Grid: <b>${t.x+1}, ${t.y+1}</b></p>${pcMiniPortrait(t)}${mapTokenVisionControls(t)}<label><input type="checkbox" ${t.kind==='pc'||t.showToPlayers===true?'checked':''} ${t.kind==='pc'?'disabled':''} onchange="mapTokenVisibility(this.checked)"> Visible in Player View ${t.kind==='pc'?'(PCs always visible)':''}</label><div class="formgrid"><div class="field"><label>Current HP (optional)</label><input type="number" min="0" id="map-hp" value="${esc(t.hp??'')}" placeholder="—" onchange="mapTokenValue('hp',this.value)"></div><div class="field"><label>Condition / note</label><input id="map-condition" value="${esc(t.condition||'')}" placeholder="e.g. Prone" onchange="mapTokenValue('condition',this.value)"></div></div><div class="actions"><button class="btn small secondary" onclick="mapCenterToken()">Center</button><button class="btn small danger" onclick="mapRemoveToken()">Remove token</button></div>`:`<p class="muted">Select any token to see its grid position, control visibility or update HP.</p>`}</div>
 <div class="card"><h3>On this map <span class="pill">${m.tokens.length}</span></h3><div class="map-roster-list">${m.tokens.map(o=>`<button class="map-roster-item ${ms.selected===o.id?'active':''}" onclick="mapSelect('${esc(o.id)}')"><span>${o.kind==='pc'?'★':o.kind==='npc'?'●':'⚔'}</span> ${esc(tokenLabel(o))} <small>${o.x+1},${o.y+1}</small></button>`).join('')||'<p class="muted">No tokens yet. Add PCs or NPCs to begin.</p>'}</div></div>
 <div class="card"><h3>Last movements</h3><div class="map-log">${ms.history.filter(h=>h.map===m.id).slice(0,6).map(h=>`<div class="item"><small>${esc(h.text)}</small></div>`).join('')||'<p class="muted">Movement history will appear here.</p>'}</div></div></div></div>`}
 function mapSetView(v){let ms=mapState();if(v==='dm'&&ms.viewMode==='player'&&!confirm('Return to DM View? Hidden maps, tokens and notes may become visible on this screen.'))return;if(v==='player'&&!mapAvailable(currentMap()))currentMap().playerShared=true;ms.viewMode=v==='player'?'player':'dm';ms.fogTool='off';save();render()}
@@ -2615,7 +2648,7 @@ function mapRevealPcTravel(m,fromX,fromY,toX,toY){
  let x=fromX,y=fromY,dx=Math.abs(toX-fromX),dy=Math.abs(toY-fromY);
  const sx=fromX<toX?1:-1,sy=fromY<toY?1:-1;let err=dx-dy;
  while(true){
-  if(mapVisionEnabled(m)){for(const cell of mapVisibleFrom(m,x,y))seen.add(cell)}
+  if(mapVisionEnabled(m)){const viewer=(m.tokens||[]).find(t=>t.kind==='pc'&&t.x===toX&&t.y===toY);for(const cell of mapVisibleFrom(m,x,y,viewer))seen.add(cell)}
   else for(let yy=Math.max(0,y-1);yy<=Math.min(rows-1,y+1);yy++)
    for(let xx=Math.max(0,x-1);xx<=Math.min(cols-1,x+1);xx++)seen.add(yy*cols+xx);
   if(x===toX&&y===toY)break;
