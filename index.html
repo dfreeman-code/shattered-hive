@@ -2661,7 +2661,7 @@ function mapSwitchPlayer(id){if(mapPlayerScenes().some(m=>m.id===id)){mapState()
 // Presentation-only grouping of existing fog actions; no new persistence or mechanics.
 function mapFogPanel(m,ms){
  const total=mapCols(m)*mapRows(m),explored=mapFog(m).length,percent=Math.round(explored/total*100);
- const tool=(key,icon,label)=>'<button type="button" class="btn secondary fog-action'+(ms.fogTool===key?' is-active':'')+'" aria-pressed="'+(ms.fogTool===key)+'" onclick="mapSetFogTool(\\''+key+'\\')">'+icon+' '+label+'</button>';
+ const tool=(key,icon,label)=>'<button type="button" class="btn secondary fog-action'+(ms.fogTool===key?' is-active':'')+'" aria-pressed="'+(ms.fogTool===key)+'" onclick="mapSetFogTool(&quot;'+key+'&quot;)">'+icon+' '+label+'</button>';
  return `<section class="card section fog-control-panel" aria-labelledby="fog-panel-title">
  <div class="fog-control-head"><div><h3 id="fog-panel-title">☁ Fog of War</h3><p class="map-file-note">Control what the adventurers can see</p></div><span class="pill" aria-label="${explored} of ${total} squares explored">${explored} / ${total} explored</span></div>
  <div class="fog-progress" role="progressbar" aria-label="Explored terrain" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div>
