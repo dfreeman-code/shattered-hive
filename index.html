@@ -2451,8 +2451,23 @@ function mapTokenHtml(t,m){
 }
 // Session presentation only; full-screen overlay never enters cloud saves or JSON exports.
 let tabletopMode=false;
-function tabletopEnter(){if(page!=='maps')return;tabletopMode=true;render()}
-function tabletopExit(){tabletopMode=false;render()}
+function tabletopEnter(){
+ if(page!=='maps')return;
+ tabletopMode=true;render();
+ // Request actual browser fullscreen only when allowed by the user's click.
+ // The fixed viewport tabletop remains functional if fullscreen is denied.
+ if(!document.fullscreenElement&&document.documentElement.requestFullscreen){
+  Promise.resolve(document.documentElement.requestFullscreen()).catch(()=>{});
+ }
+}
+function tabletopExit(){
+ tabletopMode=false;render();
+ if(document.fullscreenElement&&document.exitFullscreen)Promise.resolve(document.exitFullscreen()).catch(()=>{});
+}
+document.addEventListener('fullscreenchange',()=>{
+ // Esc or browser-specific fullscreen exit should restore the ordinary map.
+ if(tabletopMode&&!document.fullscreenElement){tabletopMode=false;render()}
+});
 function tabletopButton(){return '<button type="button" class="btn secondary" onclick="tabletopEnter()">⛶ Full-screen tabletop</button>'}
 function tabletopPage(board,m,ms,player){
  const select=player
