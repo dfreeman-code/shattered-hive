@@ -1,0 +1,26 @@
+name: Fog checkbox readability browser tests
+on:
+  push:
+    branches: [feature/fog-checkbox-readability]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/fog-checkbox-readability.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Verify readable checkbox options and functionality
+        run: node tests/fog-checkbox-readability.cjs
