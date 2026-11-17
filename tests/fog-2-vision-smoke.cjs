@@ -31,7 +31,7 @@ async function ready(){for(let i=0;i<60;i++){try{await new Promise((yes,no)=>htt
    const behindWall=!mapVisionRay(m,5,4,7,4,new Set(m.fogWalls));
    const wallVisible=mapVisionRay(m,5,4,6,4,new Set(m.fogWalls));
    const hasMonster=packet.scene.tokens.some(t=>t.name==='Secret Mite');
-   mapMove(m.tokens[0],8,4);
+   mapMove(m.tokens[0],14,4);
    const remembered=mapFog(m).includes(4*30+4);
    const oldPlace=mapCurrentVisible(m).has(4*30+4);
    const memoryPaint=mapFogTiles(m).includes('fog-memory');
