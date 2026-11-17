@@ -46,6 +46,8 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((resolve,reje
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('.tabletop-shell').count(),0,'Escape did not exit tabletop');
   assert.equal(await page.evaluate(()=>tabletopMode),false);
+  // Native fullscreen exit can finish asynchronously after the Escape handler.
+  await page.waitForFunction(()=>!document.fullscreenElement);
   await page.getByRole('button',{name:'Full-screen tabletop'}).first().click();
   assert.equal(await page.locator('.tabletop-shell').count(),1);
   await page.getByRole('button',{name:'Exit tabletop'}).click();
