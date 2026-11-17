@@ -14,7 +14,11 @@
 </style><style>.statgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.statbox{border:1px solid var(--line);padding:10px;border-radius:10px;text-align:center;background:var(--panel)}.statbox input[type=number]{width:100%;max-width:100px;text-align:center}.statbox strong{display:block;font-size:24px}.statbox .tiny{font-size:11px;display:block}.sheetmetrics{display:flex;gap:12px;flex-wrap:wrap}.sheetmetrics>div{min-width:95px;background:var(--light);padding:12px;border-radius:10px;text-align:center}.sheetmetrics b{font-size:24px;display:block}.sheetmetrics small{display:block;color:var(--muted)}.sheetfields,.slotgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.sheetfields input,.slotgrid input{width:100%}.skillsgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 14px}.skillrow{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);gap:5px;font-size:12px}.skillrow label{display:flex;align-items:center;gap:3px}.skillrow label:last-child{font-size:10px;color:var(--muted)}.skillrow input{width:auto}textarea{min-height:85px}@media(max-width:760px){.statgrid{grid-template-columns:repeat(3,minmax(0,1fr))}.skillsgrid{grid-template-columns:1fr}.sheetfields{grid-template-columns:1fr}}@media print{header,nav,.actions,.btn,.banner{display:none!important}.shell{display:block!important}main{width:100%!important}.card{break-inside:avoid}body{background:white}}.combatgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.combatgrid input{width:100%}.conditiongrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:5px;margin:10px 0}@media(max-width:550px){.combatgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}.music-inline{margin:12px 0;padding:8px 10px;border-radius:8px;background:var(--light);font-size:13px}.music-inline a{color:var(--green);font-weight:600}.card a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.toolbar select{max-width:220px;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}</style><style>.map-toolbar{display:flex;align-items:end;gap:15px;flex-wrap:wrap}.map-toolbar .field{margin:0}.map-toolbar .field:first-child{flex:1;min-width:220px}.map-toolbar .field:last-child{flex:2}.map-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:17px;align-items:start}.map-board-wrap{min-width:0}.map-board{position:relative;width:100%;aspect-ratio:20/14;overflow:hidden;border:6px solid #765f44;border-radius:18px;box-shadow:0 9px 32px #24302033;cursor:crosshair;touch-action:none;user-select:none;background:#b9d2aa}.map-board.theme-christmas{background:#b8d6d8}.map-board.theme-puddle{background:#d5e3e7}.map-board.theme-tunnel{background:#725944}.map-board.theme-ornament{background:#f2d8d7}.map-board.theme-log{background:#a08360}.map-board.theme-blank{background:#e8e3d6}.map-backdrop,.map-art,.map-tokens,.map-grid{position:absolute;inset:0;width:100%;height:100%}.map-backdrop{pointer-events:none}.map-grid{pointer-events:none;background-image:linear-gradient(to right,#273d3450 1px,transparent 1px),linear-gradient(to bottom,#273d3450 1px,transparent 1px);background-size:5% 7.142857%;z-index:1}.map-grid.no-grid{display:none}.map-tokens{pointer-events:none;z-index:2}.map-token{pointer-events:auto;touch-action:none;position:absolute;transform:translate(-50%,-50%);width:5%;aspect-ratio:1;min-width:20px;min-height:20px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 5px #0008;background:#3167ad;color:white;display:flex;align-items:center;justify-content:center;font-size:clamp(12px,1.6vw,22px);padding:0;cursor:grab;z-index:3}.map-token.map-npc{background:#ca8643}.map-token.map-monster{background:#a44c55}.map-token.is-selected{outline:3px solid #ffe277;z-index:5}.map-token:active{cursor:grabbing}.token-symbol{line-height:1}.token-text{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);font-size:11px;font-weight:700;line-height:1.1;white-space:nowrap;color:white;text-shadow:-1px -1px 2px #14241a,1px 1px 2px #14241a,0 0 4px #14241a;pointer-events:none;max-width:160px;overflow:hidden;text-overflow:ellipsis}.map-sidebar{display:grid;gap:12px}.map-sidebar .card{padding:14px}.map-roster-list{display:grid;gap:5px;max-height:210px;overflow:auto}.map-roster-item{background:#edf1e5;border:1px solid #d5dec8;text-align:left;border-radius:7px;padding:8px 9px;display:flex;align-items:center;gap:8px;font-size:13px}.map-roster-item.active{border-color:#426c4b;background:#dce9d6}.map-roster-item small{margin-left:auto;color:#6a796a}.map-sidebar .formgrid{grid-template-columns:1fr}.map-log{max-height:135px;overflow:auto}@media(max-width:1040px){.map-layout{grid-template-columns:1fr}.map-sidebar{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}}@media(max-width:650px){.map-token{border-width:1px}.token-text{font-size:9px;max-width:78px}.map-toolbar .field{width:100%}}
 </style><style>
 /* v8 map upgrades */
-.map-backdrop .map-custom-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.map-backdrop /* Expansion adds real playable columns without stretching original artwork. */
+.map-backdrop{position:absolute;inset:0;background-image:repeating-linear-gradient(140deg,transparent 0 16px,#ffffff14 17px 19px,transparent 20px 34px),radial-gradient(ellipse at center,#ffffff30,transparent 65%)}
+.map-art-center{position:absolute;top:0;bottom:0;overflow:hidden;pointer-events:none}
+.map-art-center>.map-custom-image,.map-art-center>svg{position:absolute;inset:0;width:100%;height:100%}
+.map-custom-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .map-fog{position:absolute;inset:0;z-index:4;pointer-events:none;display:grid;grid-template-columns:repeat(20,minmax(0,1fr));grid-template-rows:repeat(14,minmax(0,1fr))}
 .fog-cell{background:radial-gradient(circle at 50% 40%,#253e4d 0%,#12222c 80%);box-shadow:inset 0 0 11px #071017aa;opacity:.95;pointer-events:none}
 .map-board:not(.is-player-view):not(.is-fog-edit) .map-tokens{z-index:5}
@@ -2166,6 +2170,34 @@ const CHRISTMAS_SCENE_MAP_SUGGESTIONS=[
 function mapCols(m){return Number.isInteger(m?.cols)&&m.cols>=4&&m.cols<=100?m.cols:MAP_COLS}
 function mapRows(m){return Number.isInteger(m?.rows)&&m.rows>=4&&m.rows<=100?m.rows:MAP_ROWS}
 function mapIndex(m,x,y){return y*mapCols(m)+x}
+function mapSideExpansion(m){
+ if(!m||m.wideSidesV1)return false;
+ const oldCols=mapCols(m),rows=mapRows(m),side=Math.round(oldCols*.25),cols=oldCols+2*side;
+ if(!side||cols>100)return false;
+ const shiftIndex=i=>Number.isInteger(i)&&i>=0&&i<oldCols*rows?Math.floor(i/oldCols)*cols+(i%oldCols)+side:null;
+ const revealed=Array.isArray(m.revealed)?m.revealed:Array.from({length:oldCols*rows},(_,i)=>i);
+ const remap=a=>[...new Set(a.map(shiftIndex).filter(i=>i!==null))].sort((a,b)=>a-b);
+ m.revealed=remap(revealed);
+ if(Array.isArray(m.fogWalls))m.fogWalls=remap(m.fogWalls);
+ for(const t of Array.isArray(m.tokens)?m.tokens:[])if(Number.isFinite(t.x))t.x+=side;
+ for(const marker of Array.isArray(m.dmMarkers)?m.dmMarkers:[])if(Number.isFinite(marker.x))marker.x+=side;
+ m.cols=cols;m.wideSidesV1={originalCols:oldCols,sideCols:side};
+ return true;
+}
+function mapArtCenter(m){
+ const o=m?.wideSidesV1?.originalCols,side=m?.wideSidesV1?.sideCols,cols=mapCols(m);
+ return Number.isInteger(o)&&Number.isInteger(side)&&o+2*side===cols?{left:side/cols*100,width:o/cols*100}:null;
+}
+function mapExpandAllSides(){
+ const ms=mapState();
+ if(ms.wideSidesEnabled)return alert('The maps are already expanded.');
+ if(!confirm('Add 25% more playable columns to BOTH sides of every map? This remaps tokens, fog, blockers and DM markers. Export a campaign JSON backup first. Continue?'))return;
+ let count=0,skipped=0;
+ for(const m of [...ms.scenes,...ms.archivedScenes])mapSideExpansion(m)?count++:skipped++;
+ ms.wideSidesEnabled=true;save();render();
+ toast(count+' maps expanded by 25% on both sides'+(skipped?' ('+skipped+' could not expand)':''));
+}
+
 function mapAvailable(m){return m.playerShared===true}
 function mapPlayerScenes(){return mapState().scenes.filter(mapAvailable)}
 function mapAssetUrl(m,mode){if(m.id==='evergarden-home-hive')return 'assets/maps/home_hive_'+(mode==='dm'?'dm_annotated':'player_gridless')+'.png?v=2';if(m.id.startsWith('caper-'))return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'player')+'.png';return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'gridless')+'.svg'}
@@ -2221,6 +2253,7 @@ function mapState(){
   try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){console.warn('Caper marker guide could not save; export backup',e)}
  }
  if(!ms.scenes.length)ms.scenes=[clone(EVERGARDEN_SCENES[0])];
+ if(ms.wideSidesEnabled){for(const m of [...ms.scenes,...ms.archivedScenes])mapSideExpansion(m)}
  if(!ms.scenes.some(m=>m.id===ms.active))ms.active=ms.scenes[0].id;
  return ms;
 }
@@ -2304,7 +2337,11 @@ function mapFogTiles(m){
  const explored=new Set(mapFog(m)),current=mapCurrentVisible(m),vision=mapVisionEnabled(m),walls=new Set(mapWallCells(m));
  return Array.from({length:mapCols(m)*mapRows(m)},(_,i)=>`<div data-fog-cell="${i}" class="${vision?(current.has(i)?'fog-clear':explored.has(i)?'fog-memory':'fog-cell'):(explored.has(i)?'fog-clear':'fog-cell')}${walls.has(i)?' fog-wall-mark':''}"></div>`).join('');
 }
-function mapCustomBackground(m,mode='dm'){if(m.id.startsWith('caper-'))return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/great-christmas-caper-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} ${mode==='dm'?'DM':'player'} map">`;if(m.id==='evergarden-home-hive')return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" alt="${mode==='dm'?'Dungeon Master':'Player-safe'} Home Hive map">`;return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/home-hive-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
+function mapOriginalBackground(m,mode='dm'){if(m.id.startsWith('caper-'))return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/great-christmas-caper-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} ${mode==='dm'?'DM':'player'} map">`;if(m.id==='evergarden-home-hive')return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" alt="${mode==='dm'?'Dungeon Master':'Player-safe'} Home Hive map">`;return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/home-hive-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
+function mapCustomBackground(m,mode='dm'){
+ const c=mapArtCenter(m),art=mapOriginalBackground(m,mode);
+ return c?'<div class="map-art-center" style="left:'+c.left+'%;width:'+c.width+'%">'+art+'</div>':art;
+}
 function mapArtwork(theme){let deco='';
  if(theme==='village')deco=`
   <defs>
@@ -2624,7 +2661,7 @@ function livePlayerSnapshot(){
  // Explicitly choose the PLAYER asset; never forward DM art, markers, notes or campaign records.
  const image=m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'';
  const safeImage=/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?$/i.test(image)?image:'';
- return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
+ return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:mapArtCenter(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
 }
 function initLivePlayerDisplay(){
  if(!('BroadcastChannel' in window))return {available:false,publish(){},open(){alert('This browser does not support live tab updates. Please use a current Chrome, Edge or Firefox browser.')}};
@@ -2672,7 +2709,8 @@ let heading=`<div class="headrow"><div><h2>🗺 Battle Maps & Tokens</h2><p clas
 if(player)return `${heading}<div class="map-player-panel"><label for="player-map-picker">Shared map</label><select id="player-map-picker" onchange="mapSwitchPlayer(this.value)">${mapPlayerScenes().map(x=>`<option value="${esc(x.id)}" ${x.id===m.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select><b>Player View — ${esc(m.name)}</b><p style="margin:4px 0 0">Only revealed terrain, PCs and NPCs marked visible are shown. Use DM View to control the map. This is a presentation mode, not a secure separate player account.</p></div><div class="map-player-stage ${mapWidePreference?'is-wide':''}"><div class="map-adjacent-view-switch">${miniTokenSizeControl()}${mapWideButton()}${tabletopButton()}${player?'':livePlayerDisplayButton()}<b>Map display:</b><button class="btn small secondary" onclick="mapSetView('dm')">⚙ Switch to DM View</button></div>${board}</div><div class="actions" style="margin-top:12px"><button class="btn secondary" onclick="mapSetView('dm')">Return to DM controls</button></div>`;
 return `${heading}
 <div class="map-toolbar card section"><div class="field"><label for="map-picker">Location / scene</label><select id="map-picker" onchange="mapSwitch(this.value)">${mapOptions()}</select></div><div class="field"><label>Display</label><button class="btn secondary" onclick="mapGridToggle()">${ms.showGrid?'▦ Hide grid':'▤ Show grid'}</button></div>${miniTokenSizeControl()}<div class="field"><label>Map space</label>${mapWideButton()}${tabletopButton()}${livePlayerDisplayButton()}</div><div class="field"><label>Map tools</label><div class="actions"><button class="btn secondary" onclick="mapRename()">Rename</button><button class="btn secondary" onclick="mapClear()">Clear tokens</button><button class="btn danger" onclick="mapDelete()">Delete map</button></div></div></div>
-<div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the active map’s ${mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
+<div class="card section"><h3>Map canvas width</h3><p class="map-file-note">Add 25% new playable terrain to both the left and right edges of every existing and archived map. Keeps the original artwork and tokens aligned in the center; added sides use neutral terrain until artwork is extended.</p><button type="button" class="btn secondary" onclick="mapExpandAllSides()" ${mapState().wideSidesEnabled?'disabled':''}>${mapState().wideSidesEnabled?'✓ All maps expanded':'↔ Expand all map sides +25% each'}</button></div>
+<div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the original artwork’s ${mapArtCenter(m)?m.wideSidesV1.originalCols:mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
 ${mapFogPanel(m,ms)}
 <p class="muted" style="margin:12px 0"><b>${esc(m.name)}</b> — ${esc(m.desc||MAP_THEME_NAMES[m.theme]||'Custom map')} · ${mapCols(m)} × ${mapRows(m)} cells · 5 feet per cell (abstract bug scale)</p>
 <div class="map-layout ${mapWidePreference?'is-wide':''}"><div class="map-board-wrap">${board}<p class="muted" style="font-size:12px;margin-top:8px">${ms.fogTool==='off'?'Drag tokens, select and click a destination square, or use arrow keys.':'Fog paint mode active: click or drag the map to reveal or hide areas.'} In DM View, obscured terrain is darkened; Player View conceals it.</p></div>
@@ -2731,7 +2769,7 @@ async function mapUploadImage(event){let file=event.target.files?.[0];event.targ
 function mapRemoveImage(){delete currentMap().imageData;save();render();toast('Illustrated theme restored')}
 function mapSwitch(id){mapState().active=id;mapState().selected=null;mapState().selectedDmMarker=null;save();render()}
 function mapGridToggle(){mapState().showGrid=!mapState().showGrid;save();render()}
-function mapNew(){let name=prompt('Map name (for example, Great Bloom Festival):');if(!name?.trim())return;let theme=prompt('Theme: village, christmas, puddle, tunnel, ornament, log, blank','blank');if(theme===null)return;theme=theme.trim().toLowerCase();if(!MAP_THEME_NAMES[theme])theme='blank';let scene={id:uid(),name:name.trim().slice(0,100),theme,desc:'Custom scene',tokens:[]};mapState().scenes.push(scene);mapState().active=scene.id;mapState().selected=null;save();render();toast('Map created')}
+function mapNew(){let name=prompt('Map name (for example, Great Bloom Festival):');if(!name?.trim())return;let theme=prompt('Theme: village, christmas, puddle, tunnel, ornament, log, blank','blank');if(theme===null)return;theme=theme.trim().toLowerCase();if(!MAP_THEME_NAMES[theme])theme='blank';let scene={id:uid(),name:name.trim().slice(0,100),theme,desc:'Custom scene',tokens:[]};if(mapState().wideSidesEnabled)mapSideExpansion(scene);mapState().scenes.push(scene);mapState().active=scene.id;mapState().selected=null;save();render();toast('Map created')}
 function mapRename(){let m=currentMap(),s=prompt('New name',m.name);if(!s?.trim())return;m.name=s.trim().slice(0,100);save();render()}
 function mapDelete(){let m=currentMap();if(mapState().scenes.length===1)return alert('Keep at least one map.');if(!confirm('Delete map "'+m.name+'" and its tokens?'))return;mapState().scenes=mapState().scenes.filter(x=>x.id!==m.id);mapState().active=mapState().scenes[0].id;mapState().selected=null;save();render()}
 function mapClear(){if(!confirm('Remove all tokens from this map? Character records will not be deleted.'))return;currentMap().tokens=[];mapState().selected=null;save();render()}
