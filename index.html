@@ -714,10 +714,14 @@ function heroWizardApplySheet(id){
    'Spiderkin (homebrew): Spider Climb (climbing speed equals walking speed; ceilings); Silk Thread (20 ft, proficiency bonus uses per Long Rest; supports 50 lb).\n'+
    'Sage ability increases: +2 Intelligence and +1 Constitution. Standard array before background: 15 INT, 14 DEX, 13 CON, 12 WIS, 10 CHA, 8 STR.\n'+
    'Spell save DC 13; Wizard spell attack +5. Spiderkin species features require DM approval.';
- sh.inventory='Spellbook, quarterstaff (magic staff appearance), calligrapher’s supplies, history book, 8 parchment sheets, robe and 8 GP (Sage equipment option A).\n'+
-   'Choose the remaining Wizard starting equipment with the player. Hooded cape, potions and scroll props are narrative unless separately approved as equipment.';
+ sh.inventory='Wizard equipment option A: 2 daggers, arcane focus staff (also a quarterstaff), robe, Scholar’s Pack and 5 GP.\n'+
+   'Sage equipment option A: spare quarterstaff, calligrapher’s supplies, history book, 8 parchment sheets, robe and 8 GP. Starting total: 13 GP.\n'+
+   'Black-and-red hooded cape, decorative potion bottles and scroll props are cosmetic; no extra potions, spell scrolls or magic items are granted.';
  sh.proficiencies='Wizard: Intelligence and Wisdom saving throws; Arcana and History (Sage), Insight and Investigation (Wizard); calligrapher’s supplies. Verify weapon and language selections from 2024 rules.';
- sh.attacks='Ray of Frost (Wizard cantrip): +5 spell attack. Quarterstaff can be used as focus; confirm physical attack statistics and equipment at the table.';
+ sh.attacks='Ray of Frost: +5 spell attack, 1d8 cold and speed reduced 10 ft until start of your next turn on hit.\n'+
+   'Quarterstaff (arcane focus): +1 melee attack; 1d6-1 bludgeoning one-handed or 1d8-1 two-handed (minimum 0).\n'+
+   'Dagger: +4 melee or thrown attack; 1d4+2 piercing.\n'+
+   'Magic Missile: three darts dealing 1d4+1 force damage each. Shield reaction adds +5 AC until the start of your next turn.';
  sh.currentHp=8;sh.maxHp=8;sh.ac=12;sh.speed=30;sh.hitDiceUsed=0;
  pc.class='Wizard';pc.background='Sage';pc.hp=8;pc.maxHp=8;pc.ac=12;pc.constitution=2;
  db.sheets ||= {};
@@ -763,12 +767,13 @@ function heroWizardLevelOnePreview(pc){
  ['Prepared spells (4)',HERO_WIZARD_LEVEL1.prepared.join(', ')],
  ['Sage origin feat','Magic Initiate (Wizard): '+HERO_WIZARD_LEVEL1.featCantrips.join(', ')+'; '+HERO_WIZARD_LEVEL1.featSpell+' once free per Long Rest'],
  ['Class and skills','Intelligence and Wisdom saves; Arcana, History, Insight and Investigation; Ritual Adept; Arcane Recovery'],
- ['Species','Spiderkin climbing and silk abilities remain your homebrew rules; no additional feats or powers are assumed'],
+ ['Species','Spiderkin homebrew: 30-ft climbing speed, including ceilings; Silk Thread creates up to 20 ft supporting 50 lb, twice per Long Rest (proficiency bonus uses)'],
+ ['Equipment','Wizard and Sage option A: focus quarterstaff, 2 daggers, spare quarterstaff, spellbook, Scholar’s Pack, robes, calligrapher’s supplies, history book, 8 parchment sheets and 13 GP. Costume props are cosmetic.'],
  ['Backstory / Christmas prologue','The Forbidden Thread: a glyph etched on a frost-covered acorn hints at six lights. Player decides what their hero remembers and chooses.']
  ];
  return '<section class="hero-wizard-draft" aria-label="Level 1 Wizard detailed draft"><h4>Level-1 Wizard sheet — proposed, not applied</h4>'+
  '<div class="hero-build-grid">'+specs.map(([key,value])=>'<div><b>'+esc(key)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
- '<p class="muted">Starting equipment follows the Sage option A; review remaining Wizard class equipment. Rituals in the spellbook can be cast as rituals without preparation. Spell slots and current HP are starting values only, not tracked until approved.</p>'+
+ '<p class="muted">Starting equipment uses Wizard and Sage option A. Rituals in the spellbook can be cast as rituals without preparation. This proposal changes no saved character until its Apply button is clicked and confirmed; spell slots and HP are starting values.</p>'+
  '<div class="actions"><button type="button" class="btn secondary" onclick="heroWizardApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Wizard sheet</button>'+
  '<button type="button" class="btn secondary" onclick="heroWizardApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
  (!eligible?'<p class="muted">Automatic sheet setup is disabled because this character already has customized or recorded values. No existing entries will be overwritten.</p>':'')+
