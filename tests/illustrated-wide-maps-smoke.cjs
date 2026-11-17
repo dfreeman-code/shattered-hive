@@ -18,13 +18,13 @@ async function ready(){for(let i=0;i<80;i++){try{await new Promise((ok,no)=>http
  const scenes=await page.evaluate(()=>{
   const ms=mapState();const maps=[...EVERGARDEN_SCENES,...CHRISTMAS_CAPER_SCENES];
   const status=[];
-  for(const preset of maps){const m=structuredClone(preset);mapSideExpansion(m);status.push({slug:preset.asset,uri:mapWideSideArt(m),markup:mapCustomBackground(m,'player'),cols:mapCols(m)})}
-  const fallback={id:'user-map',theme:'tunnel',cols:20,rows:14,tokens:[]};mapSideExpansion(fallback);
+  for(const preset of maps){const m=structuredClone(preset);mapSideExpansion(m);m.panoramicArtEnabled=false;status.push({slug:preset.asset,uri:mapWideSideArt(m),markup:mapCustomBackground(m,'player'),cols:mapCols(m)})}
+  const fallback={id:'user-map',theme:'tunnel',cols:20,rows:14,tokens:[]};mapSideExpansion(fallback);fallback.panoramicArtEnabled=false;
   status.push({slug:'theme-tunnel',uri:mapWideSideArt(fallback),markup:mapCustomBackground(fallback,'player'),cols:mapCols(fallback)});
   return status;
  });
  for(const v of scenes){assert.equal(v.uri,'assets/maps/expansions/'+v.slug+'.svg');assert(v.markup.includes('map-side-illustration'));assert(v.markup.includes('map-art-center'));assert(v.cols===46||v.cols===30)}
- const result=await page.evaluate(()=>{const ms=mapState();ms.active='evergarden-home-hive';ms.viewMode='dm';const m=currentMap();m.playerShared=true;mapSideExpansion(m);goto('maps');return {snapshot:livePlayerSnapshot(),w:mapCols(m),h:mapRows(m)}});
+ const result=await page.evaluate(()=>{const ms=mapState();ms.active='evergarden-home-hive';ms.viewMode='dm';const m=currentMap();m.playerShared=true;mapSideExpansion(m);m.panoramicArtEnabled=false;goto('maps');return {snapshot:livePlayerSnapshot(),w:mapCols(m),h:mapRows(m)}});
  assert.equal(result.w,46);assert.equal(result.h,30);
  assert.equal(result.snapshot.scene.sideArt,'assets/maps/expansions/home-hive.svg');
  const extra=page.locator('#map-board .map-side-illustration');
