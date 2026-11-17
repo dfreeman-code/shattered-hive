@@ -1,0 +1,27 @@
+name: Miniature PC token browser test
+on:
+  push:
+    branches: [feature/character-miniature-image-tokens]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/miniature-token-smoke.cjs'
+      - 'assets/hero-tokens/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  miniature-token-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Test character-linked image tokens (isolated data, mock image responses)
+        run: node tests/miniature-token-smoke.cjs
