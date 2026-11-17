@@ -78,7 +78,7 @@ function playerRender(packet){
  const sizes={compact:['4%','36px'],standard:['5%','44px'],large:['6.5%','52px']};
  const selected=sizes[scene.tokenSize]||sizes.standard;
  board.style.setProperty('--hero-width',selected[0]);board.style.setProperty('--hero-max',selected[1]);
- const art=document.createElement('div');art.className='art';const sideArt=typeof scene.sideArt==='string'&&/^assets\\/maps\\/expansions\\/[a-z0-9-]+\\.svg$/i.test(scene.sideArt)?scene.sideArt:'';
+ const art=document.createElement('div');art.className='art';const prefix='assets/maps/expansions/';const sideArt=typeof scene.sideArt==='string'&&scene.sideArt.startsWith(prefix)&&/^[a-z0-9-]+[.]svg$/i.test(scene.sideArt.slice(prefix.length))?scene.sideArt:'';
  if(sideArt){const extra=document.createElement('img');extra.src=sideArt;extra.alt='';extra.draggable=false;extra.style.position='absolute';extra.style.inset='0';extra.style.width='100%';extra.style.height='100%';extra.style.objectFit='fill';art.append(extra)}
  const src=safeAsset(scene.image);
  if(src){const img=document.createElement('img');img.src=src;img.alt='';img.draggable=false;const c=scene.artCenter;if(c&&Number.isFinite(c.left)&&Number.isFinite(c.width)&&c.left>=0&&c.width>0&&c.left+c.width<=100.001){img.style.position='absolute';img.style.top='0';img.style.height='100%';img.style.left=c.left+'%';img.style.width=c.width+'%'}art.append(img)}
