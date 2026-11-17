@@ -26,7 +26,7 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((resolve,reje
   assert.equal(await page.locator('.tabletop-map-stage #map-board').count(),1);
   const dimensions=await page.locator('.tabletop-map-stage #map-board').evaluate(el=>{const r=el.getBoundingClientRect();return {w:r.width,h:r.height,top:r.top,ratio:r.width/r.height,cols:Number(el.style.getPropertyValue('--map-cols')),rows:Number(el.style.getPropertyValue('--map-rows'))}});
   assert(Math.abs(dimensions.ratio-1)<0.025,'Square board distorted in tabletop');
-  assert(dimensions.top>=0&&dimensions.top+dimensions.h<=901,'Board must fit available viewport height');
+  assert(dimensions.top>=0&&dimensions.top+dimensions.h<=901,'Board must fit available viewport height: '+JSON.stringify(dimensions));
   assert(dimensions.w>=400,'Tabletop board too small on desktop');
   assert.equal(await page.locator('[data-token="tabletop-pc"]').count(),1);
   assert.equal(await page.locator('[data-token="tabletop-secret"]').count(),1);
