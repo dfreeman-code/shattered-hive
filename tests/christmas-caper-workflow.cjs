@@ -305,7 +305,7 @@ async function ready(url){
   await rogueContext.close();
 
 
-  // Warlock review is tested only against two disposable, invented PC records.
+  // Warlock review uses disposable browser-local Snoop Bugg fixtures; one starts blank and one has protected existing data.
   const warlockContext=await browser.newContext({viewport:{width:1280,height:800}});
   const warlockPage=await warlockContext.newPage();
   warlockPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
@@ -313,10 +313,10 @@ async function ready(url){
   await warlockPage.evaluate(()=>{
     const data=JSON.parse(localStorage.getItem('shattered-hive-v1'));
     data.pcs=[
-      {id:'warlock-test',name:'Test Pact Spider',class:'Unassigned',background:'',level:1,species:'Spiderkin',status:'Active',
+      {id:'warlock-test',name:'Snoop Bugg',class:'Unassigned',background:'',level:1,species:'Spiderkin',status:'Active',
        hp:'',maxHp:'',ac:'',notes:'Never change my submitted history',bugHero:{power:'Super strength',gear:'Two little daggers',extra:'A Martial Warlock',
         dream:'To be my patron favorite',fear:'Being afraid',trait:'Mischievous'}},
-      {id:'warlock-existing',name:'Custom Pact Spider',class:'Warlock',background:'Charlatan',level:1,species:'Spiderkin',status:'Active',
+      {id:'warlock-existing',name:'Snoop Bugg',class:'Warlock',background:'Charlatan',level:1,species:'Spiderkin',status:'Active',
        hp:11,maxHp:11,ac:16,notes:'My original equipment stays',bugHero:{power:'Super strength',extra:'A Martial Warlock'}}
     ];
     localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
@@ -327,6 +327,7 @@ async function ready(url){
   await warlockPage.locator('#hero-build-workshop summary').click();
   assert.match(await warlockPage.locator('#hero-build-workshop').innerText(),/The Patron’s Favorite/);
   assert.match(await warlockPage.locator('#hero-build-workshop').innerText(),/CHA 17/);
+  assert.match(await warlockPage.locator('#hero-build-workshop').innerText(),/30 GP/);
   const warlockState=()=>warlockPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
   let ws=await warlockState();
   assert.equal(ws.pcs[0].class,'Unassigned','Opening build view must not assign class');
@@ -343,6 +344,8 @@ async function ready(url){
   assert.equal(ws.sheets['warlock-test'].spellSlots['1'],1);
   assert.equal(ws.sheets['warlock-test'].spellAbility,'CHA');
   assert.match(ws.sheets['warlock-test'].features,/Pact of the Blade/);
+  assert.match(ws.sheets['warlock-test'].inventory,/30 GP/);
+  assert.match(ws.sheets['warlock-test'].features,/Spiderkin \(approved campaign homebrew\)/);
   assert.match(ws.sheets['warlock-test'].proficiencies,/Does not automatically grant shield training/);
   assert.equal(ws.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
   assert.equal(ws.campaign.session,0);
