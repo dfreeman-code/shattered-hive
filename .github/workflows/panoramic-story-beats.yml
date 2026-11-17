@@ -1,0 +1,29 @@
+name: Panoramic maps and story beat handoff
+on:
+  push:
+    branches: [feature/panoramic-story-beat-maps]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'player-display.html'
+      - 'assets/maps/panoramic/**'
+      - 'tests/panoramic-story-beats-smoke.cjs'
+      - 'docs/story-beat-map-handoff.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  panorama:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Verify panoramic maps and story handoff
+        run: node tests/panoramic-story-beats-smoke.cjs
