@@ -249,7 +249,7 @@ async function ready(url){
   await wizardContext.close();
 
 
-  // Rogue workshop uses fake local-only character data; no production saves touched.
+  // Rogue workshop uses disposable, local-only David fixtures (including an already customized David record); no production saves touched.
   const rogueContext=await browser.newContext({viewport:{width:1280,height:800}});
   const roguePage=await rogueContext.newPage();
   roguePage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
@@ -257,9 +257,9 @@ async function ready(url){
   await roguePage.evaluate(()=>{
     const d=JSON.parse(localStorage.getItem('shattered-hive-v1'));
     d.pcs=[
-     {id:'test-rogue',name:'Test Mantid Scout',class:'Unassigned',background:'',level:1,species:'Mantisborn',status:'Active',hp:'',maxHp:'',ac:'',
+     {id:'test-rogue',name:'David',class:'Unassigned',background:'',level:1,species:'Mantisborn',status:'Active',hp:'',maxHp:'',ac:'',
        notes:'Original player history remains exactly as written',bugHero:{power:'Sneaking and climbing',gear:'Spear',dream:'Taste caramel popcorn',fear:'Deep Water',extra:'Strange Yellow markings'}},
-     {id:'test-rogue-existing',name:'Existing Mantid Scout',class:'Rogue',background:'Wayfarer',level:1,species:'Mantisborn',status:'Active',hp:12,maxHp:12,ac:15,
+     {id:'test-rogue-existing',name:'David',class:'Rogue',background:'Wayfarer',level:1,species:'Mantisborn',status:'Active',hp:12,maxHp:12,ac:15,
        notes:'Keep my existing numbers',bugHero:{power:'Sneaking and climbing',gear:'Spear'}}
     ];
     localStorage.setItem('shattered-hive-v1',JSON.stringify(d));
@@ -281,7 +281,7 @@ async function ready(url){
   assert.equal(rs.pcs[0].hp,10);
   assert.equal(rs.pcs[0].ac,14);
   assert.equal(rs.pcs[0].notes,'Original player history remains exactly as written');
-  assert.deepEqual(rs.sheets['test-rogue'].scores,{STR:8,DEX:17,CON:14,INT:12,WIS:14,CHA:10});
+  assert.deepEqual(rs.sheets['test-rogue'].scores,{STR:12,DEX:17,CON:14,INT:10,WIS:13,CHA:8});
   assert.deepEqual(rs.sheets['test-rogue'].saves,['DEX','INT']);
   assert.deepEqual(rs.sheets['test-rogue'].expertise,['Stealth','Investigation']);
   assert.match(rs.sheets['test-rogue'].features,/not a Finesse weapon/);

@@ -783,14 +783,14 @@ function heroWizardLevelOnePreview(pc){
 
 /* Rogue character setup for a Bug Hero who chose stealth and climbing. */
 const HERO_ROGUE_LEVEL1={
- scores:{STR:8,DEX:17,CON:14,INT:12,WIS:14,CHA:10},
+ scores:{STR:12,DEX:17,CON:14,INT:10,WIS:13,CHA:8},
  saves:['DEX','INT'],
  skills:['Insight','Stealth','Acrobatics','Investigation','Perception','Sleight of Hand'],
  expertise:['Stealth','Investigation'],
  mastery:['Dagger','Shortbow']
 };
 function heroRogueIsCandidate(pc){
- return heroBuildMatch(pc)?.cls==='Rogue'&&pc.species==='Mantisborn'&&Number(pc.level||1)===1;
+ return String(pc.name||'').trim().toLowerCase()==='david'&&heroBuildMatch(pc)?.cls==='Rogue'&&pc.species==='Mantisborn'&&Number(pc.level||1)===1;
 }
 function heroRogueSheetUntouched(pc){
  if(!heroRogueIsCandidate(pc))return false;
@@ -820,7 +820,7 @@ function heroRogueApplySheet(id){
  sh.expertise=[...HERO_ROGUE_LEVEL1.expertise];
  sh.spellAbility='';sh.spellSlots={};
  sh.features='Rogue level 1: Expertise (Stealth and Investigation), Sneak Attack +1d6 once per turn with a Finesse or Ranged weapon when conditions apply, Thieves’ Cant and one additional language (choose with player), Weapon Mastery (Dagger, Shortbow).\n'+
-  'Wayfarer: Lucky origin feat, Insight and Stealth skills, Thieves’ Tools. Standard array before Wayfarer: 15 DEX, 14 CON, 13 WIS, 12 INT, 10 CHA, 8 STR; background +2 DEX and +1 WIS.\n'+
+  'Wayfarer: Lucky origin feat (2 Luck Points per Long Rest at level 1), Insight and Stealth skills, Thieves’ Tools. Approved scores before Wayfarer: STR 12, DEX 15, CON 14, INT 10, WIS 12, CHA 8; background +2 DEX and +1 WIS. The exact approved scores are a DM-approved custom allocation, not the 2024 standard array (which would give WIS 14 with the other scores unchanged).\n'+
   'Mantisborn (homebrew): Raptorial Strike unarmed slashing 1d6, Springing Leap +10 feet to jump distance PB times per Long Rest.\n'+
   'The player-chosen spear is not a Finesse weapon and normally cannot trigger Rogue Sneak Attack. A compatible dagger or shortbow can.';
  sh.inventory='Rogue equipment option A: Leather Armor, 2 Daggers, Shortsword, Shortbow, 20 Arrows, Quiver, Thieves’ Tools, Burglar’s Pack, 8 GP.\n'+
@@ -830,7 +830,7 @@ function heroRogueApplySheet(id){
   'Wayfarer skills: Insight and Stealth. Rogue skills: Acrobatics, Investigation, Perception, Sleight of Hand.\n'+
   'Expertise: Stealth and Investigation. Weapon Mastery: Dagger and Shortbow. Choose one additional language for Thieves’ Cant feature.';
  sh.attacks='Dagger: +5 to hit, 1d4+3 piercing (Finesse, Light, Thrown; 20/60 ft). Shortbow: +5 to hit, 1d6+3 piercing (Ranged; 80/320 ft). Sneak Attack: +1d6 once per turn when eligible.\n'+
-  'Spear (if acquired): +1 to hit, 1d6−1 piercing one-handed or 1d8−1 two-handed (20/60 ft thrown); not eligible for Sneak Attack. Confirm 2024 weapon property details at table.';
+  'Spear (if acquired): +3 to hit, 1d6+1 piercing one-handed or 1d8+1 two-handed (20/60 ft thrown); not eligible for Sneak Attack. Simple weapon proficiency applies. Shortsword: +5 to hit, 1d6+3 piercing.';
  sh.currentHp=10;sh.maxHp=10;sh.ac=14;sh.speed=30;sh.hitDiceUsed=0;
  pc.class='Rogue';pc.background='Wayfarer';pc.hp=10;pc.maxHp=10;pc.ac=14;pc.constitution=2;
  db.sheets ||= {};
@@ -867,19 +867,20 @@ function heroRogueLevelOnePreview(pc){
  const eligible=heroRogueSheetUntouched(pc);
  const introExists=!!db.christmasPrologueDraft?.scenes?.['hero:'+pc.id];
  const rows=[
-  ['Scores','STR 8 · DEX 17 · CON 14 · INT 12 · WIS 14 · CHA 10'],
+  ['Scores','STR 12 · DEX 17 · CON 14 · INT 10 · WIS 13 · CHA 8 (DM-approved custom allocation; not a 2024 standard array)'],
   ['Combat','10 HP · AC 14 with leather armor · Initiative +3 · Proficiency +2'],
   ['Rogue skills','Acrobatics, Investigation, Perception, Sleight of Hand; plus Wayfarer Insight and Stealth'],
   ['Saving throws and expertise','DEX and INT saves; Expertise in Stealth and Investigation'],
   ['Features','Sneak Attack +1d6 once per turn (eligible finesse/ranged attack), Thieves’ Cant, Weapon Mastery (Dagger and Shortbow), Expertise'],
-  ['Wayfarer feat','Lucky; thieves’ tools, Insight and Stealth. +2 DEX and +1 WIS from background.'],
-  ['Weapons','Dagger and Shortbow +5 to hit; spear is STR-based and does not qualify for Sneak Attack.'],
-  ['Mantisborn','Raptorial Strike, Springing Leap (existing homebrew species traits; DM review required).'],
+  ['Wayfarer feat','Lucky (2 Luck Points per Long Rest); thieves’ tools, Insight and Stealth. +2 DEX and +1 WIS from background.'],
+  ['Weapons','Dagger and Shortbow +5 to hit; spear if acquired +3 to hit, and does not qualify for Sneak Attack.'],
+  ['Equipment','Rogue option A plus Wayfarer option A: leather armor, shortsword, shortbow, quiver and 20 arrows, four daggers, two sets of thieves’ tools, burglar’s pack, gaming set, bedroll, two pouches, traveler’s clothes and 24 GP. Spear and gadgets require separate acquisition/approval.'],
+  ['Mantisborn','Approved homebrew: Raptorial Strike (1d6 slashing unarmed), Springing Leap (+10-ft jump distance, 2 uses per Long Rest at level 1); claws do not trigger Sneak Attack.'],
   ['Opening story','The Caramel Trail: strange yellow markings, goggles, a dangerous water crossing, a familiar popcorn scent, and a mysterious six-star scrap.']
  ];
  return '<section class="hero-wizard-draft hero-rogue-draft" aria-label="Level 1 Rogue detailed draft"><h4>Level-1 Mantisborn Rogue sheet — proposed, not applied</h4>'+
  '<div class="hero-build-grid">'+rows.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
- '<p class="muted">Starting gear uses the Rogue and Wayfarer option A lists. A player-chosen spear, goggles and gadgets can be incorporated after DM equipment approval. Sneak Attack does not work with a spear, so keep a finesse or ranged weapon ready. The Level 3 subclass remains undecided.</p>'+
+ '<p class="muted">Approved score allocation is custom, not the 2024 standard array: with all other scores unchanged, a standard array would require Wisdom 14 instead of 13. Rogue and Wayfarer option A gear totals 24 GP; the signature spear must be acquired or explicitly granted by the DM. Sneak Attack requires a Finesse or Ranged weapon. Level 3 subclass and one additional language remain undecided. No sheet is saved until Apply is explicitly confirmed.</p>'+
  '<div class="actions"><button class="btn secondary" type="button" onclick="heroRogueApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Rogue sheet</button>'+
  '<button class="btn secondary" type="button" onclick="heroRogueApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
  (!eligible?'<p class="muted">Automatic setup is disabled because existing values need manual review. Nothing will be overwritten.</p>':'')+
