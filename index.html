@@ -1011,7 +1011,7 @@ const HERO_RANGER_LEVEL1={
  featCantrips:['Guidance','Druidcraft'],featSpell:'Speak with Animals'
 };
 function heroRangerIsCandidate(pc){
- return heroBuildMatch(pc)?.cls==='Ranger'&&pc.species==='Firefly Folk'&&Number(pc.level||1)===1;
+ return String(pc.name||'').trim().replace(/\s+/g,' ').toLowerCase()==='dr.newton sparknic'&&heroBuildMatch(pc)?.cls==='Ranger'&&pc.species==='Firefly Folk'&&Number(pc.level||1)===1;
 }
 function heroRangerSheetUntouched(pc){
  if(!heroRangerIsCandidate(pc))return false;
@@ -1050,15 +1050,16 @@ function heroRangerApplySheet(id){
   'The player-created dragonfly and firefly companions are story companions only until the DM approves specific statistics or a later subclass; no free companion attacks or Beast Master abilities at level 1.\n'+
   'The tool belt, goggles and inventions are narrative unless specific mechanical equipment is approved.';
  sh.inventory='Guide background option A: Shortbow, 20 Arrows, Cartographer’s Tools, Bedroll, Quiver, Tent, Traveler’s Clothes and 3 GP.\n'+
-  'Ranger class starting equipment: select an official class equipment option with the player; longbow and suitable armor are recommended, but no free duplicate weapons, money or armor should be assumed.\n'+
+  'Ranger class equipment option A (2024): Studded Leather Armor, Scimitar, Shortsword, Longbow, 20 Arrows, Quiver, Druidic Focus (sprig of mistletoe), Explorer’s Pack, 7 GP.\n'+
+  'Both approved packages together: 40 Arrows, two Quivers, and 10 GP total. AC 15 wearing Studded Leather (12 + DEX 3). Both class and background equipment are recorded as granted; retain duplicates rather than inventing replacements.\n'+
   'Player’s goggles, overalls, nettle arrows, tool belt, inventions, pet Scarlet Dwarf Dragonfly and Photuris Mysticalampas Firefly are preserved as character concepts. Companion mechanics require separate DM agreement.';
  sh.proficiencies='Ranger: Strength and Dexterity saving throws; light armor, medium armor, shields; simple and martial weapons. Ranger class skills: Animal Handling, Perception, Nature.\n'+
   'Guide: Stealth, Survival, Cartographer’s Tools. Magic Initiate (Druid): Wisdom spellcasting chosen for this build.\n'+
   'Weapon Mastery: Longbow, Shortsword. Choose other languages according to campaign rules.';
  sh.attacks='Longbow (if selected in starting gear): +5 to hit, 1d8+3 piercing, ranged (150/600 ft). Shortbow (Guide): +5 to hit, 1d6+3 piercing, ranged (80/320 ft).\n'+
   'Hunter’s Mark adds 1d6 Force damage on a hit while the spell lasts (Concentration); no extra attack at level 1. Nettle arrows are flavor unless DM assigns new effects.';
- sh.currentHp=12;sh.maxHp=12;sh.ac=14;sh.speed=30;sh.hitDiceUsed=0;
- pc.class='Ranger';pc.background='Guide';pc.hp=12;pc.maxHp=12;pc.ac=14;pc.constitution=2;
+ sh.currentHp=12;sh.maxHp=12;sh.ac=15;sh.speed=30;sh.hitDiceUsed=0;
+ pc.class='Ranger';pc.background='Guide';pc.hp=12;pc.maxHp=12;pc.ac=15;pc.constitution=2;
  db.sheets ||= {};db.sheets[pc.id]=sh;
  save();render();toast('Ranger build applied; review armor, spells and companion details');
 }
@@ -1094,18 +1095,19 @@ function heroRangerLevelOnePreview(pc){
  const introExists=!!db.christmasPrologueDraft?.scenes?.['hero:'+pc.id];
  const rows=[
   ['Scores','STR 8 · DEX 17 · CON 14 · INT 12 · WIS 14 · CHA 10'],
-  ['Combat','12 HP · AC 14 in leather armor · Initiative +3 · Proficiency +2'],
+  ['Combat','12 HP · AC 15 in studded leather armor · Initiative +3 · Proficiency +2'],
   ['Ranger magic','Wisdom spell attack +4 · Save DC 12 · two level-1 spell slots · Cure Wounds and Ensnaring Strike prepared'],
   ['Favored Enemy','Hunter’s Mark always prepared, two free casts per Long Rest, separate from the Ranger’s two prepared spells'],
   ['Guide feat','Magic Initiate (Druid): Guidance and Druidcraft; Speak with Animals once free per Long Rest. Background skills Stealth and Survival; Cartographer’s Tools'],
   ['Ranger skills and weapons','Animal Handling, Perception and Nature; Longbow and Shortsword masteries. Shortbow supplied by Guide background equipment'],
-  ['Firefly Folk traits','Living Lantern and Guiding Glow (Light, Faerie Fire) are existing homebrew; no free additional class spells'],
+  ['Firefly Folk traits','Approved homebrew: Living Lantern (10 ft bright + 10 ft dim), Guiding Glow (Light cantrip, Faerie Fire once per Long Rest), using Wisdom as the selected casting ability'],
   ['Companions and inventions','The player-created Scarlet Dwarf Dragonfly and Photuris Mysticalampas Firefly remain story companions with no invented combat abilities'],
+  ['Official starting equipment','Ranger A: studded leather, scimitar, shortsword, longbow, 20 arrows, quiver, druidic focus, Explorer’s Pack, 7 GP; Guide A: shortbow, 20 arrows, quiver, Cartographer’s Tools, bedroll, tent, traveler’s clothes, 3 GP. Totals: 40 arrows, 2 quivers, 10 GP.'],
   ['Solo introduction','The Sixfold Silver Thread: a companion brings a strange glowing thread to the workshop, inviting scientific curiosity and a trip to Hearthhollow']
  ];
- return '<section class="hero-wizard-draft hero-ranger-draft" aria-label="Level 1 Ranger detailed draft"><h4>Level-1 Firefly Folk Ranger sheet — proposed, not applied</h4>'+
+ return '<section class="hero-wizard-draft hero-ranger-draft" aria-label="Level 1 Ranger detailed draft"><h4>Dr. Newton Sparknic — approved Level-1 Firefly Folk Ranger proposal (not applied)</h4>'+
  '<div class="hero-build-grid">'+rows.map(([label,value])=>'<div><b>'+esc(label)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
- '<p class="muted">2024 Ranger: two 1st-level slots and two prepared class spells at level 1; Hunter’s Mark is always prepared separately. Companion stats and crafted gadgets require DM approval. AC 14 assumes leather armor; review class starting equipment before accepting this selection.</p>'+
+ '<p class="muted">2024 Ranger: two 1st-level slots and two prepared class spells at level 1; Hunter’s Mark is always prepared separately. Companion stats and crafted gadgets require DM approval. AC 15 reflects 2024 Ranger option A studded leather armor. Ranger and Guide option A packages are both itemized, with no extra combat mechanics granted to companions.</p>'+
  '<div class="actions"><button class="btn secondary" type="button" onclick="heroRangerApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Ranger sheet</button>'+
  '<button class="btn secondary" type="button" onclick="heroRangerApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
  (!eligible?'<p class="muted">Automatic setup is unavailable because existing customized values need manual review. No character sheet data is replaced.</p>':'')+
