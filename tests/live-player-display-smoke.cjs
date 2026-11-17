@@ -28,7 +28,7 @@ async function until(fn,{timeout=8000,interval=150}={}){const end=Date.now()+tim
    ];
    goto('maps');
   });
-  assert.equal(await dm.getByRole('button',{name:/Open Player Display/}).count(),2,'DM should show live launch in maps and tabletop');
+  assert.equal(await dm.getByRole('button',{name:/Open Player Display/}).count(),1,'DM should show live launch in Maps');
   const snapshot=await dm.evaluate(()=>livePlayerSnapshot());
   const serialized=JSON.stringify(snapshot);
   for(const secret of ['SECRET VESPER PLOT','SECRET DM ONLY','SECRET CHARACTER BACKSTORY','Hidden Queen','live-hidden-pc']){
