@@ -439,6 +439,44 @@ async function check(label, fn) {
   await page.getByRole('button',{name:'Draft Editor'}).click();
   await page.setViewportSize({width:1365,height:900});
  });
+ await check('Six-hero review checkboxes stay expanded, update counts and persist after reload',async()=>{
+  await page.evaluate(()=>{
+   db.pcs=Array.from({length:6},(_,i)=>({
+    id:'qa-review-'+i,name:'QA Review Hero '+(i+1),species:'Beetlekin',
+    class:'Fighter',background:'Soldier',level:1,status:'Active'
+   }));
+   db.heroReadiness={};
+   save();
+   selectedSheetPC=db.pcs[0].id;
+   goto('sheet');
+  });
+  const first=page.locator('.hero-ready-card').first();
+  const second=page.locator('.hero-ready-card').nth(1);
+  assert.equal(await page.locator('.hero-ready-card').count(),6);
+  await first.locator('summary').click();
+  await second.locator('summary').click();
+  const boxes=first.locator('input[type="checkbox"]');
+  assert.equal(await boxes.count(),5);
+  await boxes.first().check();
+  assert.equal(await first.evaluate(el=>el.open),true,'Clicked hero must stay expanded');
+  assert.equal(await second.evaluate(el=>el.open),true,'Other expanded hero must stay expanded');
+  assert.equal(await boxes.first().evaluate(el=>document.activeElement===el),true,'Checkbox retains focus');
+  assert.equal(await first.locator('.hero-review-count').innerText(),'1/5');
+  for(let i=1;i<5;i++)await boxes.nth(i).check();
+  assert.equal(await first.locator('.hero-review-count').innerText(),'5/5');
+  assert.equal(await page.locator('#hero-review-total').innerText(),'1/6 reviewed');
+  await boxes.first().uncheck();
+  assert.equal(await first.locator('.hero-review-count').innerText(),'4/5');
+  assert.equal(await page.locator('#hero-review-total').innerText(),'0/6 reviewed');
+  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')).heroReadiness['qa-review-0']);
+  assert.equal(stored.build,false);
+  assert.equal(stored.mechanics,true);
+  assert.equal(stored.resources,true);
+  await page.reload();
+  await page.evaluate(()=>goto('sheet'));
+  assert.equal(await page.locator('.hero-ready-card').first().locator('.hero-review-count').innerText(),'4/5');
+  assert.equal(await page.locator('#hero-review-total').innerText(),'0/6 reviewed');
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
