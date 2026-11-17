@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>The Shattered Hive · Live Player Display</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#101c17;color:#f3f3e9}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:#203b30;border-bottom:1px solid #57735a;flex-wrap:wrap}
+.brand{font:700 20px Georgia,serif;letter-spacing:.01em}
+.status{font-size:13px;color:#eee6cd;display:flex;align-items:center;gap:8px}
+.status::before{content:"";display:block;width:9px;height:9px;border-radius:50%;background:#d7ae6f}
+.status[data-online="true"]::before{background:#85d9a7}
+button{background:#e9e4ce;border:0;border-radius:8px;color:#1d3527;font:600 13px system-ui;padding:8px 14px;cursor:pointer}
+button:focus-visible{outline:3px solid #f1ce75;outline-offset:3px}
+main{display:flex;flex:1;min-height:0;align-items:center;justify-content:center;padding:10px}
+.placeholder{text-align:center;max-width:520px;line-height:1.65;color:#e1e2d3;padding:30px}
+.placeholder h1{font:700 30px Georgia,serif;margin:0 0 8px}
+.board{position:relative;max-width:100%;max-height:100%;width:min(calc(100vw - 20px),calc((100dvh - 116px)*var(--ratio,1)));aspect-ratio:var(--cols,30)/var(--rows,30);flex-shrink:0;border:5px solid #806748;border-radius:14px;overflow:hidden;box-shadow:0 14px 50px #0009;background:linear-gradient(135deg,#668c67,#9fbd8d)}
+.board[data-theme="christmas"]{background:linear-gradient(140deg,#b1d2d1,#e5e4ee)}
+.board[data-theme="tunnel"]{background:linear-gradient(140deg,#503e34,#8d7a68)}
+.art,.grid,.tokens,.fog{position:absolute;inset:0;width:100%;height:100%}
+.art img{width:100%;height:100%;object-fit:fill;display:block}
+.grid{pointer-events:none;background-image:linear-gradient(to right,#213e3850 1px,transparent 1px),linear-gradient(to bottom,#213e3850 1px,transparent 1px);background-size:calc(100% / var(--cols)) calc(100% / var(--rows));z-index:1}
+.tokens{pointer-events:none;z-index:2}
+.token{position:absolute;transform:translate(-50%,-50%);border-radius:50%;width:min(var(--hero-width,5%),var(--hero-max,52px));aspect-ratio:1;background:#3167ad;border:3px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:clamp(12px,1.5vw,22px);box-shadow:0 2px 8px #0009;z-index:2}
+.token.other{width:calc(100% / var(--cols))}
+.token img{width:100%;height:100%;object-fit:contain;border-radius:50%;position:absolute;inset:0}
+.token .symbol{position:relative;z-index:0;font-weight:800}
+.token .label{position:absolute;bottom:calc(100% + 3px);left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:700;text-shadow:-1px -1px 3px #111,1px 1px 3px #111;z-index:3}
+.fog{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));pointer-events:none;z-index:4}
+.fog div{background:#0b1713}
+.fog div.revealed{background:transparent}
+footer{text-align:center;padding:6px 12px;background:#203b30;color:#d4ddcc;font-size:12px;min-height:30px}
+@media(max-width:700px){.brand{font-size:16px}.board{width:min(calc(100vw - 10px),calc((100dvh - 148px)*var(--ratio,1)))}header{padding:7px}main{padding:5px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand">✿ The Shattered Hive <span style="font:400 13px system-ui">· Player Display</span></div>
+ <div class="status" id="status" role="status" aria-live="polite" data-online="false">Connecting to DM tab…</div>
+ <button type="button" id="fullscreen">⛶ Fullscreen</button>
+</header>
+<main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
+<footer id="footer">Player-safe display · Read-only · Same-browser session</footer>
+<script>
+'use strict';
+// Standalone display: never loads the campaign app, localStorage, Supabase, or DM data.
+const status=document.getElementById('status'),stage=document.getElementById('stage'),footer=document.getElementById('footer');
+const session=new URLSearchParams(location.hash.slice(1)).get('session')||'';
+let channel=null,lastUpdate=0,lastSequence=0;
+function setStatus(label,online){status.textContent=label;status.dataset.online=online?'true':'false'}
+function waiting(message){
+ stage.replaceChildren();
+ const wrap=document.createElement('div');wrap.className='placeholder';
+ const heading=document.createElement('h1');heading.textContent='🐛 Waiting for the Dungeon Master';
+ const text=document.createElement('p');text.textContent=message;
+ wrap.append(heading,text);stage.append(wrap);
+}
+function safeAsset(path){
+ return typeof path==='string'&&/^assets\/(?:maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?|hero-tokens\/[a-z0-9_-]+_token\.png)$/i.test(path)?path:'';
+}
+function playerRender(packet){
+ const scene=packet?.scene;
+ if(!scene){waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
+ const cols=Number(scene.cols),rows=Number(scene.rows);
+ if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<4||cols>100||rows<4||rows>100)return;
+ const reveal=new Set((Array.isArray(scene.revealed)?scene.revealed:[]).filter(x=>Number.isInteger(x)&&x>=0&&x<cols*rows));
+ const board=document.createElement('div');board.className='board';board.id='live-board';
+ board.style.setProperty('--cols',String(cols));board.style.setProperty('--rows',String(rows));board.style.setProperty('--ratio',String(cols/rows));
+ board.dataset.theme=String(scene.theme||'blank').slice(0,32);
+ board.setAttribute('role','img');board.setAttribute('aria-label',String(scene.name||'Shared map')+' player-safe tabletop');
+ const sizes={compact:['4%','36px'],standard:['5%','44px'],large:['6.5%','52px']};
+ const selected=sizes[scene.tokenSize]||sizes.standard;
+ board.style.setProperty('--hero-width',selected[0]);board.style.setProperty('--hero-max',selected[1]);
+ const art=document.createElement('div');art.className='art';const src=safeAsset(scene.image);
+ if(src){const img=document.createElement('img');img.src=src;img.alt='';img.draggable=false;art.append(img)}
+ const grid=document.createElement('div');grid.className='grid';if(!scene.grid)grid.style.display='none';
+ const tokens=document.createElement('div');tokens.className='tokens';
+ for(const t of Array.isArray(scene.tokens)?scene.tokens:[]){
+  if(!t||!Number.isInteger(t.x)||!Number.isInteger(t.y)||t.x<0||t.x>=cols||t.y<0||t.y>=rows)continue;
+  if(!reveal.has(t.y*cols+t.x))continue; // defense in depth; never reveal a token under fog
+  const el=document.createElement('div');el.className='token'+(t.kind==='pc'?'':' other');
+  el.style.left=((t.x+.5)/cols*100)+'%';el.style.top=((t.y+.5)/rows*100)+'%';
+  if(/^#[0-9a-f]{6}$/i.test(t.bg||''))el.style.backgroundColor=t.bg;
+  if(/^#[0-9a-f]{6}$/i.test(t.ring||''))el.style.borderColor=t.ring;
+  const symbol=document.createElement('span');symbol.className='symbol';symbol.textContent=String(t.symbol||'●').slice(0,6);el.append(symbol);
+  const tokenSrc=safeAsset(t.image);if(tokenSrc&&t.kind==='pc'){const img=document.createElement('img');img.src=tokenSrc;img.alt='';img.draggable=false;img.addEventListener('load',()=>{symbol.style.visibility='hidden'});img.addEventListener('error',()=>{img.remove()});el.append(img)}
+  if(t.showLabel!==false){const name=document.createElement('span');name.className='label';name.textContent=String(t.name||'').slice(0,100);el.append(name)}
+  tokens.append(el);
+ }
+ const fog=document.createElement('div');fog.className='fog';const cells=document.createDocumentFragment();
+ for(let i=0;i<cols*rows;i++){const cell=document.createElement('div');if(reveal.has(i))cell.className='revealed';cells.append(cell)}
+ fog.append(cells);board.append(art,grid,tokens,fog);
+ stage.replaceChildren(board);
+ footer.textContent=String(scene.name||'Shared map').slice(0,100)+' · '+cols+' × '+rows+' · Player-safe display';
+}
+function hello(){if(channel)channel.postMessage({type:'hello',session})}
+if(!/^[a-f0-9-]{24,64}$/.test(session)||!('BroadcastChannel' in window)){
+ setStatus('Live connection unavailable',false);
+ waiting('Open this page using the Open Player Display button in your DM tab.');
+}else{
+ channel=new BroadcastChannel('sh-live-tabletop-v1-'+session);
+ channel.onmessage=e=>{
+  const msg=e.data;
+  if(msg?.type!=='snapshot'||msg.session!==session||msg.snapshot?.version!==1)return;
+  if(typeof msg.sentAt!=='number'||msg.sentAt<lastSequence)return;
+  lastSequence=msg.sentAt;
+  lastUpdate=Date.now();setStatus('Live · Connected to DM',true);playerRender(msg.snapshot);
+ };
+ hello();
+ setInterval(()=>{
+  hello();
+  if(lastUpdate&&Date.now()-lastUpdate>9000)setStatus('Waiting for DM updates · Reconnecting…',false);
+ },2000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)hello()});
+}
+document.getElementById('fullscreen').addEventListener('click',()=>{
+ if(document.fullscreenElement){document.exitFullscreen?.().catch(()=>{})}
+ else document.documentElement.requestFullscreen?.().catch(()=>{});
+});
+</script>
+</body>
+</html>
