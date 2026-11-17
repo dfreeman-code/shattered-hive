@@ -62,12 +62,9 @@ function waiting(message){
  wrap.append(heading,text);stage.append(wrap);
 }
 function safeAsset(path){
- if(typeof path!=='string')return '';
- const prefix='assets/maps/panoramic/';
- if(path.startsWith(prefix))return /^[a-z0-9-]+[.]svg$/i.test(path.slice(prefix.length))?path:'';
- return /^assets\\/(?:maps\\/[a-z0-9_-]+\\.(?:png|svg)(?:\\?v=[0-9]+)?|hero-tokens\\/[a-z0-9_-]+_token\\.png)$/i.test(path)?path:'';
+ if(typeof path==='string'&&path.startsWith('assets/maps/panoramic/'))return /^[a-z0-9-]+[.]svg$/i.test(path.slice('assets/maps/panoramic/'.length))?path:'';
+ return typeof path==='string'&&/^assets\/(?:maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?|hero-tokens\/[a-z0-9_-]+_token\.png)$/i.test(path)?path:'';
 }
-
 function playerRender(packet){
  const scene=packet?.scene;
  if(!scene){waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
