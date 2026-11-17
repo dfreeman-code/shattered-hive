@@ -21,6 +21,7 @@ async function ready(){for(let i=0;i<60;i++){try{await new Promise((yes,no)=>htt
    ms.archivedScenes.push(b,noFog);
    const before=JSON.stringify(db.pcs);
    const m=mapSideExpansion(a),m2=mapSideExpansion(a),small=mapSideExpansion(b),defaultFog=mapSideExpansion(noFog);
+   a.panoramicArtEnabled=false; // Verify the legacy centered-art fallback remains intact.
    const center=mapArtCenter(a),packet=livePlayerSnapshot();
    const correct={cols:a.cols,rows:a.rows,token:a.tokens[0].x,secret:a.dmMarkers[0].x,
     fog:a.revealed.includes(12*46+16)&&a.revealed.includes(5*46+10),
