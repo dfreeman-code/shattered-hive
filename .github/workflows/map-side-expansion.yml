@@ -1,0 +1,27 @@
+name: Map side expansion browser tests
+on:
+  push:
+    branches: [feature/expand-map-sides-25-percent]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'player-display.html'
+      - 'tests/map-side-expansion-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  expansion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Test map expansion
+        run: node tests/map-side-expansion-smoke.cjs
