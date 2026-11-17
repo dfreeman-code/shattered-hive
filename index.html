@@ -2459,8 +2459,8 @@ function tabletopPage(board,m,ms,player){
   ?'<select aria-label="Shared tabletop map" onchange="mapSwitchPlayer(this.value)">'+mapPlayerScenes().map(a=>'<option value="'+esc(a.id)+'"'+(a.id===m.id?' selected':'')+'>'+esc(a.name)+'</option>').join('')+'</select>'
   :'<select aria-label="Tabletop map" onchange="mapSwitch(this.value)">'+mapOptions()+'</select>';
  const toggle=player
-  ?'<button type="button" class="btn secondary small" onclick="mapSetView(\\'dm\\')">⚙ DM View</button>'
-  :'<button type="button" class="btn secondary small" onclick="mapSetView(\\'player\\')">◉ Player View</button>';
+  ?`<button type="button" class="btn secondary small" onclick="mapSetView('dm')">⚙ DM View</button>`
+  :`<button type="button" class="btn secondary small" onclick="mapSetView('player')">◉ Player View</button>`;
  const grid=player?'':'<button type="button" class="btn secondary small" onclick="mapGridToggle()">'+(ms.showGrid?'▦ Hide grid':'▤ Show grid')+'</button>';
  const selected=player?'Player-safe presentation · No DM controls':(ms.selected?esc(tokenLabel(m.tokens.find(t=>t.id===ms.selected)||{name:'Token'}))+' selected · Drag, click a square, or use arrows':'DM tabletop · Select a token to move it');
  return '<section class="tabletop-shell" role="region" aria-label="Full-screen tabletop"><div class="tabletop-toolbar"><strong>✿ Tabletop · '+esc(m.name)+'</strong><label>Scene '+select+'</label>'+miniTokenSizeControl()+grid+toggle+'<span class="tabletop-spacer"></span><button type="button" class="btn secondary small" onclick="tabletopExit()">✕ Exit tabletop</button></div><div class="tabletop-map-stage" style="--tabletop-ratio:'+(mapCols(m)/mapRows(m))+'">'+board+'</div><div class="tabletop-foot">'+selected+' · Esc exits tabletop</div></section>';
