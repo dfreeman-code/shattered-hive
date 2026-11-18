@@ -497,16 +497,44 @@ let page='dashboard',query='';const sections={dashboard:'⌂ Dashboard',command:
  if(localStorage.getItem(KEY)!==campaignStorageBaseline)
    throw Error('Another campaign tab saved newer browser data. This tab has NOT overwritten it. Export this tab\'s backup, then reload or reconcile your changes before editing further.');
 }
+// A failed save leaves db intact only in this tab. Make that danger visible
+// after the alert closes, and offer recovery without writing any extra storage.
+let campaignSaveFailed=false;
+function updateCampaignSaveWarning(){
+ let notice=document.getElementById('campaign-save-warning');
+ if(!campaignSaveFailed){if(notice)notice.remove();return;}
+ if(!notice){
+  notice=document.createElement('div');
+  notice.id='campaign-save-warning';
+  notice.setAttribute('role','alert');
+  notice.style.cssText='padding:12px 18px;background:#fff1d4;border-bottom:2px solid #ad5142;color:#442b20;display:flex;gap:12px;align-items:center;flex-wrap:wrap';
+  notice.innerHTML='<strong>Campaign changes are NOT saved in this browser.</strong> Keep this tab open. Export a backup before refreshing or closing. <button type="button" class="btn small secondary" id="campaign-save-backup">Export unsaved backup</button> <button type="button" class="btn small secondary" id="campaign-save-retry">Retry browser save</button>';
+  document.querySelector('header').insertAdjacentElement('afterend',notice);
+  notice.querySelector('#campaign-save-backup').addEventListener('click',exportData);
+  notice.querySelector('#campaign-save-retry').addEventListener('click',function(){
+   if(save())toast('Browser save recovered');
+  });
+ }
+}
+window.addEventListener('beforeunload',function(e){
+ if(!campaignSaveFailed)return;
+ e.preventDefault();
+ e.returnValue='';
+});
 function persistCampaign(){
  try{
   assertCampaignStorageCurrent();
   const serialized=JSON.stringify(db);
   localStorage.setItem(KEY,serialized);
   campaignStorageBaseline=serialized;
+  campaignSaveFailed=false;
+  updateCampaignSaveWarning();
   return true;
  }catch(e){
+  campaignSaveFailed=true;
+  updateCampaignSaveWarning();
   alert(e.message&&e.message.startsWith('Another campaign tab')?e.message:
-    'Browser storage unavailable or full. Export a backup before closing.');
+    'Browser storage unavailable or full. Your edits are still in this tab only. Export a backup before closing.');
   return false;
  }
 }
@@ -3026,5 +3054,5 @@ async function importBugHero(e){
   alert('Imported '+hero.name+' as a level-1 '+pc.species+'!\n\nNext: Open View / Edit to choose a class, then complete the Character Sheet. No D&D statistics or equipment were assigned automatically.');
  }catch(err){alert('Hero import failed: '+err.message)}finally{e.target.value=''}
 }
-async function importData(e){let f=e.target.files?.[0];if(!f)return;try{let v=JSON.parse(await f.text());let d=v.data||v;if(!d.campaign||!Array.isArray(d.npcs)||!Array.isArray(d.quests))throw Error('Not a valid campaign backup.');if(!confirm('Replace all current data with this backup? Export your current data first if needed.'))return;window.SHCloud?.suspendForReplacement();db=d;for(let k in initial)if(!(k in db))db[k]=clone(initial[k]);if(!Array.isArray(db.music))db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();save();goto('dashboard');toast('Backup imported')}catch(ex){alert('Import failed: '+ex.message)}finally{e.target.value=''}}function resetData(){if(!confirm('Reset ALL campaign data to the original starter content? This will erase edits.'))return;if(!confirm('Last chance: have you exported a backup?'))return;window.SHCloud?.suspendForReplacement();db=clone(initial);db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();save();goto('dashboard');toast('Campaign reset')}window.SHLive=initLivePlayerDisplay();render();
+async function importData(e){let f=e.target.files?.[0];if(!f)return;try{let v=JSON.parse(await f.text());let d=v.data||v;if(!d.campaign||!Array.isArray(d.npcs)||!Array.isArray(d.quests))throw Error('Not a valid campaign backup.');if(!confirm('Replace all current data with this backup? Export your current data first if needed.'))return;window.SHCloud?.suspendForReplacement();db=d;for(let k in initial)if(!(k in db))db[k]=clone(initial[k]);if(!Array.isArray(db.music))db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();if(!save())return;goto('dashboard');toast('Backup imported')}catch(ex){alert('Import failed: '+ex.message)}finally{e.target.value=''}}function resetData(){if(!confirm('Reset ALL campaign data to the original starter content? This will erase edits.'))return;if(!confirm('Last chance: have you exported a backup?'))return;window.SHCloud?.suspendForReplacement();db=clone(initial);db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();if(!save())return;goto('dashboard');toast('Campaign reset')}window.SHLive=initLivePlayerDisplay();render();
 </script><script src="assets/cloud-config.js"></script><script src="assets/cloud-sync.js"></script><script>if(window.SHCloud)window.SHCloud.boot({getData:()=>db,getStartupSerializedData:()=>cloudSyncStartupDocument,getExpectedStartupPreparation:cloudSyncExpectedChristmasPreparation,exportBackup:exportData,replaceData:(v)=>{if(!v||!v.campaign||!Array.isArray(v.pcs)||!Array.isArray(v.npcs)||!Array.isArray(v.quests))throw Error('Invalid cloud data');assertCampaignStorageCurrent();db=clone(v);for(let k in initial)if(!(k in db))db[k]=clone(initial[k]);if(!Array.isArray(db.music))db.music=clone(MUSIC_STARTER);ensureExpansion();activateVesperStory();ensureDecisions();if(!save())throw Error('Cloud browser replacement could not be persisted. Export this tab backup and resolve the conflict.');goto('dashboard')}});</script><script src="assets/ai-dm.js"></script></body></html>
