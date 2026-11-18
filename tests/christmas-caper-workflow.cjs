@@ -434,7 +434,7 @@ async function ready(url){
   await rangerContext.close();
 
 
-  // Paladin checks use two synthetic Beetlekin PC records in a disposable browser.
+  // Paladin checks use two disposable browser-local Mister Potts records; one has existing custom values that must be protected.
   const paladinContext=await browser.newContext({viewport:{width:1280,height:800}});
   const paladinPage=await paladinContext.newPage();
   paladinPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
@@ -442,10 +442,10 @@ async function ready(url){
   await paladinPage.evaluate(()=>{
    const d=JSON.parse(localStorage.getItem('shattered-hive-v1'));
    d.pcs=[
-    {id:'test-paladin',name:'Test Beetle Guardian',class:'Unassigned',background:'',level:1,species:'Beetlekin',status:'Active',
+    {id:'test-paladin',name:'Mister Potts',class:'Unassigned',background:'',level:1,species:'Beetlekin',status:'Active',
      hp:'',maxHp:'',ac:'',notes:'Keep the original player story intact',
      bugHero:{power:'Protecting friends',gear:'Sword and shield',trait:'Brave',fear:'Dry Grass',dream:'Guard all insects',extra:'Orange mohawk'}},
-    {id:'custom-paladin',name:'Customized Beetle Protector',class:'Paladin',background:'Guard',level:1,species:'Beetlekin',status:'Active',
+    {id:'custom-paladin',name:'Mister Potts',class:'Paladin',background:'Guard',level:1,species:'Beetlekin',status:'Active',
      hp:14,maxHp:14,ac:16,notes:'Manual build must remain',bugHero:{power:'Protecting friends',gear:'Sword and shield'}}
    ];
    localStorage.setItem('shattered-hive-v1',JSON.stringify(d));
@@ -456,6 +456,7 @@ async function ready(url){
   await paladinPage.locator('#hero-build-workshop summary').click();
   assert.match(await paladinPage.locator('#hero-build-workshop').innerText(),/Guardian and the Dry Grass/);
   assert.match(await paladinPage.locator('#hero-build-workshop').innerText(),/WIS 13/);
+  assert.match(await paladinPage.locator('#hero-build-workshop').innerText(),/21 GP/);
   const paladinState=()=>paladinPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
   let ps=await paladinState();
   assert.equal(ps.pcs[0].class,'Unassigned');
@@ -475,6 +476,9 @@ async function ready(url){
   assert.match(ps.sheets['test-paladin'].features,/Lay on Hands/);
   assert.match(ps.sheets['test-paladin'].features,/Sacred Oath|oath/i);
   assert.match(ps.sheets['test-paladin'].features,/do not stack/);
+  assert.match(ps.sheets['test-paladin'].inventory,/21 GP/);
+  assert.match(ps.sheets['test-paladin'].inventory,/Red Ant Sword uses ordinary longsword mechanics/);
+  assert.match(ps.sheets['test-paladin'].features,/Beetlekin \(approved campaign homebrew\)/);
   assert.equal(ps.campaign.session,0);
   assert.equal(ps.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
   assert.ok(ps.decisions.every(d=>d.status==='Not decided'));
