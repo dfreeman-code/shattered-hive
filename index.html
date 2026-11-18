@@ -1230,7 +1230,7 @@ const HERO_FIGHTER_LEVEL1={
  mastery:['Greatsword','Flail','Javelin']
 };
 function heroFighterIsCandidate(pc){
- return heroBuildMatch(pc)?.cls==='Fighter'&&pc.species==='Antfolk'&&Number(pc.level||1)===1;
+ return String(pc.name||'').trim().replace(/\s+/g,' ').toLowerCase()==='jawshua red hawk'&&heroBuildMatch(pc)?.cls==='Fighter'&&pc.species==='Antfolk'&&Number(pc.level||1)===1;
 }
 function heroFighterSheetUntouched(pc){
  if(!heroFighterIsCandidate(pc))return false;
@@ -1261,10 +1261,10 @@ function heroFighterApplySheet(id){
  sh.features='Fighter level 1 (2024): Fighting Style (Defense, +1 AC while wearing armor), Second Wind (2 uses; Bonus Action heal 1d10+1 HP; regain 1 use on a Short Rest and all on a Long Rest), Weapon Mastery (Greatsword, Flail, Javelin).\n'+
   'Weapon Mastery: Greatsword (Graze), Flail (Sap), Javelin (Slow). Check each mastery property against the official weapon table when using it.\n'+
   'Soldier origin: Savage Attacker (once per turn when a weapon attack hits, roll weapon damage dice twice and choose one roll), Athletics and Intimidation, one Gaming Set. Standard array before origin: STR 15, CON 14, DEX 13, WIS 12, CHA 10, INT 8; Soldier +2 STR and +1 CON.\n'+
-  'Antfolk (homebrew): Colony Cooperation (Bonus Action Help for ally within 5 feet, proficiency bonus uses per Long Rest); Tunnel Sense (proficiency in Survival chosen over Investigation).\n'+
+  'Antfolk (approved campaign homebrew): Colony Cooperation (Bonus Action Help for ally within 5 feet, 2 uses per Long Rest at level 1); Tunnel Sense (proficiency in Survival chosen over Investigation).\n'+
   'Trap-jaw bite and defensive scent are player-created appearance/story details; NO automatic extra weapon attack, damage, poison, aura, resistance or status effect is granted. Fighter subclass starts at level 3.';
  sh.inventory='Fighter class equipment option A: Chain Mail, Greatsword, Flail, 8 Javelins, Dungeoneer’s Pack, 4 GP.\n'+
-  'Soldier background equipment option A: Spear, Shortbow, 20 Arrows, one Gaming Set, Healer’s Kit, Quiver, Traveler’s Clothes, 14 GP.\n'+
+  'Soldier background equipment option A: Spear, Shortbow, 20 Arrows, one Gaming Set, Healer’s Kit, Quiver, Traveler’s Clothes, 14 GP. Combined starting currency from Fighter and Soldier option A: 18 GP.\n'+
   'Player-chosen platform shoes and red/black armor are appearance details without a height, reach, speed or defense bonus. The requested sword and shield can be a later alternate loadout: a Greatsword requires two hands to attack and cannot be used simultaneously with a wielded shield.';
  sh.proficiencies='Fighter: Strength and Constitution saves; all armor and shields; simple and martial weapons.\n'+
   'Fighter skills: Perception and Insight. Soldier skills: Athletics and Intimidation. Antfolk Tunnel Sense: Survival. Soldier gaming set type is the player’s choice.\n'+
@@ -1315,13 +1315,13 @@ function heroFighterLevelOnePreview(pc){
   ['Weapon and damage','Greatsword +5 to hit, 2d6+3 slashing. Fighter also trained in Flail and Javelin; Greatsword is two-handed, so no shield while attacking with it.'],
   ['Soldier background','Savage Attacker origin feat; Athletics and Intimidation, gaming set; +2 STR and +1 CON'],
   ['Saving throws and skills','STR/CON saves; Perception and Insight (Fighter), Athletics and Intimidation (Soldier), Survival (Antfolk Tunnel Sense)'],
-  ['Antfolk homebrew','Colony Cooperation: Bonus Action Help for ally within 5 ft, 2 uses/Long Rest; Tunnel Sense: Survival. Trap-jaws/scent do not automatically add attack or damage effects.'],
-  ['Starting equipment','Fighter option A: chain mail, greatsword, flail, eight javelins, dungeoneer’s pack, 4 GP; Soldier option A chosen separately.'],
+  ['Antfolk homebrew','Approved campaign homebrew: Colony Cooperation, Bonus Action Help within 5 ft, 2 uses/Long Rest; Tunnel Sense grants Survival proficiency. Trap-jaws and defensive scent are narrative only.'],
+  ['Starting equipment','Fighter A: chain mail, greatsword, flail, eight javelins, Dungeoneer’s Pack, 4 GP. Soldier A: spear, shortbow, 20 arrows, gaming set, Healer’s Kit, quiver, traveler’s clothes, 14 GP. Combined: 18 GP.'],
   ['Personal solo intro','The Crossing of Little Giants: help a courier near water without forcing a fear response; platform shoes and humor are roleplay, not mechanical bonuses.']
  ];
- return '<section class="hero-wizard-draft hero-fighter-draft" aria-label="Level 1 Fighter detailed draft"><h4>Level-1 Trap-Jaw Ant Fighter sheet — proposed, not applied</h4>'+
+ return '<section class="hero-wizard-draft hero-fighter-draft" aria-label="Level 1 Fighter detailed draft"><h4>Jawshua Red Hawk — approved Level-1 Antfolk Fighter proposal (not applied)</h4>'+
  '<div class="hero-build-grid">'+rows.map(([title,value])=>'<div><b>'+esc(title)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
- '<p class="muted">2024 Fighter begins with Fighting Style, Second Wind, and 3 Weapon Masteries. Action Surge is level 2; subclass is level 3. Custom Antfolk features remain subject to the campaign’s homebrew approval.</p>'+
+ '<p class="muted">2024 Fighter begins with Fighting Style, Second Wind, and 3 Weapon Masteries. Action Surge is level 2; subclass is level 3. Jawshua’s Antfolk abilities are approved campaign homebrew; platform shoes and trap-jaw/scent details remain narrative, with no extra attacks or bonuses. Merely viewing this proposal does not save character data.</p>'+
  '<div class="actions"><button class="btn secondary" type="button" onclick="heroFighterApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Fighter sheet</button>'+
  '<button class="btn secondary" type="button" onclick="heroFighterApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
  (!eligible?'<p class="muted">Automatic setup unavailable because an existing character sheet has recorded data. Nothing will be overwritten.</p>':'')+

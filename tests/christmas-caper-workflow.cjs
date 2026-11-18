@@ -500,7 +500,7 @@ async function ready(url){
   await paladinContext.close();
 
 
-  // Fighter final-hero workshop: disposable browser-only PC records, no cloud campaign access.
+  // Fighter final-hero workshop: disposable browser-only Jawshua Red Hawk fixtures, including one customized record; no cloud campaign access.
   const fighterContext=await browser.newContext({viewport:{width:1280,height:800}});
   const fighterPage=await fighterContext.newPage();
   fighterPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
@@ -508,11 +508,11 @@ async function ready(url){
   await fighterPage.evaluate(()=>{
    const d=JSON.parse(localStorage.getItem('shattered-hive-v1'));
    d.pcs=[
-    {id:'test-fighter',name:'Test Trap-Jaw Hero',class:'Unassigned',background:'',level:1,species:'Antfolk',status:'Active',
+    {id:'test-fighter',name:'Jawshua Red Hawk',class:'Unassigned',background:'',level:1,species:'Antfolk',status:'Active',
      hp:'',maxHp:'',ac:'',notes:'Do not overwrite the original family character notes',
      bugHero:{power:'Super strength',gear:'Sword and shield',trait:'Funny',fear:'Water',dream:'Wish I were taller',
       extra:'Trap Jaw Ant, natural scent defenses',outfit:'Armor, great sword and platform shoes'}},
-    {id:'test-fighter-custom',name:'Customized Ant Fighter',class:'Fighter',background:'Soldier',level:1,species:'Antfolk',status:'Active',
+    {id:'test-fighter-custom',name:'Jawshua Red Hawk',class:'Fighter',background:'Soldier',level:1,species:'Antfolk',status:'Active',
      hp:15,maxHp:15,ac:18,notes:'My manually chosen armor stays',
      bugHero:{power:'Super strength',gear:'Greatsword'}}
    ];
@@ -524,6 +524,7 @@ async function ready(url){
   await fighterPage.locator('#hero-build-workshop summary').click();
   assert.match(await fighterPage.locator('#hero-build-workshop').innerText(),/Crossing of Little Giants/);
   assert.match(await fighterPage.locator('#hero-build-workshop').innerText(),/CON 15/);
+  assert.match(await fighterPage.locator('#hero-build-workshop').innerText(),/18 GP/);
   const fighterState=()=>fighterPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
   let fs=await fighterState();
   assert.equal(fs.pcs[0].class,'Unassigned','Preview cannot automatically change the class');
@@ -540,6 +541,9 @@ async function ready(url){
   assert.equal(fs.sheets['test-fighter'].spellAbility,'');
   assert.match(fs.sheets['test-fighter'].features,/Second Wind/);
   assert.match(fs.sheets['test-fighter'].features,/Savage Attacker/);
+  assert.match(fs.sheets['test-fighter'].inventory,/18 GP/);
+  assert.match(fs.sheets['test-fighter'].features,/Antfolk \(approved campaign homebrew\)/);
+  assert.match(fs.sheets['test-fighter'].attacks,/Greatsword: \+5 to hit, 2d6\+3/);
   assert.match(fs.sheets['test-fighter'].features,/no automatic extra|NO automatic extra/i);
   assert.equal(fs.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
   assert.equal(fs.campaign.session,0);
