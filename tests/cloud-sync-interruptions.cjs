@@ -57,6 +57,8 @@ const assert=require('node:assert/strict');
  });
  try{
   await page.goto(base,{waitUntil:'domcontentloaded'});
+  await page.locator('#cloud-header-status').click();
+  await page.locator('#cloud-sync-panel').waitFor({state:'visible'});
   await page.getByRole('button',{name:'Upload this browser to cloud (first time)'}).waitFor();
   const firstBackup=page.waitForEvent('download');
   await page.getByRole('button',{name:'Upload this browser to cloud (first time)'}).click();
