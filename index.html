@@ -1124,7 +1124,7 @@ const HERO_PALADIN_LEVEL1={
  mastery:['Longsword','Javelin']
 };
 function heroPaladinIsCandidate(pc){
- return heroBuildMatch(pc)?.cls==='Paladin'&&pc.species==='Beetlekin'&&Number(pc.level||1)===1;
+ return String(pc.name||'').trim().toLowerCase()==='mister potts'&&heroBuildMatch(pc)?.cls==='Paladin'&&pc.species==='Beetlekin'&&Number(pc.level||1)===1;
 }
 function heroPaladinSheetUntouched(pc){
  if(!heroPaladinIsCandidate(pc))return false;
@@ -1157,11 +1157,11 @@ function heroPaladinApplySheet(id){
   '\nNo Divine Smite at level 1 (Paladin’s Smite and Fighting Style start at level 2; Sacred Oath at level 3).';
  sh.features='Paladin level 1 (2024): Lay on Hands (5 HP pool, Bonus Action), Spellcasting (2 level-1 spell slots, 2 prepared spells), Weapon Mastery (Longsword, Javelin).\n'+
   'Guard origin: Alert feat (+2 initiative from proficiency), Athletics and Perception, choice of one Gaming Set. Guard ability boosts: +2 STR and +1 WIS. Standard array before background: STR 15, CHA 14, CON 13, WIS 12, INT 10, DEX 8. Guard boosts +2 STR and +1 WIS, yielding STR 17, CHA 14, CON 13, WIS 13, INT 10, DEX 8.\n'+
-  'Beetlekin homebrew: Shell Armor (unarmored AC 13 + DEX modifier max +2; shields apply), Powerful Build (count as one size larger for lifting/carrying/pushing/dragging).\n'+
+  'Beetlekin (approved campaign homebrew): Shell Armor (when unarmored AC 13 + DEX modifier, maximum +2; shield applies if held); Powerful Build (count as one size larger for lifting, carrying, pushing and dragging).\n'+
   'A Paladin’s Shield and armor do not stack with the Beetlekin unarmored shell formula; choose applicable armor calculation. An oath is not selected until level 3.';
  sh.inventory='Paladin class equipment option A: Chain Mail, Shield, Longsword, 6 Javelins, Holy Symbol, Priest’s Pack and 9 GP.\n'+
-  'Guard option A: Spear, Light Crossbow, 20 Bolts, one Gaming Set of choice, Hooded Lantern, Manacles, Quiver, Traveler’s Clothes and 12 GP.\n'+
-  'Player’s Red Ant Sword, orange mohawk, headband, and insect-inspired armor are appearance/weapon-flavor choices. Use the longsword mechanics unless the DM approves special properties. Dry grass fear remains a roleplay choice.';
+  'Guard background equipment option A: Spear, Light Crossbow, 20 Bolts, one Gaming Set of choice, Hooded Lantern, Manacles, Quiver, Traveler’s Clothes and 12 GP. Total starting currency from both approved packages: 21 GP.\n'+
+  'Player’s Red Ant Sword, orange mohawk, headband, and insect-inspired armor are appearance/weapon-flavor choices. The Red Ant Sword uses ordinary longsword mechanics unless the DM approves special properties; the standard shield provides +2 AC when equipped. Dry grass fear remains a roleplay choice and grants no automatic mechanical penalty.';
  sh.proficiencies='Paladin: Wisdom and Charisma saving throws; light, medium and heavy armor, shields; simple and martial weapons.\n'+
   'Paladin class skills: Insight, Persuasion. Guard skills: Athletics, Perception; one Gaming Set (choose type). Longsword and Javelin Weapon Mastery.';
  sh.attacks='Longsword (Red Ant Sword flavor): +5 to hit, 1d8+3 slashing with one hand and shield; 1d10+3 versatile two-handed without shield.\n'+
@@ -1208,12 +1208,13 @@ function heroPaladinLevelOnePreview(pc){
  ['Healing','Lay on Hands: 5 HP pool per Long Rest, Bonus Action. No Smite, Fighting Style, oath or aura yet.'],
  ['Guard background','Alert feat; Athletics, Perception; one Gaming Set. Guard boosts +2 STR / +1 WIS from a valid standard array; ability scores remain suggestions until approval.'],
  ['Weapon mastery','Longsword and Javelin; Red Ant Sword uses longsword stats. +5 to hit, 1d8+3 one-handed.'],
- ['Beetlekin','Shell Armor and Powerful Build are homebrew. Shell AC is an alternative to chain mail, not additive.'],
+ ['Beetlekin','Approved campaign homebrew: Shell Armor (unarmored 13 + DEX modifier, max +2; shield permitted) and Powerful Build. Shell AC is an alternative to chain mail, not additive.'],
+ ['Starting equipment','Paladin A: chain mail, shield, longsword, six javelins, holy symbol, Priest’s Pack and 9 GP. Guard A: spear, light crossbow, 20 bolts, gaming set, hooded lantern, manacles, quiver, traveler’s clothes and 12 GP. Total: 21 GP. Red Ant Sword uses longsword mechanics.'],
  ['Solo introduction','The Guardian and the Dry Grass: a lost lantern-bug asks for help beyond a patch of dry grass. Personal fears and choices belong to the player.']
  ];
- return '<section class="hero-wizard-draft hero-paladin-draft" aria-label="Level 1 Paladin detailed draft"><h4>Level-1 Beetlekin Paladin sheet — proposed, not applied</h4>'+
+ return '<section class="hero-wizard-draft hero-paladin-draft" aria-label="Level 1 Paladin detailed draft"><h4>Mister Potts — approved Level-1 Beetlekin Paladin proposal (not applied)</h4>'+
  '<div class="hero-build-grid">'+rows.map(([label,value])=>'<div><b>'+esc(label)+'</b><p>'+esc(value)+'</p></div>').join('')+'</div>'+
- '<p class="muted">AC 18 assumes Paladin option A chain mail plus shield. The Guard background grants Alert, Athletics and Perception, not Charisma increases. Review any changes with the player before approving. All special beetle traits follow the app’s homebrew rules.</p>'+
+ '<p class="muted">AC 18 assumes Paladin option A chain mail plus shield. The Guard background grants Alert, Athletics and Perception, not Charisma increases. The player has approved these Level 1 choices. Beetlekin traits are campaign homebrew; dry grass fear remains narrative and grants no automatic condition. Viewing the proposal makes no saved changes.</p>'+
  '<div class="actions"><button class="btn secondary" type="button" onclick="heroPaladinApplySheet('+esc(JSON.stringify(pc.id))+')" '+(!eligible?'disabled':'')+'>Apply approved level-1 Paladin sheet</button>'+
  '<button class="btn secondary" type="button" onclick="heroPaladinApplyPrologue('+esc(JSON.stringify(pc.id))+')" '+(introExists?'disabled':'')+'>Save suggested solo introduction draft</button></div>'+
  (!eligible?'<p class="muted">Automatic setup disabled: existing customized character values need individual review. No values were overwritten.</p>':'')+
