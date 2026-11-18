@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
  const context=await browser.newContext({acceptDownloads:true});
  const a=await context.newPage(),b=await context.newPage();
  const dialogs=[];
- b.on('dialog',async dialog=>{dialogs.push(dialog.message());await dialog.dismiss();});
+ b.on('dialog',async dialog=>{dialogs.push(dialog.message());if(dialog.type()==='beforeunload')await dialog.accept();else await dialog.dismiss();});
  const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
  try{
   await a.goto(base,{waitUntil:'domcontentloaded'});
