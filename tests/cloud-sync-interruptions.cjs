@@ -90,6 +90,8 @@ const assert=require('node:assert/strict');
   // After reload, remote revision 2 differs because of the newer local edit.
   // The client must remain blocked and offer recovery, not overwrite either.
   await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('#cloud-header-status').click();
+  await page.locator('#cloud-sync-panel').waitFor({state:'visible'});
   await page.waitForFunction(()=>document.querySelector('#cloud-sync-status')?.textContent?.includes('unconfirmed local differences'),null,{timeout:15000});
   assert.equal(await page.evaluate(()=>SHCloud.isLinked()),false);
   assert.equal(revision,2);
