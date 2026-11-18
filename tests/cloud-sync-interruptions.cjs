@@ -106,6 +106,10 @@ const assert=require('node:assert/strict');
 
   // External device changes a different record; a stale local upload must fail
   // without changing either local or cloud campaign.
+  // Recovery replaces the campaign and navigates back to Dashboard.
+  // Reopen Settings so its status messages remain available for assertions.
+  await page.locator('#cloud-header-status').click();
+  await page.locator('#cloud-sync-panel').waitFor({state:'visible'});
   const otherDevice=clone(payload);
   otherDevice.npcs.push({id:'remote-npc',name:'Remote NPC',species:'Mothkin'});
   store(otherDevice);
