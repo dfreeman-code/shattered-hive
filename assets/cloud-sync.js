@@ -389,6 +389,9 @@
   async function upload(first) {
     if (busy || !session) return;
     if (!first && (!linked || blocked)) return notify('Resolve the cloud version before uploading.');
+    // A previous request might have committed on the server before its response
+    // was lost. Do not allow another "first upload" until cloud is checked.
+    if (first && blocked) return notify('A previous cloud write could not be confirmed. Reload and verify the cloud version before another first upload. Export a browser backup.');
     if (first) {
       if (remoteAvailable) return notify('A cloud save already exists. Download it first; this browser cannot replace it blindly.');
       if (!confirm('Are you on your HOME computer with the original characters? Export a JSON backup before first upload. Upload this browser campaign to your private cloud account?')) return;
@@ -417,7 +420,16 @@
         notify('Saved online; sending more recent edits...');
         queueSave();
       } else notify('Cloud up to date. Changes on this browser will sync automatically.');
-    } catch (e) { markPending();notify('Cloud upload failed (local save retained): ' + e.message); }
+    } catch (e) {
+      // Timeout, disconnect, or browser storage failure after a POST is
+      // ambiguous: the server may already have committed the new revision.
+      // Do not automatically retry with a stale expected_revision.
+      clearTimeout(timer);timer=null;
+      linked=false;blocked=true;changedWhileBusy=false;
+      markPending();
+      notify('Cloud upload could not be confirmed (browser save retained): ' + e.message +
+        '. Export a JSON backup, then reload and verify the cloud revision before syncing again. No automatic retry was attempted.');
+    }
     finally { busy = false; renderStatus(); if(changedWhileBusy && linked && !blocked){changedWhileBusy=false;queueSave();} }
   }
   async function download() {

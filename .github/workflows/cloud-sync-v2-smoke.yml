@@ -7,6 +7,7 @@ on:
       - 'assets/cloud-sync.js'
       - 'assets/cloud-config.js'
       - 'tests/cloud-sync-v2.smoke.cjs'
+      - 'tests/cloud-sync-interruptions.cjs'
       - 'tests/cloud-sync-v2.api.cjs'
       - '.github/workflows/cloud-sync-v2-smoke.yml'
   workflow_dispatch:
@@ -32,7 +33,9 @@ jobs:
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/hive-http.log 2>&1 &
           for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ >/dev/null && break; sleep 1; done
       - name: Run isolated browser smoke tests
-        run: node tests/cloud-sync-v2.smoke.cjs
+        run: |
+          node tests/cloud-sync-v2.smoke.cjs
+          node tests/cloud-sync-interruptions.cjs
       - name: Confirm real Supabase anonymous API cannot read private campaigns
         run: node tests/cloud-sync-v2.api.cjs
       - name: Upload screenshot on failure
