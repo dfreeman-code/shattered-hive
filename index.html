@@ -2361,6 +2361,11 @@ function mapState(){
   const all=ms.scenes;
   let home=all.find(m=>m.id==='evergarden-home-hive');
   if(!home){
+   // A previously archived customized Home Hive is not a blank preset.
+   home=ms.archivedScenes.find(m=>m.id==='evergarden-home-hive');
+   if(home)ms.archivedScenes=ms.archivedScenes.filter(m=>m.id!==home.id);
+  }
+  if(!home){
    home=clone(EVERGARDEN_SCENES[0]);
    home.cols=30;home.rows=30;home.asset='home-hive';
    home.name='Home Hive';
