@@ -2345,58 +2345,72 @@ function mapPlayerScenes(){return mapState().scenes.filter(mapAvailable)}
 function mapAssetUrl(m,mode){if(m.id==='evergarden-home-hive')return 'assets/maps/home_hive_'+(mode==='dm'?'dm_annotated':'player_gridless')+'.png?v=2';if(m.id.startsWith('caper-'))return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'player')+'.png';return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'gridless')+'.svg'}
 
 function mapState(){
- if(!db.maps||!Array.isArray(db.maps.scenes))db.maps={scenes:clone(MAP_START),active:'map-dewdrop',selected:null,showGrid:true,history:[]};
+ let migrationChanged=false;
+ if(!db.maps||!Array.isArray(db.maps.scenes)){
+  db.maps={scenes:clone(MAP_START),active:'map-dewdrop',selected:null,showGrid:true,history:[]};
+  migrationChanged=true;
+ }
  const ms=db.maps;
- if(!Array.isArray(ms.history))ms.history=[];
- if(!ms.viewMode)ms.viewMode='dm';
- if(!ms.fogTool)ms.fogTool='off';
- if(!Array.isArray(ms.archivedScenes))ms.archivedScenes=[];
- // One-time, reversible retirement. Preserve every prior map (including tokens,
- // custom art, fog and metadata) without deleting any character or encounter data.
+ if(!Array.isArray(ms.history)){ms.history=[];migrationChanged=true}
+ if(!ms.viewMode){ms.viewMode='dm';migrationChanged=true}
+ if(!ms.fogTool){ms.fogTool='off';migrationChanged=true}
+ if(!Array.isArray(ms.archivedScenes)){ms.archivedScenes=[];migrationChanged=true}
+ // Preserve the exact geometry, fog, token positions and metadata of an
+ // existing Home Hive map. Only configure the default when creating it.
  if(!ms.homeHiveOfficialV1){
-  const all=Array.isArray(ms.scenes)?ms.scenes:[];
-  const home=all.find(m=>m.id==='evergarden-home-hive')||clone(EVERGARDEN_SCENES[0]);
-  home.cols=30;home.rows=30;home.asset='home-hive';
-  home.name='Home Hive';
-  home.desc='Official Evergarden home village — Council Acorn, market, defenses and root hollow';
-  home.playerShared=true;
+  const all=ms.scenes;
+  let home=all.find(m=>m.id==='evergarden-home-hive');
+  if(!home){
+   home=clone(EVERGARDEN_SCENES[0]);
+   home.cols=30;home.rows=30;home.asset='home-hive';
+   home.name='Home Hive';
+   home.desc='Official Evergarden home village — Council Acorn, market, defenses and root hollow';
+   home.playerShared=true;
+  }
   for(const old of all)if(old.id!==home.id&&!ms.archivedScenes.some(a=>a.id===old.id))ms.archivedScenes.push(old);
-  ms.scenes=[home];ms.active=home.id;ms.selected=null;ms.fogTool='off';
+  ms.scenes=[home];
+  if(ms.active!==home.id)ms.selected=null;
+  ms.active=home.id;
   ms.homeHiveOfficialV1=true;
   ms.evergardenSeeded=true;
-  try{if(!persistCampaign())throw Error('Campaign storage changed or could not be saved');}catch(e){console.warn('Home Hive map migration could not be saved; export a backup',e)}
+  migrationChanged=true;
  }
  if(!ms.christmasCaperMapsSeeded){
   for(const preset of CHRISTMAS_CAPER_SCENES){
    if(!ms.scenes.some(m=>m.id===preset.id)){
-    // Preserve old custom versions and tokens when an identically named scene exists.
-    const existing=ms.scenes.find(m=>m.name===preset.name);
-    if(!existing)ms.scenes.push(clone(preset));
+    // Respect an existing custom map with the same name.
+    if(!ms.scenes.some(m=>m.name===preset.name))ms.scenes.push(clone(preset));
    }
   }
   ms.christmasCaperMapsSeeded=true;
-  try{if(!persistCampaign())throw Error('Campaign storage changed or could not be saved');}catch(e){console.warn('Christmas map registration could not save; export backup',e)}
+  migrationChanged=true;
  }
  if(!ms.christmasFinalTwoMapsSeeded){
-  // Add the two final location maps without altering existing scenes, positions or secrets.
   for(const preset of CHRISTMAS_CAPER_SCENES.filter(p=>p.id==='caper-frozen-berry'||p.id==='caper-glass-doors')){
    if(!ms.scenes.some(m=>m.id===preset.id)&&!ms.scenes.some(m=>m.name===preset.name))ms.scenes.push(clone(preset));
   }
   ms.christmasFinalTwoMapsSeeded=true;
-  try{if(!persistCampaign())throw Error('Campaign storage changed or could not be saved');}catch(e){console.warn('Christmas location map registration could not save; export a backup',e)}
+  migrationChanged=true;
  }
-
  for(const guide of CHRISTMAS_DM_GUIDES){
   const m=ms.scenes.find(x=>x.id===guide.id);
   if(!m||m.caperGuideSeededV1)continue;
   if(!Array.isArray(m.dmMarkers))m.dmMarkers=[];
   for(const marker of guide.marks)if(!m.dmMarkers.some(x=>x.id===marker.id))m.dmMarkers.push(clone(marker));
   m.caperGuideSeededV1=true;
-  try{if(!persistCampaign())throw Error('Campaign storage changed or could not be saved');}catch(e){console.warn('Caper marker guide could not save; export backup',e)}
+  migrationChanged=true;
  }
- if(!ms.scenes.length)ms.scenes=[clone(EVERGARDEN_SCENES[0])];
- if(ms.wideSidesEnabled){for(const m of [...ms.scenes,...ms.archivedScenes])mapSideExpansion(m)}
- if(!ms.scenes.some(m=>m.id===ms.active))ms.active=ms.scenes[0].id;
+ if(!ms.scenes.length){ms.scenes=[clone(EVERGARDEN_SCENES[0])];migrationChanged=true}
+ if(ms.wideSidesEnabled){
+  for(const m of [...ms.scenes,...ms.archivedScenes])if(mapSideExpansion(m))migrationChanged=true;
+ }
+ if(!ms.scenes.some(m=>m.id===ms.active)){ms.active=ms.scenes[0].id;migrationChanged=true}
+ // One guarded browser write after the complete migration, instead of a
+ // partially upgraded campaign after each individual map/guide seed.
+ // Phase 1 prevents a stale tab overwrite; Phase 2 retains unsaved data and
+ // offers export/retry if this write fails.
+ if(migrationChanged&&!persistCampaign())
+  console.warn('Map startup migration is unsaved; keep this tab open and export a backup before reloading');
  return ms;
 }
 function currentMap(){let a=mapState();return a.scenes.find(m=>m.id===a.active)}
