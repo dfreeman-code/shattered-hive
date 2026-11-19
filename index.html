@@ -1561,8 +1561,48 @@ function applyVismundApprovedEquipment(){
  toast('Vismund’s approved equipment saved');
  return true;
 }
+// David's approved Rogue/Wayfarer inventory is reconciled only by an explicit DM action.
+// The gaming set, language and spear remain undecided; no new items are awarded.
+// Exact source-match protects later edits, cloud recovery and repeated application.
+const DAVID_EQUIPMENT_REVIEWED="Rogue equipment option A: Leather Armor, 2 Daggers, Shortsword, Shortbow, 20 Arrows, Quiver, Thieves’ Tools, Burglar’s Pack, 8 GP.\nWayfarer background equipment option A: 2 Daggers, Thieves’ Tools, Gaming Set (choose type), Bedroll, 2 Pouches, Traveler’s Clothes, 16 GP.\nPlayer-chosen spear, goggles, tool belt and pocketed outfit are desired character flavor; confirm how the spear is obtained and whether gadgets have mechanical effects. Do not silently grant free extra items or proficiencies.";
+const DAVID_EQUIPMENT_RECONCILED="Rogue equipment option A: Leather Armor, 2 Daggers, Shortsword, Shortbow, 20 Arrows, Quiver, Thieves’ Tools, Burglar’s Pack, 8 GP.\nWayfarer background equipment option A: 2 Daggers, Thieves’ Tools, Gaming Set (type not yet chosen), Bedroll, 2 Pouches, Traveler’s Clothes, 16 GP.\nTotal starting currency: 24 GP (8 GP Rogue + 16 GP Wayfarer). Do not add these amounts twice; duplicate equipment entries above are retained to show each source.\nPending player choice: select the Wayfarer gaming set type. Thieves’ Cant additional language also awaits the player’s selection and is not automatically granted.\nPlayer-chosen spear, goggles, tool belt and pocketed outfit are desired character flavor; confirm how the spear is obtained and whether gadgets have mechanical effects. Spear not granted as starting equipment. Do not silently grant free extra items or proficiencies.";
+function davidEquipmentEligible(pc){
+ if(!pc||pc.name!=='David'||pc.species!=='Mantisborn'||
+    pc.class!=='Rogue'||pc.background!=='Wayfarer'||Number(pc.level)!==1)return false;
+ const sheet=db.sheets?.[pc.id];
+ return !!sheet&&sheet.inventory===DAVID_EQUIPMENT_REVIEWED;
+}
+function davidEquipmentReviewPanel(pc){
+ if(!davidEquipmentEligible(pc))return '';
+ return '<section class="card section" id="david-equipment-review">'+
+  '<h3>David · Rogue/Wayfarer starting equipment reconciliation</h3>'+
+  '<p>Rogue equipment option A lists 8 GP, and Wayfarer equipment option A lists 16 GP. '+
+  'This change clarifies the total as <b>24 GP</b> without duplicating currency or awarding extra equipment.</p>'+
+  '<p><b>Pending player choices:</b> Wayfarer gaming-set type; additional language from Thieves’ Cant. '+
+  'The preferred spear remains a narrative request, not a granted weapon. These decisions will NOT be made by this correction.</p>'+
+  '<p class="muted">Optional DM action. Confirm your cloud copy is synchronized and export a JSON backup. '+
+  'The button disappears if the inventory differs from the reviewed text; no startup migration runs.</p>'+
+  '<button id="david-equipment-apply" class="btn secondary" type="button" onclick="applyDavidEquipmentReconciliation()">Reconcile David’s 24 GP inventory</button>'+
+  '</section>';
+}
+function applyDavidEquipmentReconciliation(){
+ const pc=currentSheetPC();
+ if(!davidEquipmentEligible(pc)){
+  alert('David’s inventory differs from the reviewed version; no changes made.');
+  return false;
+ }
+ if(!confirm('Update only David’s inventory wording to show 24 GP total and pending choices? Check cloud sync and export a JSON backup first.'))return false;
+ if(!davidEquipmentEligible(pc))return false;
+ const sheet=db.sheets[pc.id],prior=sheet.inventory;
+ sheet.inventory=DAVID_EQUIPMENT_RECONCILED;
+ if(!save()){sheet.inventory=prior;return false}
+ render();
+ toast('David’s inventory wording reconciled; player choices still pending');
+ return true;
+}
 function sheetPage(){const pc=currentSheetPC();let options=db.pcs.map(x=>`<option value="${esc(x.id)}" ${pc?.id===x.id?'selected':''}>${esc(x.name)} — Level ${esc(x.level||1)}</option>`).join('');if(!pc)return `<div class="headrow"><h2>📜 Character Sheets</h2><button class="btn" onclick="add('pcs')">+ Add Character</button></div><div class="empty">Create a player character first, then return to complete their sheet.</div>`;let sh=getSheet(pc),prof=proficiency(Number(pc.level)||1),dex=modifier(sh.scores.DEX),spellMod=modifier(sh.scores[sh.spellAbility]||10);let species=BUG_TRAITS[pc.species]||[];return `<div class="headrow"><div><h2>📜 Character Sheets</h2><p class="muted">Editable D&D 5e 2024 player sheets · Saved with campaign backups</p></div><div class="actions"><button class="btn secondary" onclick="window.print()">Print sheet</button><button class="btn" onclick="edit('pcs','${pc.id}')">Edit PC profile</button></div></div><div class="card section"><label>Select player character</label><select onchange="selectedSheetPC=this.value;render()">${options}</select><h2>${esc(pc.name)}</h2><p class="muted">${esc(pc.species||'Species unset')} · ${esc(pc.class||'Class unset')} · Level ${esc(pc.level||1)} · ${esc(pc.subclass||'Subclass not selected')} · ${esc(pc.background||'Background unset')}</p><div class="sheetmetrics"><div><b>${signed(prof)}</b><small>Proficiency</small></div><div><b>${signed(dex+Number(sh.initiativeBonus||0))}</b><small>Initiative</small></div><div><b>${10+modifier(sh.scores.WIS)+ (sh.skills.includes('Perception')?prof:0)+(sh.expertise.includes('Perception')?prof:0)+Number(sh.passiveBonus||0)}</b><small>Passive Perception</small></div></div></div>
 ${heroReadinessPanel()}\n${heroBuildWorkshop(pc)}\n${vismundEquipmentReviewPanel(pc)}
+${davidEquipmentReviewPanel(pc)}
 <div class="card section"><h3>Ability scores & saving throws</h3><div class="statgrid">${ATTRS.map(a=>scoreInput(a,sh)).join('')}</div><p class="meta">Saving throw proficiency must be selected from your class. Modifiers recalculate from scores and proficiency bonus.</p></div>
 <div class="two section"><div class="card"><h3>Combat & resources</h3><div class="sheetfields">${[['ac','Armor Class'],['speed','Speed (game feet)'],['currentHp','Current HP'],['maxHp','Maximum HP'],['tempHp','Temporary HP'],['initiativeBonus','Additional initiative modifier'],['hitDiceUsed','Hit Dice spent']].map(([k,t])=>`<label>${t}<input type="number" value="${esc(sh[k])}" onchange="sheetSet('field','${k}',this.value)"></label>`).join('')}</div><div class="sheetfields"><label>Death save successes <input type="number" min="0" max="3" value="${sh.deathSuccess}" onchange="sheetSet('field','deathSuccess',this.value)"></label><label>Death save failures <input type="number" min="0" max="3" value="${sh.deathFailure}" onchange="sheetSet('field','deathFailure',this.value)"></label><label><input type="checkbox" ${sh.inspiration?'checked':''} onchange="sheetSet('field','inspiration',this.checked)"> Heroic Inspiration</label></div><p class="meta">Hit Dice total: ${esc(pc.level||1)}d${esc(GUIDE[pc.class]?.die||'?')}; hit points are manually assigned, not automatically rolled.</p></div><div class="card"><h3>Skill proficiencies</h3><div class="skillsgrid">${SKILLS.map(([name,attr])=>{let val=modifier(sh.scores[attr])+ (sh.skills.includes(name)?prof:0)+(sh.expertise.includes(name)?prof:0);return `<div class="skillrow"><label><input type="checkbox" ${sh.skills.includes(name)?'checked':''} onchange="sheetSet('skill','${name}',this.checked)"> ${name} <small>(${attr})</small></label><strong>${signed(val)}</strong><label title="Expertise"><input type="checkbox" ${sh.expertise.includes(name)?'checked':''} onchange="sheetSet('expertise','${name}',this.checked)"> Exp</label></div>`}).join('')}</div><p class="meta">Exp = expertise (double proficiency bonus). Select only when granted by your class or another feature.</p></div></div>
 <div class="two section"><div class="card"><h3>Spellcasting</h3><label>Spellcasting ability <select onchange="sheetSet('field','spellAbility',this.value)"><option value="">None / select</option>${ATTRS.map(a=>`<option value="${a}" ${sh.spellAbility===a?'selected':''}>${a}</option>`).join('')}</select></label><p><b>Spell attack:</b> ${sh.spellAbility?signed(prof+spellMod):'—'} · <b>Spell save DC:</b> ${sh.spellAbility?8+prof+spellMod:'—'}</p><p class="meta">Enter remaining spell slots manually; slots vary by class, level and multiclass features.</p><div class="slotgrid">${Array.from({length:9},(_,i)=>`<label>Level ${i+1}<input type="number" min="0" value="${esc(sh.spellSlots[i+1]??0)}" onchange="sheetSet('slot','${i+1}',this.value)"></label>`).join('')}</div><label>Cantrips, prepared spells & spell notes<textarea onchange="sheetSet('field','spellPrepared',this.value)">${esc(sh.spellPrepared)}</textarea></label></div><div class="card"><h3>Bug species features</h3>${species.length?species.map(t=>`<div class="item">✿ ${esc(t)}</div>`).join(''):'<p class="muted">Enter a supported Shattered Hive bug species to display its traits.</p>'}<p class="meta">These species traits are homebrew, not official PHB species features. Confirm with your DM.</p><label>Species feature uses / special notes<textarea onchange="sheetSet('field','speciesNotes',this.value)">${esc(sh.speciesNotes)}</textarea></label><h3>Class features, feats, and resources</h3><textarea onchange="sheetSet('field','features',this.value)">${esc(sh.features)}</textarea><p class="meta">See 2024 Player’s Handbook ${esc(pc.class||'class')} p. ${esc(GUIDE[pc.class]?.page||'—')} for official advancement.</p></div></div>
