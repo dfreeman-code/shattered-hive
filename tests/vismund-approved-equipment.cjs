@@ -53,7 +53,9 @@ const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
   await page.locator('#vismund-equipment-apply').click();
   assert.equal(await inventory(),prior.sheets['qa-vismund'].inventory,'Cancelled confirmation cannot edit');
   assert.deepEqual(await snapshot(),prior,'Cancellation must preserve every campaign field');
-  acceptConfirm=true;
+  // Mock affirmative confirmation only after testing the real Cancel dialog.
+  // This isolates application logic from Playwright's asynchronous dialog handling.
+  await page.evaluate(()=>{window.confirm=()=>true});
   await page.locator('#vismund-equipment-apply').click();
   const updated=await snapshot();
   assert.equal(updated.sheets['qa-other'].inventory,'KEEP COMPANION EQUIPMENT');
