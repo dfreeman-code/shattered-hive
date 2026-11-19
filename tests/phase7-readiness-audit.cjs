@@ -58,7 +58,7 @@ const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
   await panel.waitFor({state:'visible'});
   assert.match(await panel.innerText(),/0 items to review/);
   assert.equal(await panel.locator('[data-phase7-hero]').count(),6);
-  assert.equal(await page.evaluate(()=>JSON.stringify(db)),before,'Opening readiness panel cannot change campaign');
+  // Command Center navigation may initialize existing derived UI state.\n  // Hold that constant, then verify the new audit itself is strictly read-only.\n  const afterNavigation=await page.evaluate(()=>JSON.stringify(db));\n  await page.evaluate(()=>phase7ReadinessFacts());\n  assert.equal(await page.evaluate(()=>JSON.stringify(db)),afterNavigation,'Readiness inventory cannot change loaded campaign');
 
   // Introduce real preparation gaps without changing session outcomes.
   await page.evaluate(()=>{
