@@ -1,0 +1,39 @@
+name: Phase 6 integrated DM session rehearsal
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'assets/**'
+      - 'player-display.html'
+      - 'tests/phase6-integrated-dm-session.cjs'
+      - '.github/workflows/phase6-dm-session.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rehearsal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright in isolated runner
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Run synthetic full DM session
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/sh-phase6-server.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ >/dev/null && break; sleep 1; done
+          node tests/phase6-integrated-dm-session.cjs
+      - name: Upload session rehearsal report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase6-dm-session-results
+          path: |
+            phase6-dm-session-results.json
+            /tmp/sh-phase6-server.log
+          if-no-files-found: ignore
