@@ -2060,6 +2060,64 @@ function christmasCaperSessionPreflight(){
   '<button class="btn secondary" type="button" onclick="goto(\'maps\')">DM maps</button></div>'+
   '<p class="muted cc-note">Planning status only. Play has not started, and this panel does not change character sheets, quests, maps, cloud sync or session progress.</p></section>';
 }
+// Phase 7: read-only preflight of the campaign currently loaded in this browser.
+// This is an inventory, not D&D rules validation or an approval action.
+// Never create missing sheets, alter player decisions, or call save().
+function phase7ReadinessFacts(){
+ const active=(Array.isArray(db.pcs)?db.pcs:[]).filter(pc=>!['Retired','Deceased','Away'].includes(pc.status||''));
+ const heroes=active.map(pc=>{
+  const facts=heroReadinessFacts(pc),review=heroReviewState(pc);
+  const missing=[];
+  if(!facts.classAssigned)missing.push('Class or background not recorded');
+  if(!facts.scoresEntered)missing.push('Ability scores not entered');
+  if(!facts.hpAc)missing.push('HP or AC not entered');
+  if(!facts.spellsOrAttacks)missing.push('Attacks or spells not entered');
+  if(!facts.soloSaved)missing.push('Personal introduction not saved');
+  if(!HERO_REVIEW_FIELDS.every(([key])=>review[key]===true))missing.push('DM review acknowledgements incomplete');
+  return {id:pc.id,name:pc.name||'Unnamed hero',species:pc.species||'',className:pc.class||'Unassigned',level:pc.level||1,missing};
+ });
+ const draft=adventureRunnerDraft(),script=ADVENTURE_ONE_SCENES.map((title,i)=>{
+  const saved=draft.scenes[adventureSceneId(i)]||{};
+  const filled=ADVENTURE_FIELDS.filter(field=>typeof saved[field]==='string'&&saved[field].trim()).length;
+  const mapId=adventureRunnerMapId(i);
+  const found=!!mapId&&Array.isArray(db.maps?.scenes)&&db.maps.scenes.some(m=>m.id===mapId);
+  return {title,filled,mapId,mapFound:found};
+ });
+ const encounters=CHRISTMAS_PREP_ENCOUNTERS.map(info=>{
+  const record=(Array.isArray(db.encounters)?db.encounters:[]).find(e=>e.id===info.id);
+  return {id:info.id,name:record?.name||info.name||info.id,
+   present:!!record,details:!!(record&&String(record.enemies||record.notes||'').trim())};
+ });
+ const planned=Array.isArray(db.sessions)&&db.sessions.some(x=>x.id==='vesper-session-1'&&x.status==='Planned');
+ const unplayed=Number(db.campaign?.session||0)===0&&planned;
+ return {heroes,partyCount:active.length,script,encounters,
+  introCount:heroes.filter(h=>!h.missing.includes('Personal introduction not saved')).length,
+  unplayed};
+}
+function phase7ReadinessPanel(){
+ const audit=phase7ReadinessFacts();
+ const issues=(audit.partyCount!==6?1:0)+audit.heroes.filter(h=>h.missing.length).length+
+  audit.script.filter(s=>s.filled!==ADVENTURE_FIELDS.length||(s.mapId&&!s.mapFound)).length+
+  audit.encounters.filter(e=>!e.present||!e.details).length+(audit.unplayed?0:1);
+ const heroRows=audit.heroes.map(h=>'<li data-phase7-hero="'+esc(h.id)+'"><strong>'+esc(h.name)+'</strong> · '+
+  esc([h.species,h.className,'Level '+h.level].filter(Boolean).join(' · '))+
+  '<span class="muted"> — '+(h.missing.length?esc(h.missing.join('; ')):'Recorded fields present; review marked complete')+'</span></li>').join('');
+ const sceneRows=audit.script.filter(s=>s.filled!==ADVENTURE_FIELDS.length||(s.mapId&&!s.mapFound))
+  .map(s=>'<li>'+esc(s.title)+' — '+s.filled+'/9 script sections, '+(s.mapFound?'map linked':s.mapId?'linked map missing':'no map assigned')+'</li>').join('');
+ const encounterRows=audit.encounters.filter(e=>!e.present||!e.details)
+  .map(e=>'<li>'+esc(e.name)+' — '+(e.present?'Encounter details missing':'Encounter record missing')+'</li>').join('');
+ return '<section class="card cc-card" id="phase7-readiness" aria-label="Final campaign readiness audit">'+
+  '<div class="cc-heading"><h3>Final campaign readiness audit</h3><b>'+issues+' items to review</b></div>'+
+  '<p class="muted">Read-only checks of the campaign loaded in this browser, not a certification of D&D rules or player consent. No information is saved by this audit. Check cloud synchronization before trusting this inventory as the latest campaign.</p>'+
+  '<p><b>Active heroes:</b> '+audit.partyCount+'/6 · <b>Saved solo drafts:</b> '+audit.introCount+'/'+audit.partyCount+
+  ' · <b>Unplayed session:</b> '+(audit.unplayed?'Confirmed in current data':'Check session status')+'</p>'+
+  '<details><summary>Review each hero</summary><ul>'+heroRows+'</ul></details>'+
+  '<details><summary>Missing or incomplete scene scripts and maps</summary>'+
+  (sceneRows?'<ul>'+sceneRows+'</ul>':'<p>No missing scene sections or map links detected.</p>')+'</details>'+
+  '<details><summary>Encounter preparation gaps</summary>'+
+  (encounterRows?'<ul>'+encounterRows+'</ul>':'<p>All expected encounter records and notes are present.</p>')+'</details>'+
+  '<p class="muted">A missing personal draft or unchecked review acknowledgement is a preparation reminder. Empty saved script fields do not imply the story should be invented or automatically approved.</p></section>';
+}
 function commandCenterPage(){
   const c=combatState();
   const activePCs=db.pcs.filter(p=>!['Retired','Deceased','Away'].includes(p.status||''));
@@ -2109,7 +2167,7 @@ function commandCenterPage(){
     '<span>◷ '+esc(db.campaign.date||'In-game date not set')+'</span></div></div>'+
     '<div class="cc-hero-actions"><button type="button" class="btn" onclick="goto(\'runner\')">Open Adventure Runner</button><button id="cc-open-player-board" class="btn secondary" type="button" onclick="commandCenterPlayerBoard()">Player-safe board</button><button class="btn" onclick="goto(\'maps\')">Open Battle Map</button>'+
     '<button class="btn secondary" onclick="goto(\'combat\')">Full Combat Tracker</button></div></section>'+
-    christmasCaperSessionPreflight()+
+    christmasCaperSessionPreflight()+phase7ReadinessPanel()+
     '<div class="cc-layout"><div class="cc-stack">'+
     '<section class="card cc-card"><div class="cc-heading"><h3>⚔ Party at a glance</h3>'+
     '<button class="btn small secondary" onclick="goto(\'pcs\')">Characters</button></div>'+
