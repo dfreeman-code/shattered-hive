@@ -2097,12 +2097,12 @@ function phase7ReadinessFacts(){
 function phase7ReadinessPanel(){
  const audit=phase7ReadinessFacts();
  const issues=(audit.partyCount!==6?1:0)+audit.heroes.filter(h=>h.missing.length).length+
-  audit.script.filter(s=>s.filled!==ADVENTURE_FIELDS.length||!s.mapFound).length+
+  audit.script.filter(s=>s.filled!==ADVENTURE_FIELDS.length||(s.mapId&&!s.mapFound)).length+
   audit.encounters.filter(e=>!e.present||!e.details).length+(audit.unplayed?0:1);
  const heroRows=audit.heroes.map(h=>'<li data-phase7-hero="'+esc(h.id)+'"><strong>'+esc(h.name)+'</strong> · '+
   esc([h.species,h.className,'Level '+h.level].filter(Boolean).join(' · '))+
   '<span class="muted"> — '+(h.missing.length?esc(h.missing.join('; ')):'Recorded fields present; review marked complete')+'</span></li>').join('');
- const sceneRows=audit.script.filter(s=>s.filled!==ADVENTURE_FIELDS.length||!s.mapFound)
+ const sceneRows=audit.script.filter(s=>s.filled!==ADVENTURE_FIELDS.length||(s.mapId&&!s.mapFound))
   .map(s=>'<li>'+esc(s.title)+' — '+s.filled+'/9 script sections, '+(s.mapFound?'map linked':s.mapId?'linked map missing':'no map assigned')+'</li>').join('');
  const encounterRows=audit.encounters.filter(e=>!e.present||!e.details)
   .map(e=>'<li>'+esc(e.name)+' — '+(e.present?'Encounter details missing':'Encounter record missing')+'</li>').join('');
