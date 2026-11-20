@@ -11,6 +11,7 @@ on:
       - 'tests/campaign-data-integrity.cjs'
       - 'tests/phase7-readiness-audit.cjs'
       - 'tests/vismund-approved-equipment.cjs'
+      - 'tests/david-rogue-equipment.cjs'
       - '.github/workflows/isolated-browser-qa.yml'
   workflow_dispatch:
 jobs:
@@ -39,6 +40,7 @@ jobs:
           node tests/campaign-data-integrity.cjs
           node tests/phase7-readiness-audit.cjs
           node tests/vismund-approved-equipment.cjs
+          node tests/david-rogue-equipment.cjs
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
