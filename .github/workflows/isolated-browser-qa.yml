@@ -13,6 +13,7 @@ on:
       - 'tests/vismund-approved-equipment.cjs'
       - 'tests/david-rogue-equipment.cjs'
       - 'tests/david-final-approved-choices.cjs'
+      - 'tests/snoop-warlock-clarifications.cjs'
       - '.github/workflows/isolated-browser-qa.yml'
   workflow_dispatch:
 jobs:
@@ -43,6 +44,7 @@ jobs:
           node tests/vismund-approved-equipment.cjs
           node tests/david-rogue-equipment.cjs
           node tests/david-final-approved-choices.cjs
+          node tests/snoop-warlock-clarifications.cjs
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
