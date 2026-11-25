@@ -1720,11 +1720,61 @@ function applySnoopClarifications(){
  toast('Snoop’s 30 GP and Skilled choices clarified');
  return true;
 }
+// Dr. Newton Sparknic: guarded, user-approved 2024 Ranger Option A equipment.
+// No startup migration, and no live save until the DM explicitly confirms in the app.
+const NEWTON_RANGER_REVIEWED_INVENTORY="Guide background option A: Shortbow, 20 Arrows, Cartographer’s Tools, Bedroll, Quiver, Tent, Traveler’s Clothes and 3 GP.\nRanger class starting equipment: select an official class equipment option with the player; longbow and suitable armor are recommended, but no free duplicate weapons, money or armor should be assumed.\nPlayer’s goggles, overalls, nettle arrows, tool belt, inventions, pet Scarlet Dwarf Dragonfly and Photuris Mysticalampas Firefly are preserved as character concepts. Companion mechanics require separate DM agreement.";
+const NEWTON_RANGER_REVIEWED_ATTACKS="Longbow (if selected in starting gear): +5 to hit, 1d8+3 piercing, ranged (150/600 ft). Shortbow (Guide): +5 to hit, 1d6+3 piercing, ranged (80/320 ft).\nHunter’s Mark adds 1d6 Force damage on a hit while the spell lasts (Concentration); no extra attack at level 1. Nettle arrows are flavor unless DM assigns new effects.";
+const NEWTON_RANGER_APPROVED_INVENTORY="Guide background option A: Shortbow, 20 Arrows, Cartographer’s Tools, Bedroll, Quiver, Tent, Traveler’s Clothes and 3 GP.\nRanger class equipment option A (DM-approved): Studded Leather Armor, Scimitar, Shortsword, Longbow, 20 Arrows, Quiver, Druidic Focus (sprig of mistletoe), Explorer’s Pack and 7 GP.\nTotal starting currency: 10 GP (3 GP Guide + 7 GP Ranger); source amounts are not additional currency. The Guide and Ranger options each supply 20 arrows and one quiver: 40 arrows and 2 quivers total. Studded Leather Armor gives AC 15 (12 + Dexterity modifier 3); existing AC 15 stays unchanged.\nPlayer’s goggles, overalls, nettle arrows, tool belt, inventions, pet Scarlet Dwarf Dragonfly and Photuris Mysticalampas Firefly are preserved as character concepts. Companion mechanics require separate DM agreement.";
+const NEWTON_RANGER_APPROVED_ATTACKS="Longbow (Ranger option A): +5 to hit, 1d8+3 piercing, ranged (150/600 ft). Shortbow (Guide): +5 to hit, 1d6+3 piercing, ranged (80/320 ft).\nHunter’s Mark adds 1d6 Force damage on a hit while the spell lasts (Concentration); no extra attack at level 1. Nettle arrows are flavor unless DM assigns new effects.";
+function newtonRangerEquipmentEligible(pc){
+ if(!pc||pc.name!=='Dr.Newton Sparknic'||pc.species!=='Firefly Folk'||
+    pc.class!=='Ranger'||pc.background!=='Guide'||Number(pc.level)!==1||
+    Number(pc.ac)!==15)return false;
+ const sheet=db.sheets?.[pc.id];
+ return !!sheet&&Number(sheet.ac)===15&&Number(sheet.scores?.DEX)===17&&
+    sheet.inventory===NEWTON_RANGER_REVIEWED_INVENTORY&&
+    sheet.attacks===NEWTON_RANGER_REVIEWED_ATTACKS;
+}
+function newtonRangerEquipmentPanel(pc){
+ if(!newtonRangerEquipmentEligible(pc))return '';
+ return '<section class="card section" id="newton-ranger-equipment-review">'+
+ '<h3>Dr. Newton · Approved Ranger starting equipment</h3>'+
+ '<p>Add 2024 Ranger <b>Option A</b>: Studded Leather Armor, Scimitar, Shortsword, Longbow, '+
+ '20 Arrows, Quiver, Druidic Focus (sprig of mistletoe), Explorer’s Pack and 7 GP. '+
+ 'Preserve Guide Option A with Shortbow, 20 Arrows, Quiver, tools, travel gear and 3 GP. '+
+ '<b>10 GP total</b>, <b>40 arrows</b> and <b>2 quivers</b>; studded leather matches saved AC 15 (12 + DEX 3).</p>'+
+ '<p class="muted">Optional DM action: verify cloud synchronization and export JSON backup. '+
+ 'Only this hero’s inventory and conditional longbow attack wording may change. '+
+ 'The button disappears if his reviewed sheet changes; this never runs automatically.</p>'+
+ '<button type="button" class="btn secondary" id="newton-ranger-equipment-apply" onclick="applyNewtonRangerEquipment()">Record approved Ranger Option A</button>'+
+ '</section>';
+}
+function applyNewtonRangerEquipment(){
+ const pc=currentSheetPC();
+ if(!newtonRangerEquipmentEligible(pc)){
+  alert('Dr. Newton’s record differs from the reviewed snapshot. No change made.');
+  return false;
+ }
+ if(!confirm('Record approved Ranger Option A for Dr. Newton only? This updates the inventory and longbow label, preserves 10 GP total and AC 15. First confirm cloud sync and export a JSON backup.'))return false;
+ if(!newtonRangerEquipmentEligible(pc))return false;
+ const sheet=db.sheets[pc.id],oldInventory=sheet.inventory,oldAttacks=sheet.attacks;
+ sheet.inventory=NEWTON_RANGER_APPROVED_INVENTORY;
+ sheet.attacks=NEWTON_RANGER_APPROVED_ATTACKS;
+ if(!save()){
+  sheet.inventory=oldInventory;
+  sheet.attacks=oldAttacks;
+  return false;
+ }
+ render();
+ toast('Dr. Newton’s approved Ranger Option A recorded');
+ return true;
+}
 function sheetPage(){const pc=currentSheetPC();let options=db.pcs.map(x=>`<option value="${esc(x.id)}" ${pc?.id===x.id?'selected':''}>${esc(x.name)} — Level ${esc(x.level||1)}</option>`).join('');if(!pc)return `<div class="headrow"><h2>📜 Character Sheets</h2><button class="btn" onclick="add('pcs')">+ Add Character</button></div><div class="empty">Create a player character first, then return to complete their sheet.</div>`;let sh=getSheet(pc),prof=proficiency(Number(pc.level)||1),dex=modifier(sh.scores.DEX),spellMod=modifier(sh.scores[sh.spellAbility]||10);let species=BUG_TRAITS[pc.species]||[];return `<div class="headrow"><div><h2>📜 Character Sheets</h2><p class="muted">Editable D&D 5e 2024 player sheets · Saved with campaign backups</p></div><div class="actions"><button class="btn secondary" onclick="window.print()">Print sheet</button><button class="btn" onclick="edit('pcs','${pc.id}')">Edit PC profile</button></div></div><div class="card section"><label>Select player character</label><select onchange="selectedSheetPC=this.value;render()">${options}</select><h2>${esc(pc.name)}</h2><p class="muted">${esc(pc.species||'Species unset')} · ${esc(pc.class||'Class unset')} · Level ${esc(pc.level||1)} · ${esc(pc.subclass||'Subclass not selected')} · ${esc(pc.background||'Background unset')}</p><div class="sheetmetrics"><div><b>${signed(prof)}</b><small>Proficiency</small></div><div><b>${signed(dex+Number(sh.initiativeBonus||0))}</b><small>Initiative</small></div><div><b>${10+modifier(sh.scores.WIS)+ (sh.skills.includes('Perception')?prof:0)+(sh.expertise.includes('Perception')?prof:0)+Number(sh.passiveBonus||0)}</b><small>Passive Perception</small></div></div></div>
 ${heroReadinessPanel()}\n${heroBuildWorkshop(pc)}\n${vismundEquipmentReviewPanel(pc)}
 ${davidEquipmentReviewPanel(pc)}
 ${davidFinalChoicesReviewPanel(pc)}
 ${snoopClarificationsReviewPanel(pc)}
+${newtonRangerEquipmentPanel(pc)}
 <div class="card section"><h3>Ability scores & saving throws</h3><div class="statgrid">${ATTRS.map(a=>scoreInput(a,sh)).join('')}</div><p class="meta">Saving throw proficiency must be selected from your class. Modifiers recalculate from scores and proficiency bonus.</p></div>
 <div class="two section"><div class="card"><h3>Combat & resources</h3><div class="sheetfields">${[['ac','Armor Class'],['speed','Speed (game feet)'],['currentHp','Current HP'],['maxHp','Maximum HP'],['tempHp','Temporary HP'],['initiativeBonus','Additional initiative modifier'],['hitDiceUsed','Hit Dice spent']].map(([k,t])=>`<label>${t}<input type="number" value="${esc(sh[k])}" onchange="sheetSet('field','${k}',this.value)"></label>`).join('')}</div><div class="sheetfields"><label>Death save successes <input type="number" min="0" max="3" value="${sh.deathSuccess}" onchange="sheetSet('field','deathSuccess',this.value)"></label><label>Death save failures <input type="number" min="0" max="3" value="${sh.deathFailure}" onchange="sheetSet('field','deathFailure',this.value)"></label><label><input type="checkbox" ${sh.inspiration?'checked':''} onchange="sheetSet('field','inspiration',this.checked)"> Heroic Inspiration</label></div><p class="meta">Hit Dice total: ${esc(pc.level||1)}d${esc(GUIDE[pc.class]?.die||'?')}; hit points are manually assigned, not automatically rolled.</p></div><div class="card"><h3>Skill proficiencies</h3><div class="skillsgrid">${SKILLS.map(([name,attr])=>{let val=modifier(sh.scores[attr])+ (sh.skills.includes(name)?prof:0)+(sh.expertise.includes(name)?prof:0);return `<div class="skillrow"><label><input type="checkbox" ${sh.skills.includes(name)?'checked':''} onchange="sheetSet('skill','${name}',this.checked)"> ${name} <small>(${attr})</small></label><strong>${signed(val)}</strong><label title="Expertise"><input type="checkbox" ${sh.expertise.includes(name)?'checked':''} onchange="sheetSet('expertise','${name}',this.checked)"> Exp</label></div>`}).join('')}</div><p class="meta">Exp = expertise (double proficiency bonus). Select only when granted by your class or another feature.</p></div></div>
 <div class="two section"><div class="card"><h3>Spellcasting</h3><label>Spellcasting ability <select onchange="sheetSet('field','spellAbility',this.value)"><option value="">None / select</option>${ATTRS.map(a=>`<option value="${a}" ${sh.spellAbility===a?'selected':''}>${a}</option>`).join('')}</select></label><p><b>Spell attack:</b> ${sh.spellAbility?signed(prof+spellMod):'—'} · <b>Spell save DC:</b> ${sh.spellAbility?8+prof+spellMod:'—'}</p><p class="meta">Enter remaining spell slots manually; slots vary by class, level and multiclass features.</p><div class="slotgrid">${Array.from({length:9},(_,i)=>`<label>Level ${i+1}<input type="number" min="0" value="${esc(sh.spellSlots[i+1]??0)}" onchange="sheetSet('slot','${i+1}',this.value)"></label>`).join('')}</div><label>Cantrips, prepared spells & spell notes<textarea onchange="sheetSet('field','spellPrepared',this.value)">${esc(sh.spellPrepared)}</textarea></label></div><div class="card"><h3>Bug species features</h3>${species.length?species.map(t=>`<div class="item">✿ ${esc(t)}</div>`).join(''):'<p class="muted">Enter a supported Shattered Hive bug species to display its traits.</p>'}<p class="meta">These species traits are homebrew, not official PHB species features. Confirm with your DM.</p><label>Species feature uses / special notes<textarea onchange="sheetSet('field','speciesNotes',this.value)">${esc(sh.speciesNotes)}</textarea></label><h3>Class features, feats, and resources</h3><textarea onchange="sheetSet('field','features',this.value)">${esc(sh.features)}</textarea><p class="meta">See 2024 Player’s Handbook ${esc(pc.class||'class')} p. ${esc(GUIDE[pc.class]?.page||'—')} for official advancement.</p></div></div>
