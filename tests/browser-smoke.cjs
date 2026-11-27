@@ -531,6 +531,42 @@ async function check(label, fn) {
   await page.locator('.nav-focus-toggle').click();
   await page.setViewportSize({width:1365,height:900});
  });
+ await check('Phase 2 Command Center previews current script and shows real sheet HP/AC without writes',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  const before=await page.evaluate(()=>JSON.stringify(db));
+  await page.evaluate(()=>{
+   db.pcs=[{id:'phase2-hero',name:'QA Lantern Hero',species:'Firefly Folk',class:'Wizard',level:1,status:'Active',hp:7,maxHp:7,ac:10}];
+   db.sheets={'phase2-hero':{scores:{STR:8,DEX:14,CON:12,INT:17,WIS:10,CHA:10},currentHp:9,maxHp:11,ac:14}};
+   db.combat={name:'QA Encounter',round:1,turn:0,active:false,participants:[],history:[]};
+   db.adventureScriptDraft={adventureId:'vesper-adventure-1',scenes:{'a1-scene-01':{readAloud:'QA scene text: a lantern glows brightly.',dmNotes:'Private DM-only details.'}}};
+   adventurePreviewIndex=0;christmasIntroSelection=null;
+   goto('command');
+  });
+  const dashboard=page.locator('#app');
+  assert.equal(await dashboard.locator('.cc-atglance .cc-overview-tile').count(),4);
+  assert.equal(await dashboard.locator('.cc-person').count(),1);
+  assert.match(await dashboard.locator('.cc-person .cc-stats').innerText(),/9 \/ 11/);
+  assert.match(await dashboard.locator('.cc-person .cc-stats').innerText(),/AC 14/);
+  assert.match(await dashboard.locator('.cc-scene-quote').innerText(),/lantern glows brightly/);
+  assert.doesNotMatch(await dashboard.locator('.cc-scene-quote').innerText(),/Private DM-only details/);
+  assert.equal(await dashboard.locator('.cc-scene-preview').getAttribute('data-cc-scene-index'),'0');
+  assert.equal(await dashboard.locator('.cc-scene-controls button').first().isDisabled(),true);
+  const protectedBefore=await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,campaign:db.campaign,sessions:db.sessions,decisions:db.decisions,script:db.adventureScriptDraft}));
+  await dashboard.locator('.cc-scene-controls').getByRole('button',{name:'Next scene'}).click();
+  assert.equal(await page.evaluate(()=>page),'runner');
+  assert.equal(await page.evaluate(()=>adventurePreviewIndex),1);
+  assert.equal(await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,campaign:db.campaign,sessions:db.sessions,decisions:db.decisions,script:db.adventureScriptDraft})),protectedBefore,'Scene preview navigation must not change protected campaign records');
+  await page.evaluate(snapshot=>{db=JSON.parse(snapshot);adventurePreviewIndex=0;goto('command')},before);
+  assert.deepEqual(await page.evaluate(()=>db.pcs.map(x=>x.id)),JSON.parse(before).pcs.map(x=>x.id),'Synthetic QA heroes must not persist in the displayed campaign');
+ });
+ await check('Phase 2 Command Center fits a narrow mobile viewport',async()=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>goto('command'));
+  assert.equal(await page.locator('.cc-atglance .cc-overview-tile').count(),4);
+  const dims=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
+  assert.ok(dims.scroll<=dims.width+5,'Mobile Command Center overflow: '+JSON.stringify(dims));
+  await page.setViewportSize({width:1365,height:900});
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
