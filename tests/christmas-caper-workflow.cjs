@@ -58,7 +58,7 @@ async function ready(url){
   await page.getByRole('button',{name:'Tabletop View'}).click();
   assert.match(await page.locator('.ar-reading-text').first().innerText(),/Custom introduction/);
   await page.locator('.ar-scene').last().click();
-  assert.match(await page.locator('.ar-reading-text').first().innerText(),/six separate trails converge/i);
+  assert.match(await page.locator('.ar-reading-text').first().innerText(),/BEAT 1 — HEARTHHOLLOW AT STARFALL EVE|six separate trails converge/i);
   await page.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
   assert.equal(await page.locator('.ar-scene').count(),10,'Original 10-scene structure must remain');
   await page.reload();
@@ -609,7 +609,7 @@ async function ready(url){
   assert.equal(await gatherButton.isEnabled(),true);
   await gatherButton.click();
   prepAfter=await prepState();
-  assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.readAloud,/six small figures/);
+  assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.readAloud,/BEAT 2 — SIX ENTRANCES|six small figures/);
   assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Review Hero 1/);
   assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Review Hero 6/);
   assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Unique dream 3/);
@@ -621,13 +621,78 @@ async function ready(url){
   await prepPage.evaluate(()=>goto('runner'));
   await prepPage.getByRole('button',{name:'Open Hero Introductions'}).click();
   await prepPage.locator('.ar-scene').last().click();
-  assert.match(await prepPage.locator('#ar-readAloud').inputValue(),/six small figures/);
+  assert.match(await prepPage.locator('#ar-readAloud').inputValue(),/BEAT 2 — SIX ENTRANCES|six small figures/);
   await prepPage.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
   assert.equal(await prepPage.locator('.ar-scene').count(),10);
   prepAfter=await prepState();
   assert.equal(prepAfter.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
   assert.deepEqual(prepAfter.pcs,prepBefore.pcs);
   await readinessContext.close();
+
+  // Phase 2: complete six-hero gathering is a non-mutating template until the DM explicitly saves.
+  const gatheringContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const gatheringPage=await gatheringContext.newPage();
+  gatheringPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
+  await gatheringPage.goto('http://127.0.0.1:8767/index.html');
+  await gatheringPage.evaluate(()=>{
+    const d=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+    const names=['Vismund Cygnus','David','Snoop Bugg','Dr.Newton Sparknic','Mister Potts','Jawshua Red Hawk'];
+    const species=['Spiderkin','Mantisborn','Spiderkin','Firefly Folk','Beetlekin','Antfolk'];
+    const classes=['Wizard','Rogue','Warlock','Ranger','Paladin','Fighter'];
+    d.pcs=names.map((name,i)=>({id:'gather-hero-'+i,name,class:classes[i],level:1,species:species[i],
+      status:'Active',hp:12,maxHp:12,ac:15,notes:'Do not change character '+i,bugHero:{dream:'Personal dream '+i,fear:'Private fear '+i}}));
+    d.christmasPrologueDraft={scenes:{'hero:gather-hero-0':{readAloud:'Protected Vismund solo draft'}}};
+    localStorage.setItem('shattered-hive-v1',JSON.stringify(d));
+  });
+  await gatheringPage.reload();
+  const gatheringState=()=>gatheringPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  const gatheringBefore=await gatheringState();
+  await gatheringPage.evaluate(()=>goto('runner'));
+  await gatheringPage.getByRole('button',{name:'Open Hero Introductions'}).click();
+  await gatheringPage.locator('.ar-scene').last().click();
+  const gathered=await gatheringPage.locator('#ar-readAloud').inputValue();
+  assert.match(gathered,/BEAT 1 — HEARTHHOLLOW AT STARFALL EVE/);
+  assert.match(gathered,/BEAT 2 — SIX ENTRANCES/);
+  assert.match(gathered,/BEAT 3 — MAYOR MARIBEL WELCOMES YOU/);
+  assert.match(gathered,/BEAT 4 — OPEN INVITATION/);
+  assert.match(gathered,/TRANSITION/);
+  let guidance=await gatheringPage.locator('#ar-dmNotes').inputValue();
+  for(const name of ['Vismund Cygnus','David','Snoop Bugg','Dr.Newton Sparknic','Mister Potts','Jawshua Red Hawk'])
+    assert.ok(guidance.includes(name),'DM entrance cue for '+name);
+  assert.match(await gatheringPage.locator('#ar-npcDialogue').inputValue(),/MAYOR MARIBEL/);
+  assert.match(await gatheringPage.locator('#ar-checks').inputValue(),/FAILED CHECK/);
+  assert.match(await gatheringPage.locator('#ar-choices').inputValue(),/IF NO ONE HELPS/);
+  assert.match(await gatheringPage.locator('#ar-clues').inputValue(),/PRIVATE, OPTIONAL/);
+  assert.match(await gatheringPage.locator('#ar-music').inputValue(),/CUE C/);
+  const gatheringPreview=await gatheringState();
+  assert.deepEqual(gatheringPreview,gatheringBefore,'Viewing proposed gathering must not save anything');
+  await gatheringPage.getByRole('button',{name:'Prepare personalized gathering draft'}).click();
+  const gatheringSaved=await gatheringState();
+  assert.match(gatheringSaved.christmasPrologueDraft.scenes.gathering.readAloud,/BEAT 4 — OPEN INVITATION/);
+  assert.equal(await gatheringPage.getByRole('button',{name:'Prepare personalized gathering draft'}).isDisabled(),true);
+  assert.deepEqual(gatheringSaved.pcs,gatheringBefore.pcs);
+  assert.deepEqual(gatheringSaved.sheets,gatheringBefore.sheets);
+  assert.deepEqual(gatheringSaved.christmasPrologueDraft.scenes['hero:gather-hero-0'],
+    gatheringBefore.christmasPrologueDraft.scenes['hero:gather-hero-0']);
+  assert.deepEqual(gatheringSaved.adventureScriptDraft,gatheringBefore.adventureScriptDraft);
+  assert.deepEqual(gatheringSaved.decisions,gatheringBefore.decisions);
+  assert.equal(gatheringSaved.campaign.session,gatheringBefore.campaign.session);
+  await gatheringPage.reload();
+  await gatheringPage.evaluate(()=>goto('runner'));
+  await gatheringPage.getByRole('button',{name:'Open Hero Introductions'}).click();
+  await gatheringPage.locator('.ar-scene').last().click();
+  assert.match(await gatheringPage.locator('#ar-readAloud').inputValue(),/BEAT 4 — OPEN INVITATION/);
+  const comparison=gatheringPage.locator('.ar-final-script-preview');
+  assert.equal(await comparison.count(),1,'Saved gathering has read-only final comparison');
+  await comparison.locator('summary').click();
+  assert.match(await comparison.innerText(),/BEAT 3 — MAYOR MARIBEL WELCOMES YOU/);
+  await gatheringPage.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
+  assert.equal(await gatheringPage.locator('.ar-scene').count(),10);
+  const gatheringAfter=await gatheringState();
+  assert.deepEqual(gatheringAfter.pcs,gatheringBefore.pcs);
+  assert.equal(gatheringAfter.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');
+  assert.ok(gatheringAfter.decisions.every(x=>x.status==='Not decided'));
+  await gatheringContext.close();
 
   // Finalized six-hero DM scripts are view-only fallback templates.
   // Existing saved introduction drafts, PC sheets, story decisions and original 10 scenes stay unchanged.

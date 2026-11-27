@@ -1469,6 +1469,77 @@ function heroGatheringProposal(){
   rewards:'A shared celebration and transition to the original adventure Scene 1. No automatic XP, treasure, friendship bonds, spell use or quest completion.'
  };
 }
+/* Phase 2 canonical six-hero gathering: read-only defaults; saved DM drafts win.
+   Narrative cues never determine player decisions, relationships, items or progress. */
+function christmasFinalGatheringScript(){
+ const original=heroGatheringProposal();
+ const heroes=christmasIntroHeroes();
+ const names=['Vismund Cygnus','David','Snoop Bugg','Dr.Newton Sparknic','Mister Potts','Jawshua Red Hawk'];
+ const arrivals=[
+  ['Vismund Cygnus','the frost-dusted archive lane','a Spiderkin wizard with a staff, perhaps carrying news of an acorn glyph'],
+  ['David','the fragrant seed-market path','a Mantisborn rogue who may recognize the caramel scent from the market'],
+  ['Snoop Bugg','the shadow of a hanging glass ornament','a Spiderkin warlock with unanswered questions about a strange reflection'],
+  ['Dr.Newton Sparknic','the lantern-lit walnut-shell workshop trail','a Firefly Folk ranger whose silver-thread puzzle may still be unresolved'],
+  ['Mister Potts','the dry-grass crossing','a Beetlekin paladin who may have helped a lost lantern-bug'],
+  ['Jawshua Red Hawk','the icy root-channel footpath','an Antfolk fighter who may have met a seed-courier']
+ ];
+ const introductions=heroes.map((pc,i)=>{
+  const normalized=String(pc.name||'').trim().replace(/\\s*\\.\\s*/g,'.').replace(/\\s+/g,' ').toLowerCase();
+  const hint=arrivals.find(x=>x[0].toLowerCase()===normalized);
+  const arrival=hint?hint[1]:'a winding winter path';
+  const description=hint?hint[2]:'a small adventurer whose story belongs to their player';
+  return String(i+1)+'. '+(pc.name||'Hero '+(i+1))+': From '+arrival+' comes '+description+
+   '. Ask the player: “What do the others notice first, and what do you keep to yourself?” Do not presume they possess an optional clue or companion.';
+ }).join('\\n');
+ return {
+  ...original,
+  readAloud:'BEAT 1 — HEARTHHOLLOW AT STARFALL EVE (read aloud)\\n'+
+   'At insect height, Hearthhollow looks like a city of lanterns tucked between enormous pine needles. Acorn-door shops glimmer with frost. The great tree arches far above the village, and bells ripple through the roots. Six small figures arrive by different paths as the festivities begin. Nobody here is required to know anyone else.\\n\\n'+
+   'BEAT 2 — SIX ENTRANCES (read aloud, one hero at a time)\\n'+
+   'The paths open onto a circle of warm light. Each of you can see unfamiliar travelers arriving from another direction. We will hear from everyone in turn. When I say your hero’s name, tell us what they look like, what they are doing, and one thing the others might notice. You may keep any private discovery to yourself.\\n\\n'+
+   'BEAT 3 — MAYOR MARIBEL WELCOMES YOU (read aloud)\\n'+
+   'A cheerful beetle in a knitted festival sash steps atop a berry-crate podium. “Welcome to Hearthhollow, friends! Our brightest night belongs to everyone who finds their way here.” At that moment the lights dim for one heartbeat. Six distant silver points shimmer beneath the great tree, and the bell sounds a note that is slightly wrong. The lights return before anyone can agree what happened.\\n\\n'+
+   'BEAT 4 — OPEN INVITATION (read aloud)\\n'+
+   'Mayor Maribel lowers her voice. “Curious, that. Could one of you help me find out why the lanterns are being so temperamental? Or at least stay for a warm seed-cake while I check?” The festival paths remain open. What would each of you like to do?\\n\\n'+
+   'TRANSITION (read aloud only after everyone responds)\\n'+
+   'The bell sounds again. Music and laughter drift from the Hearthhollow square, where tonight’s Starfall celebration is about to begin.',
+  dmNotes:'RUNNING ORDER — approximately 12–18 minutes, adjustable for younger players.\\n'+
+   '1. Establish the village (1 minute), and remind everyone that introductions do not require friendship or party membership.\\n'+
+   '2. Give each player 1–2 minutes to introduce their hero; use the individualized entrance prompts below in the current party order. Do not dictate possessions or outcomes from solo scenes.\\n'+
+   '3. Offer one voluntary question or reaction per player. Make sure quieter players can speak without interrupting.\\n'+
+   '4. Introduce Mayor Maribel, the brief sixfold flicker, and an invitation to explore. Allow refusal, skepticism, private investigation and alternate plans.\\n'+
+   '5. Once everyone has had a meaningful response, press “Continue to original Scene 1” in Adventure Runner. Original Scene 1: Welcome to Hearthhollow, remains unchanged.\\n\\n'+
+   'ENTRANCE CUES (read to yourself; the player describes actual actions):\\n'+introductions+'\\n\\n'+
+   'DM NOTE: The following preexisting personalized reference remains available for comparison, and contains original player dreams and fears. Do not treat those as public knowledge unless the player shares them.\\n'+original.dmNotes+
+   '\\n\\nNever start a session, change any character sheet, write to Player Decisions, or award anything by reading this script.',
+  npcDialogue:'MAYOR MARIBEL (warmly): “Welcome to Hearthhollow! Tonight, we celebrate the smallest lights that shine the brightest.”\\n'+
+   'IF SOMEONE ASKS ABOUT THE FLICKER: “I saw six lights where we usually see one. Perhaps the bells are playing tricks?”\\n'+
+   'IF A HERO DECLINES TO HELP: “You are still welcome at the festival. There is always room at our table.”\\n'+
+   'OPTIONAL LANTERN-BUG, ONLY IF INTRODUCED BY A PLAYER: “I heard the same funny bell on the road here!”\\n'+
+   'IF THEY ASK ABOUT KING VESPER: Do not reveal or invent a confirmed connection; Maribel knows nothing identifying the villain.',
+  checks:'No checks required to enter the village, meet other heroes, see the six silver sparks, or proceed to Scene 1.\\n'+
+   'OPTIONAL Perception DC 10: notice the six lights blink one by one.\\n'+
+   'OPTIONAL Arcana or Nature DC 11: suspect a repeated six-part pattern, without identifying its source.\\n'+
+   'OPTIONAL Insight DC 10: Maribel is genuinely surprised, not hiding a conspiracy.\\n'+
+   'FAILED CHECK: The lights still flicker visibly and the invitation remains. Give a different description or let another player try a different approach; never block progression. No group check requirement.',
+  encounters:'Roleplay and environmental mystery only. Six individual entrances, one welcoming NPC, optional reactions, and a bell/light interruption. No initiative, combat, forced movement, fear checks, spell expenditure, damage, or automatic NPC companion joins. Let shy players gesture or answer briefly.',
+  clues:'PUBLIC: The bell sounds unusual, festival lanterns dim briefly, and six silver sparks appear below the great tree. No one knows their significance yet.\\n'+
+   'PRIVATE, OPTIONAL: Vismund’s acorn glyph; David’s caramel trail; Snoop Bugg’s reflection; Newton’s silver thread; Potts’s lantern-bug; Jawshua’s courier. Reveal these only when the corresponding player elects to share or act on them.\\n'+
+   'CONTINUITY: Suggest a shared sixfold motif, not evidence of Vesper’s identity, the nature of the Starheart theft, or a predetermined alliance.',
+  choices:'EACH HERO may speak, stay silent, approach another, ask Maribel questions, investigate the flicker, stay at the festival, or walk away and return later.\\n'+
+   'IF EVERYONE HELPS: Maribel thanks them and points toward the square; do not auto-create a party contract.\\n'+
+   'IF SOME HELP AND SOME HESITATE: Offer independent reasons to reach the square; no one is compelled to join.\\n'+
+   'IF NO ONE HELPS: Continue the festival as normal. The mystery develops in original Scene 1; do not deny access.\\n'+
+   'IF SOMEONE SHARES A SOLO CLUE: Acknowledge it without declaring what another PC knows or owns.\\n'+
+   'IF PLAYERS DEVISE AN UNEXPECTED PLAN: Follow it briefly, then make the festival visible and reachable. Record actual player decisions only during play.',
+  music:'CUE A — village arrival: warm winter ambience, distant bells, soft marketplace bustle; lower volume for every introduction.\\n'+
+   'CUE B — sixfold flicker: one brief low chime, then a breath of silence (optional, no required music playback).\\n'+
+   'CUE C — open invitation: return to gentle festival music. Fade into the original Scene 1 ambience; no forced Spotify track.',
+  rewards:'Each player gets a spotlight and the option of a shared acquaintance. Mayor Maribel welcomes all six regardless of choices.\\n'+
+   'SCENE EXIT: Click Continue to original Scene 1 → Welcome to Hearthhollow. No automatic XP, items, social bonds, clues in inventory, quest completions, resource expenditure, or recorded player decisions.'
+ };
+}
+
 function heroGatheringApplyProposal(){
  if(christmasIntroSelection!=='gathering')return;
  adventureRunnerPreserveScene();
@@ -1477,7 +1548,7 @@ function heroGatheringApplyProposal(){
  if(!confirm('Save the proposed six-hero gathering as a separate DM-only draft? It will not record any played decisions or replace the original ten-scene adventure.'))return;
  db.christmasPrologueDraft ||= {scenes:{}};
  db.christmasPrologueDraft.scenes ||= {};
- db.christmasPrologueDraft.scenes.gathering=heroGatheringProposal();
+ db.christmasPrologueDraft.scenes.gathering=christmasFinalGatheringScript();
  save();render();toast('Six-hero gathering draft saved');
 }
 function heroGatheringDraftActions(item){
@@ -2067,6 +2138,7 @@ function christmasFinalSoloScript(item){
 }
 
 function christmasIntroDefaults(item){
+ if(item.id==='gathering'&&christmasIntroHeroes().length===6)return christmasFinalGatheringScript();
  if(item.id==='gathering')return {
   readAloud:'As Starfall Eve approaches, six separate trails converge upon Hearthhollow. The village lights shimmer like constellations caught in the branches. A bell sounds from the great tree, and for the first time tonight, all six of you can see one another.\n\nOne by one, tell the others what brought you here—and what your hero notices first.',
   dmNotes:'Allow every player a brief introduction and one question to another hero. Spotlight each player equally; no relationship or alliance is assumed. After everyone meets, transition into the existing Scene 1, Welcome to Hearthhollow.',
@@ -2128,6 +2200,12 @@ function christmasIntroOriginal(){
 // The finalized script can be reviewed safely when a custom intro was already saved.
 // No Apply or Replace action is offered; DM edits remain deliberate in the existing editor.
 function christmasFinalSoloComparison(item){
+ if(item.id==='gathering'&&db.christmasPrologueDraft?.scenes?.gathering){
+  const script=christmasFinalGatheringScript();
+  return '<details class="card ar-final-script-preview"><summary>Review finalized gathering script (read-only; existing saved draft preserved)</summary>'+
+   '<p class="muted">Your saved gathering remains active and unchanged. The finalized script below is reference only.</p>'+
+   ADVENTURE_FIELDS.map(k=>'<h4>'+esc(k)+'</h4><div class="ar-reading-text">'+esc(script[k]||'')+'</div>').join('')+'</details>';
+ }
  if(!item.pc||!db.christmasPrologueDraft?.scenes?.[item.id])return '';
  const finalScript=christmasFinalSoloScript(item);
  if(!finalScript)return '';

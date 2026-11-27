@@ -78,7 +78,7 @@ async function ready(){
     assert.equal(await p.locator('.ar-field textarea').count(),9);
    }
    await p.locator('.ar-scene').last().click();
-   assert.match(await p.locator('#ar-readAloud').inputValue(),/six separate trails converge/i);
+   assert.match(await p.locator('#ar-readAloud').inputValue(),/BEAT 1 — HEARTHHOLLOW AT STARFALL EVE|six separate trails converge/i);
    await p.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
    assert.equal(await p.locator('.ar-scene').count(),10);
   });
