@@ -26,14 +26,14 @@
 .ar-reading-section.ar-narration{background:#fff9e9;border-left:6px solid #b18b47;padding:27px 29px}
 .ar-narration h4{font-size:22px;color:#67471e}
 .ar-narration .ar-reading-text{font-size:clamp(19px,1.5vw,22px);line-height:1.9;max-width:68ch}
-.ar-reading-section.ar-npc-dialogue{border-left-color:#795f9d;background:#fbf8ff}
-.ar-reading-section.ar-checks{border-left-color:#276d83;background:#f5fbfd}
-.ar-reading-section.ar-choices{border-left-color:#45794c;background:#f5fbf2}
-.ar-reading-section.ar-encounters{border-left-color:#ab6647;background:#fff8f4}
-.ar-reading-section.ar-clues{border-left-color:#92783e}
-.ar-reading-section.ar-dm-notes{border-left-color:#73808e}
-.ar-reading-section.ar-music{border-left-color:#7569a2}
-.ar-reading-section.ar-rewards{border-left-color:#9a8744}
+.ar-reading-section.ar-cue-npc-dialogue{border-left-color:#795f9d;background:#fbf8ff}
+.ar-reading-section.ar-cue-checks{border-left-color:#276d83;background:#f5fbfd}
+.ar-reading-section.ar-cue-choices{border-left-color:#45794c;background:#f5fbf2}
+.ar-reading-section.ar-cue-encounters{border-left-color:#ab6647;background:#fff8f4}
+.ar-reading-section.ar-cue-clues{border-left-color:#92783e}
+.ar-reading-section.ar-cue-dm-notes{border-left-color:#73808e}
+.ar-reading-section.ar-cue-music{border-left-color:#7569a2}
+.ar-reading-section.ar-cue-rewards{border-left-color:#9a8744}
 .ar-priority-cues{background:#edf3e8;border:1px solid #cfdec8;border-radius:12px;padding:12px}
 .ar-cues-heading{font-weight:800;color:#2e5140}
 .ar-tab{min-height:45px;font-size:14px;font-weight:750;border-radius:10px}
