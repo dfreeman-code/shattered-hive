@@ -1769,12 +1769,66 @@ function applyNewtonRangerEquipment(){
  toast('Dr. Newton’s approved Ranger Option A recorded');
  return true;
 }
+// Mister Potts: DM-approved Guard Playing Card Set and 21 GP clarification.
+// Opt-in only; no startup migration, no automatic inventory or campaign edits.
+const POTTS_REVIEWED_INVENTORY="Paladin class equipment option A: Chain Mail, Shield, Longsword, 6 Javelins, Holy Symbol, Priest’s Pack and 9 GP.\nGuard option A: Spear, Light Crossbow, 20 Bolts, one Gaming Set of choice, Hooded Lantern, Manacles, Quiver, Traveler’s Clothes and 12 GP.\nPlayer’s Red Ant Sword, orange mohawk, headband, and insect-inspired armor are appearance/weapon-flavor choices. Use the longsword mechanics unless the DM approves special properties. Dry grass fear remains a roleplay choice.";
+const POTTS_REVIEWED_FEATURES="Paladin level 1 (2024): Lay on Hands (5 HP pool, Bonus Action), Spellcasting (2 level-1 spell slots, 2 prepared spells), Weapon Mastery (Longsword, Javelin).\nGuard origin: Alert feat (+2 initiative from proficiency), Athletics and Perception, choice of one Gaming Set. Guard ability boosts: +2 STR and +1 WIS. Standard array before background: STR 15, CHA 14, CON 13, WIS 12, INT 10, DEX 8. Guard boosts +2 STR and +1 WIS, yielding STR 17, CHA 14, CON 13, WIS 13, INT 10, DEX 8.\nBeetlekin homebrew: Shell Armor (unarmored AC 13 + DEX modifier max +2; shields apply), Powerful Build (count as one size larger for lifting/carrying/pushing/dragging).\nA Paladin’s Shield and armor do not stack with the Beetlekin unarmored shell formula; choose applicable armor calculation. An oath is not selected until level 3.";
+const POTTS_REVIEWED_PROFICIENCIES="Paladin: Wisdom and Charisma saving throws; light, medium and heavy armor, shields; simple and martial weapons.\nPaladin class skills: Insight, Persuasion. Guard skills: Athletics, Perception; one Gaming Set (choose type). Longsword and Javelin Weapon Mastery.";
+const POTTS_APPROVED_INVENTORY=POTTS_REVIEWED_INVENTORY
+ .replace('one Gaming Set of choice','Playing Card Set (Guard gaming set, DM-approved)')
+ .replace('Player’s Red Ant Sword',
+          'Total starting currency: 21 GP (9 GP Paladin + 12 GP Guard); the source amounts are included in this total and must not be added again.\nPlayer’s Red Ant Sword');
+const POTTS_APPROVED_FEATURES=POTTS_REVIEWED_FEATURES.replace(
+ 'choice of one Gaming Set.', 'Playing Card Set (confirmed Guard gaming set).');
+const POTTS_APPROVED_PROFICIENCIES=POTTS_REVIEWED_PROFICIENCIES.replace(
+ 'one Gaming Set (choose type).', 'Playing Card Set (confirmed Guard gaming set proficiency).');
+function pottsEquipmentClarificationEligible(pc){
+ if(!pc||pc.name!=='Mister Potts'||pc.species!=='Beetlekin'||
+    pc.class!=='Paladin'||pc.background!=='Guard'||Number(pc.level)!==1)return false;
+ const sh=db.sheets?.[pc.id];
+ return !!sh&&sh.inventory===POTTS_REVIEWED_INVENTORY&&
+    sh.features===POTTS_REVIEWED_FEATURES&&
+    sh.proficiencies===POTTS_REVIEWED_PROFICIENCIES;
+}
+function pottsEquipmentClarificationPanel(pc){
+ if(!pottsEquipmentClarificationEligible(pc))return '';
+ return '<section class="card section" id="potts-equipment-review">'+
+  '<h3>Mister Potts · Approved Guard equipment clarification</h3>'+
+  '<p>Record the chosen <b>Playing Card Set</b> in Guard equipment and tool proficiency descriptions. '+
+  'Clarify <b>21 GP total</b> from 9 GP Paladin + 12 GP Guard without awarding new coins. '+
+  'Do not change armor, shield, Red Ant Sword mechanics, spells, HP, or other equipment.</p>'+
+  '<p class="muted">Optional DM action. Check cloud synchronization and export a JSON backup before applying. '+
+  'This button is hidden on any source-field mismatch and never runs on startup.</p>'+
+  '<button class="btn secondary" type="button" id="potts-equipment-apply" onclick="applyPottsEquipmentClarification()">Record Potts’s approved cards and currency</button>'+
+  '</section>';
+}
+function applyPottsEquipmentClarification(){
+ const pc=currentSheetPC();
+ if(!pottsEquipmentClarificationEligible(pc)){
+  alert('Mister Potts’s saved sheet has changed from the reviewed snapshot. No changes made.');
+  return false;
+ }
+ if(!confirm('Record Mister Potts’s approved Playing Card Set and 21 GP total? Only inventory, features, and proficiencies wording will change. Check cloud sync and export JSON first.'))return false;
+ if(!pottsEquipmentClarificationEligible(pc))return false;
+ const sh=db.sheets[pc.id],old={inventory:sh.inventory,features:sh.features,proficiencies:sh.proficiencies};
+ sh.inventory=POTTS_APPROVED_INVENTORY;
+ sh.features=POTTS_APPROVED_FEATURES;
+ sh.proficiencies=POTTS_APPROVED_PROFICIENCIES;
+ if(!save()){
+  Object.assign(sh,old);
+  return false;
+ }
+ render();
+ toast('Mister Potts’s Guard Playing Card Set and 21 GP recorded');
+ return true;
+}
 function sheetPage(){const pc=currentSheetPC();let options=db.pcs.map(x=>`<option value="${esc(x.id)}" ${pc?.id===x.id?'selected':''}>${esc(x.name)} — Level ${esc(x.level||1)}</option>`).join('');if(!pc)return `<div class="headrow"><h2>📜 Character Sheets</h2><button class="btn" onclick="add('pcs')">+ Add Character</button></div><div class="empty">Create a player character first, then return to complete their sheet.</div>`;let sh=getSheet(pc),prof=proficiency(Number(pc.level)||1),dex=modifier(sh.scores.DEX),spellMod=modifier(sh.scores[sh.spellAbility]||10);let species=BUG_TRAITS[pc.species]||[];return `<div class="headrow"><div><h2>📜 Character Sheets</h2><p class="muted">Editable D&D 5e 2024 player sheets · Saved with campaign backups</p></div><div class="actions"><button class="btn secondary" onclick="window.print()">Print sheet</button><button class="btn" onclick="edit('pcs','${pc.id}')">Edit PC profile</button></div></div><div class="card section"><label>Select player character</label><select onchange="selectedSheetPC=this.value;render()">${options}</select><h2>${esc(pc.name)}</h2><p class="muted">${esc(pc.species||'Species unset')} · ${esc(pc.class||'Class unset')} · Level ${esc(pc.level||1)} · ${esc(pc.subclass||'Subclass not selected')} · ${esc(pc.background||'Background unset')}</p><div class="sheetmetrics"><div><b>${signed(prof)}</b><small>Proficiency</small></div><div><b>${signed(dex+Number(sh.initiativeBonus||0))}</b><small>Initiative</small></div><div><b>${10+modifier(sh.scores.WIS)+ (sh.skills.includes('Perception')?prof:0)+(sh.expertise.includes('Perception')?prof:0)+Number(sh.passiveBonus||0)}</b><small>Passive Perception</small></div></div></div>
 ${heroReadinessPanel()}\n${heroBuildWorkshop(pc)}\n${vismundEquipmentReviewPanel(pc)}
 ${davidEquipmentReviewPanel(pc)}
 ${davidFinalChoicesReviewPanel(pc)}
 ${snoopClarificationsReviewPanel(pc)}
 ${newtonRangerEquipmentPanel(pc)}
+${pottsEquipmentClarificationPanel(pc)}
 <div class="card section"><h3>Ability scores & saving throws</h3><div class="statgrid">${ATTRS.map(a=>scoreInput(a,sh)).join('')}</div><p class="meta">Saving throw proficiency must be selected from your class. Modifiers recalculate from scores and proficiency bonus.</p></div>
 <div class="two section"><div class="card"><h3>Combat & resources</h3><div class="sheetfields">${[['ac','Armor Class'],['speed','Speed (game feet)'],['currentHp','Current HP'],['maxHp','Maximum HP'],['tempHp','Temporary HP'],['initiativeBonus','Additional initiative modifier'],['hitDiceUsed','Hit Dice spent']].map(([k,t])=>`<label>${t}<input type="number" value="${esc(sh[k])}" onchange="sheetSet('field','${k}',this.value)"></label>`).join('')}</div><div class="sheetfields"><label>Death save successes <input type="number" min="0" max="3" value="${sh.deathSuccess}" onchange="sheetSet('field','deathSuccess',this.value)"></label><label>Death save failures <input type="number" min="0" max="3" value="${sh.deathFailure}" onchange="sheetSet('field','deathFailure',this.value)"></label><label><input type="checkbox" ${sh.inspiration?'checked':''} onchange="sheetSet('field','inspiration',this.checked)"> Heroic Inspiration</label></div><p class="meta">Hit Dice total: ${esc(pc.level||1)}d${esc(GUIDE[pc.class]?.die||'?')}; hit points are manually assigned, not automatically rolled.</p></div><div class="card"><h3>Skill proficiencies</h3><div class="skillsgrid">${SKILLS.map(([name,attr])=>{let val=modifier(sh.scores[attr])+ (sh.skills.includes(name)?prof:0)+(sh.expertise.includes(name)?prof:0);return `<div class="skillrow"><label><input type="checkbox" ${sh.skills.includes(name)?'checked':''} onchange="sheetSet('skill','${name}',this.checked)"> ${name} <small>(${attr})</small></label><strong>${signed(val)}</strong><label title="Expertise"><input type="checkbox" ${sh.expertise.includes(name)?'checked':''} onchange="sheetSet('expertise','${name}',this.checked)"> Exp</label></div>`}).join('')}</div><p class="meta">Exp = expertise (double proficiency bonus). Select only when granted by your class or another feature.</p></div></div>
 <div class="two section"><div class="card"><h3>Spellcasting</h3><label>Spellcasting ability <select onchange="sheetSet('field','spellAbility',this.value)"><option value="">None / select</option>${ATTRS.map(a=>`<option value="${a}" ${sh.spellAbility===a?'selected':''}>${a}</option>`).join('')}</select></label><p><b>Spell attack:</b> ${sh.spellAbility?signed(prof+spellMod):'—'} · <b>Spell save DC:</b> ${sh.spellAbility?8+prof+spellMod:'—'}</p><p class="meta">Enter remaining spell slots manually; slots vary by class, level and multiclass features.</p><div class="slotgrid">${Array.from({length:9},(_,i)=>`<label>Level ${i+1}<input type="number" min="0" value="${esc(sh.spellSlots[i+1]??0)}" onchange="sheetSet('slot','${i+1}',this.value)"></label>`).join('')}</div><label>Cantrips, prepared spells & spell notes<textarea onchange="sheetSet('field','spellPrepared',this.value)">${esc(sh.spellPrepared)}</textarea></label></div><div class="card"><h3>Bug species features</h3>${species.length?species.map(t=>`<div class="item">✿ ${esc(t)}</div>`).join(''):'<p class="muted">Enter a supported Shattered Hive bug species to display its traits.</p>'}<p class="meta">These species traits are homebrew, not official PHB species features. Confirm with your DM.</p><label>Species feature uses / special notes<textarea onchange="sheetSet('field','speciesNotes',this.value)">${esc(sh.speciesNotes)}</textarea></label><h3>Class features, feats, and resources</h3><textarea onchange="sheetSet('field','features',this.value)">${esc(sh.features)}</textarea><p class="meta">See 2024 Player’s Handbook ${esc(pc.class||'class')} p. ${esc(GUIDE[pc.class]?.page||'—')} for official advancement.</p></div></div>
