@@ -42,14 +42,38 @@ footer{text-align:center;padding:6px 12px;background:#203b30;color:#d4ddcc;font-
 .board[data-theme="tunnel"] .territory-art,.board[data-theme="log"] .territory-art{background-color:#7d6853}
 .board[data-theme="ornament"] .territory-art{background-color:#b7b2c6}
 .territory-core{overflow:hidden;box-shadow:0 0 40px #0e28152a}
+
+/* HDMI / living-room presentation. No private controls or state on this page. */
+body.tv-mode{background:#050b09}
+body.tv-mode header,body.tv-mode footer{display:none}
+body.tv-mode main{padding:0;background:#050b09}
+body.tv-mode .board{border:0;border-radius:0;box-shadow:none;width:min(100vw,calc(100dvh * var(--ratio,1)));max-width:100%;max-height:100dvh}
+body.tv-mode .token{--hero-max:clamp(60px,5vw,100px)!important;border-width:4px;box-shadow:0 2px 13px #000c,0 0 0 2px #f0e5c6b8}
+body.tv-mode .token.other{width:calc(100% / var(--cols));min-width:0}
+body.tv-mode .token .label{font-size:clamp(15px,1.3vw,24px);font-weight:850;bottom:calc(100% + 5px);padding:2px 6px;border-radius:5px;background:#081611cf;text-shadow:0 2px 3px #000}
+body.tv-mode .token .symbol{font-size:clamp(20px,2vw,35px)}
+body.tv-mode .placeholder{max-width:900px}
+body.tv-mode .placeholder h1{font-size:clamp(30px,4vw,58px)}
+body.tv-mode .placeholder p{font-size:clamp(18px,2vw,30px)}
+#tv-hud{display:none;pointer-events:none;position:fixed;inset:0;z-index:20}
+body.tv-mode #tv-hud{display:block}
+#tv-hud-scene{position:absolute;top:max(16px,2vh);left:max(16px,2vw);max-width:60vw;background:#0b1f19dc;border:1px solid #9db7a077;border-radius:10px;padding:8px 14px;color:#fff5d8;text-shadow:0 1px 4px #000;box-shadow:0 4px 12px #0007;font-size:clamp(16px,1.55vw,27px);font-weight:750}
+#tv-hud-status{position:absolute;bottom:max(12px,1.8vh);right:max(14px,1.7vw);border-radius:20px;padding:7px 12px;background:#10261ddc;font-weight:700;font-size:clamp(13px,1vw,18px);color:#d8e3d3}
+#tv-hud-status[data-online="false"]{background:#4d2925ed;color:#ffe0d6}
+#tv-hud-status[data-online="true"]::before{content:"● ";color:#88dc9b}
+#tv-mode-exit{display:none;position:fixed;z-index:30;top:12px;right:14px;opacity:.1;transition:opacity .15s}
+body.tv-mode #tv-mode-exit{display:block}
+body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacity:1}
+@media(prefers-reduced-motion:reduce){#tv-mode-exit{transition:none}}
 </style>
 </head>
 <body>
 <header>
  <div class="brand">✿ The Shattered Hive <span style="font:400 13px system-ui">· Player Display</span></div>
  <div class="status" id="status" role="status" aria-live="polite" data-online="false">Connecting to DM tab…</div>
- <button type="button" id="fullscreen">⛶ Fullscreen</button>
+ <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="tv-mode">📺 TV Mode</button><button type="button" id="fullscreen">⛶ Fullscreen</button></div>
 </header>
+<div id="tv-hud" aria-hidden="true"><div id="tv-hud-scene"></div><div id="tv-hud-status" data-online="false">Connecting…</div></div><button type="button" id="tv-mode-exit" aria-label="Exit TV Mode" title="Exit TV Mode (Esc)">✕ Exit TV Mode</button>
 <main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
 <footer id="footer">Player-safe display · Read-only · Same-browser session</footer>
 <script>
@@ -57,10 +81,11 @@ footer{text-align:center;padding:6px 12px;background:#203b30;color:#d4ddcc;font-
 // Standalone display: never loads the campaign app, localStorage, Supabase, or DM data.
 const status=document.getElementById('status'),stage=document.getElementById('stage'),footer=document.getElementById('footer');
 const session=new URLSearchParams(location.hash.slice(1)).get('session')||'';
-let channel=null,lastUpdate=0,lastSequence=0;
-function setStatus(label,online){status.textContent=label;status.dataset.online=online?'true':'false'}
+let channel=null,lastUpdate=0,lastSequence=0,tvMode=false;
+const tvHudScene=document.getElementById('tv-hud-scene'),tvHudStatus=document.getElementById('tv-hud-status');
+function setStatus(label,online){status.textContent=label;status.dataset.online=online?'true':'false';tvHudStatus.textContent=label;tvHudStatus.dataset.online=online?'true':'false'}
 function waiting(message){
- stage.replaceChildren();
+ tvHudScene.textContent='';stage.replaceChildren();
  const wrap=document.createElement('div');wrap.className='placeholder';
  const heading=document.createElement('h1');heading.textContent='🐛 Waiting for the Dungeon Master';
  const text=document.createElement('p');text.textContent=message;
@@ -72,6 +97,7 @@ function safeAsset(path){
 function playerRender(packet){
  const scene=packet?.scene;
  if(!scene){waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
+ tvHudScene.textContent=String(scene.name||'Shared map').slice(0,100);
  const cols=Number(scene.cols),rows=Number(scene.rows);
  if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<4||cols>100||rows<4||rows>100)return;
  const reveal=new Set((Array.isArray(scene.revealed)?scene.revealed:[]).filter(x=>Number.isInteger(x)&&x>=0&&x<cols*rows));
@@ -135,6 +161,17 @@ if(!/^[a-f0-9-]{24,64}$/.test(session)||!('BroadcastChannel' in window)){
  },2000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)hello()});
 }
+function setTvMode(on){
+ tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);
+ document.getElementById('tv-mode').setAttribute('aria-pressed',String(tvMode));
+ document.getElementById('tv-hud').setAttribute('aria-hidden',String(!tvMode));
+ if(tvMode){document.documentElement.requestFullscreen?.().catch(()=>{});}
+ else if(document.fullscreenElement){document.exitFullscreen?.().catch(()=>{});}
+}
+document.getElementById('tv-mode').addEventListener('click',()=>setTvMode(!tvMode));
+document.getElementById('tv-mode-exit').addEventListener('click',()=>setTvMode(false));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&tvMode)setTvMode(false)});
+document.addEventListener('fullscreenchange',()=>{if(tvMode&&!document.fullscreenElement)setTvMode(false)});
 document.getElementById('fullscreen').addEventListener('click',()=>{
  if(document.fullscreenElement){document.exitFullscreen?.().catch(()=>{})}
  else document.documentElement.requestFullscreen?.().catch(()=>{});
