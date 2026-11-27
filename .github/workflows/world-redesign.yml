@@ -1,0 +1,28 @@
+name: Evergarden full world map redesign
+on:
+  push:
+    branches: [feature/evergarden-full-map-world-redesign]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'player-display.html'
+      - 'assets/maps/world-redesign/**'
+      - 'tests/world-redesign-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Verify full world-map redesign and live TV privacy
+        run: node tests/world-redesign-smoke.cjs
