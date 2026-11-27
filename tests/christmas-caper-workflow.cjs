@@ -660,6 +660,9 @@ async function ready(url){
     if(i===0){
       assert.match(aloud,/Saved original Vismund script takes priority/);
       assert.equal(notes,'Keep custom notes');
+      const comparison=solosPage.locator('.ar-final-script-preview');
+      assert.equal(await comparison.count(),1,'Existing saved intro has a read-only finalized script comparison');
+      assert.match(await comparison.innerText(),/SCENE 2 — THE SIXFOLD CLUE/);
     }else{
       assert.match(aloud,/SCENE 1 — DISCOVERY/);
       assert.match(aloud,/SCENE 2 — THE SIXFOLD CLUE/);
