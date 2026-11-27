@@ -12,7 +12,8 @@ async function ready(){for(let i=0;i<60;i++){try{await new Promise((yes,no)=>htt
   await page.goto('http://127.0.0.1:8795/',{waitUntil:'load'});
   const v=await page.evaluate(()=>{
    const ms=mapState();ms.active='evergarden-home-hive';ms.viewMode='dm';ms.fogTool='off';
-   const a=currentMap();a.cols=30;a.rows=30;a.playerShared=true;
+   const a=currentMap();a.worldRedesignEnabled=false; // Legacy side-strip placement regression while redesigned atlas is disabled.
+   a.cols=30;a.rows=30;a.playerShared=true;
    a.tokens=[{id:'tester-pc',kind:'pc',name:'Test PC',x:8,y:12},{id:'tester-npc',kind:'npc',name:'Private NPC',x:12,y:12,showToPlayers:false}];
    a.dmMarkers=[{id:'private-mark',type:'S',title:'Secret',x:3,y:7}];
    a.revealed=[12*30+8,5*30+2];a.fogWalls=[12*30+9];
