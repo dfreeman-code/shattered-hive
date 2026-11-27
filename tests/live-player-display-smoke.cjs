@@ -19,7 +19,8 @@ async function until(fn,{timeout=8000,interval=150}={}){const end=Date.now()+tim
    db.npcs.push({id:'live-secret-npc',name:'Hidden Queen',secret:'SECRET DM ONLY NPC INFO'});
    db.pcs.push({id:'live-safe-pc',name:'Vismund Cygnus',species:'Spiderkin',class:'Wizard',tokenColor:'Ruby',tokenRing:'Gold',tokenSymbol:'★',notes:'SECRET CHARACTER BACKSTORY'});
    const ms=mapState();ms.active='evergarden-home-hive';ms.viewMode='dm';ms.fogTool='off';
-   const m=currentMap();m.playerShared=true;m.name='Home Hive Live';m.revealed=[0,1,8*30+9,8*30+10];
+   const m=currentMap();m.worldRedesignEnabled=false; // Existing player-safe PNG regression remains covered under explicit legacy-art mode.
+   m.playerShared=true;m.name='Home Hive Live';m.revealed=[0,1,8*30+9,8*30+10];
    m.tokens=[
     {id:'live-visible-pc',kind:'pc',ref:'live-safe-pc',x:9,y:8},
     {id:'live-hidden-pc',kind:'pc',ref:'live-safe-pc',x:18,y:17},
