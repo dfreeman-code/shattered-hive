@@ -609,7 +609,7 @@ async function ready(url){
   assert.equal(await gatherButton.isEnabled(),true);
   await gatherButton.click();
   prepAfter=await prepState();
-  assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.readAloud,/six small figures/);
+  assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.readAloud,/BEAT 2 — SIX ENTRANCES|six small figures/);
   assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Review Hero 1/);
   assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Review Hero 6/);
   assert.match(prepAfter.christmasPrologueDraft.scenes.gathering.dmNotes,/Unique dream 3/);
@@ -621,7 +621,7 @@ async function ready(url){
   await prepPage.evaluate(()=>goto('runner'));
   await prepPage.getByRole('button',{name:'Open Hero Introductions'}).click();
   await prepPage.locator('.ar-scene').last().click();
-  assert.match(await prepPage.locator('#ar-readAloud').inputValue(),/six small figures/);
+  assert.match(await prepPage.locator('#ar-readAloud').inputValue(),/BEAT 2 — SIX ENTRANCES|six small figures/);
   await prepPage.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
   assert.equal(await prepPage.locator('.ar-scene').count(),10);
   prepAfter=await prepState();
