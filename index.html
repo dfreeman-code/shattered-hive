@@ -2125,6 +2125,20 @@ function christmasIntroOriginal(){
  adventurePreviewIndex=0;
  render();
 }
+// The finalized script can be reviewed safely when a custom intro was already saved.
+// No Apply or Replace action is offered; DM edits remain deliberate in the existing editor.
+function christmasFinalSoloComparison(item){
+ if(!item.pc||!db.christmasPrologueDraft?.scenes?.[item.id])return '';
+ const finalScript=christmasFinalSoloScript(item);
+ if(!finalScript)return '';
+ const names={readAloud:'Read-aloud scenes',dmNotes:'DM running order',npcDialogue:'NPC dialogue',
+  checks:'Checks and consequences',encounters:'Encounter safety',clues:'Mystery clues',
+  choices:'Player branches',music:'Music cues',rewards:'Transition and rewards'};
+ return '<details class="card ar-final-script-preview"><summary>Review finalized three-scene script (read-only; existing saved draft preserved)</summary>'+
+  '<p class="muted">Your existing draft remains active and unchanged. This reference is never applied or saved automatically. Copy only the parts you choose into Draft Editor.</p>'+
+  ADVENTURE_FIELDS.map(k=>'<h4>'+esc(names[k]||k)+'</h4><div class="ar-reading-text">'+esc(finalScript[k]||'')+'</div>').join('')+
+  '</details>';
+}
 function christmasIntroPage(){
  const items=christmasIntroDescriptors(),item=items.find(x=>x.id===christmasIntroSelection)||items[0];
  if(!item)return '<div class="card">Add your heroes to prepare solo introductions.</div>';
@@ -2155,7 +2169,7 @@ function christmasIntroPage(){
   '<div class="ar-scene-list">'+buttons+'</div><button class="btn secondary ar-sidebar-link" onclick="christmasIntroOriginal()">Continue to original Scene 1</button></aside>'+
   '<section class="ar-detail"><div class="card ar-scene-head"><p class="muted">PROLOGUE '+(n+1)+' OF '+items.length+'</p>'+
   '<h3>'+esc(item.title)+'</h3>'+(item.pc?'<p>'+esc([item.pc.species,item.pc.class,item.pc.level?'Level '+item.pc.level:null].filter(Boolean).join(' · '))+'</p>':'<p>All six heroes meet at Hearthhollow before the existing Christmas adventure begins.</p>')+
-  heroGatheringDraftActions(item)+
+  heroGatheringDraftActions(item)+christmasFinalSoloComparison(item)+
   '<div class="ar-nav"><button class="btn secondary" type="button" onclick="christmasIntroGo('+esc(JSON.stringify(items[Math.max(0,n-1)].id))+')" '+(n===0?'disabled':'')+'>← Previous</button>'+
   (n===items.length-1?'<button class="btn" type="button" onclick="christmasIntroOriginal()">Continue to original Scene 1 →</button>':
   '<button class="btn" type="button" onclick="christmasIntroGo('+esc(JSON.stringify(items[n+1].id))+')">Next introduction →</button>')+'</div>'+
