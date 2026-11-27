@@ -629,6 +629,63 @@ async function ready(url){
   assert.deepEqual(prepAfter.pcs,prepBefore.pcs);
   await readinessContext.close();
 
+  // Finalized six-hero DM scripts are view-only fallback templates.
+  // Existing saved introduction drafts, PC sheets, story decisions and original 10 scenes stay unchanged.
+  const solosContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const solosPage=await solosContext.newPage();
+  solosPage.on('dialog',dialog=>{void dialog.accept().catch(()=>{});});
+  await solosPage.goto('http://127.0.0.1:8767/index.html');
+  await solosPage.evaluate(()=>{
+    const data=JSON.parse(localStorage.getItem('shattered-hive-v1'));
+    const names=['Vismund Cygnus','David','Snoop Bugg','Dr.Newton Sparknic','Mister Potts','Jawshua Red Hawk'];
+    const species=['Spiderkin','Mantisborn','Spiderkin','Firefly Folk','Beetlekin','Antfolk'];
+    const classes=['Wizard','Rogue','Warlock','Ranger','Paladin','Fighter'];
+    data.pcs=names.map((name,i)=>({id:'solo-'+i,name,class:classes[i],level:1,species:species[i],
+      status:'Active',hp:10,maxHp:10,ac:15,notes:'Preserve player history '+i,bugHero:{dream:'Personal dream '+i,fear:'Personal fear '+i}}));
+    data.christmasPrologueDraft={scenes:{'hero:solo-0':{readAloud:'Saved original Vismund script takes priority',dmNotes:'Keep custom notes'}}};
+    localStorage.setItem('shattered-hive-v1',JSON.stringify(data));
+  });
+  await solosPage.reload();
+  const soloBefore=await solosPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  await solosPage.evaluate(()=>goto('runner'));
+  await solosPage.getByRole('button',{name:'Open Hero Introductions'}).click();
+  assert.equal(await solosPage.locator('.ar-scene').count(),7);
+  const names=['The Forbidden Thread','The Caramel Trail','The Patron’s Favorite','The Sixfold Silver Thread','The Guardian and the Dry Grass','The Crossing of Little Giants'];
+  const clues=['six tiny lights','caramel popcorn','scimitar-shaped shadow','silver thread','lantern-bug','seed-courier'];
+  for(let i=0;i<6;i++){
+    await solosPage.locator('.ar-scene').nth(i).click();
+    const aloud=await solosPage.locator('#ar-readAloud').inputValue();
+    const checks=await solosPage.locator('#ar-checks').inputValue();
+    const notes=await solosPage.locator('#ar-dmNotes').inputValue();
+    if(i===0){
+      assert.match(aloud,/Saved original Vismund script takes priority/);
+      assert.equal(notes,'Keep custom notes');
+      const comparison=solosPage.locator('.ar-final-script-preview');
+      assert.equal(await comparison.count(),1,'Existing saved intro has a read-only finalized script comparison');
+      await comparison.locator('summary').click();
+      assert.match(await comparison.innerText(),/SCENE 2 — THE SIXFOLD CLUE/);
+    }else{
+      assert.match(aloud,/SCENE 1 — DISCOVERY/);
+      assert.match(aloud,/SCENE 2 — THE SIXFOLD CLUE/);
+      assert.match(aloud,/SCENE 3 — THE INVITATION/);
+      assert.match(aloud,new RegExp(clues[i],'i'));
+      assert.match(notes,/DM SCRIPT:/);
+      assert.ok(notes.includes(names[i]),'DM notes include named scene: '+names[i]);
+      assert.match(checks,/Failure changes the texture/);
+      assert.match(await solosPage.locator('#ar-choices').inputValue(),/DM FOLLOW-UP/);
+    }
+  }
+  const soloAfter=await solosPage.evaluate(()=>JSON.parse(localStorage.getItem('shattered-hive-v1')));
+  assert.deepEqual(soloAfter.pcs,soloBefore.pcs,'Read-only prologues cannot change character records');
+  assert.deepEqual(soloAfter.sheets,soloBefore.sheets,'Read-only prologues cannot change completed sheets');
+  assert.deepEqual(soloAfter.christmasPrologueDraft,soloBefore.christmasPrologueDraft,
+    'Existing saved prologue text and unpersisted defaults cannot be overwritten');
+  assert.deepEqual(soloAfter.adventureScriptDraft,soloBefore.adventureScriptDraft,
+    'Finalized prologues cannot alter original ten-scene draft');
+  assert.deepEqual(soloAfter.decisions,soloBefore.decisions,'No gameplay choices recorded');
+  assert.equal(soloAfter.campaign.session,soloBefore.campaign.session,'Campaign not started');
+  await solosContext.close();
+
   const after=await read();
   assert.equal(after.campaign.session,0);
   assert.equal(after.sessions.find(x=>x.id==='vesper-session-1').status,'Planned');

@@ -1957,6 +1957,115 @@ function christmasIntroDescriptors(){
  const heroes=christmasIntroHeroes().map((pc,i)=>({id:'hero:'+pc.id,pc,index:i,title:'Solo introduction — '+(pc.name||'Hero '+(i+1))}));
  return [...heroes,{id:'gathering',title:'The Six Heroes Gather',index:6,pc:null}];
 }
+/* Phase 1: finalized DM-only solo scripts, resolved by existing PC identity.
+   These are read-only fallback templates; saved christmasPrologueDraft.scenes always wins.
+   No import, migration, character modification, or automatic draft save occurs. */
+const CHRISTMAS_FINAL_SOLO_PLANS=[
+ {
+  "key": "vismund cygnus",
+  "builder": "heroWizardPrologueDraft",
+  "title": "The Forbidden Thread",
+  "spotlight": "5–7 minutes",
+  "setup": "Archive among frozen roots; no map or tokens required",
+  "beat2": "As you lean closer, the acorn casts six tiny lights across the hanging silk. One light briefly darkens, then all six return. Beyond the root wall, the festival bell rings twice. The archive keeper opens a narrow passage toward Hearthhollow.",
+  "beat3": "The keeper lifts a lantern. “Whether you take the acorn or leave it here, the village is expecting guests tonight. Will you follow the bell?”",
+  "checks": "Arcana DC 11: notice six connected points, with one briefly darkening. Investigation DC 11: trace the pattern to an old festival diagram. Failure: give the six lights and bell connection anyway, but leave the diagram unreadable. Mage Hand or Spiderkin Silk Thread may retrieve the acorn without rolling; never require a slot or force a familiar.",
+  "branches": "Study the pattern → offer diagram resemblance. Keep the acorn → record only if player declares it; it is a story clue, not a magic item. Ask keeper → keeper suggests the festival archive. Ignore it → the bells still guide the route. Any creative solution reaches Hearthhollow.",
+  "transition": "Exit cue: the keeper gestures toward warm lights between the roots. Ask Vismund what one detail he remembers; never decide the memory for him."
+ },
+ {
+  "key": "david",
+  "builder": "heroRoguePrologueDraft",
+  "title": "The Caramel Trail",
+  "spotlight": "5–7 minutes",
+  "setup": "Winter market and narrow meltwater channel; a slick pine-needle bridge offers a safe route",
+  "beat2": "Across the dark water, a folded human paper scrap rustles under a pebble. Its scent is unmistakable: caramel popcorn. Six tiny marks glimmer on one corner. From a nearby stall, a moth calls, “The Hearthhollow bells! The celebration is starting!”",
+  "beat3": "The nearest pine needle bows gently over the channel. You can reach the paper, ask someone for help, or head straight toward the lights. David, what matters most right now?",
+  "checks": "Acrobatics DC 11 to cross the slippery needle; Stealth DC 11 to pass a curious beetle quietly; Investigation DC 11 to spot the six-star mark. Failure: a harmless noise or a longer dry route, never falling into deep water or losing equipment. Springing Leap and careful scouting may remove the need for a roll.",
+  "branches": "Cross bridge → reach scrap if desired. Seek dry route → market moth points out a safe path. Ask for help → build a connection, not a forced companion. Leave scrap → the smell and six marks can be recalled later. Never define David's childhood memory for the player.",
+  "transition": "Exit cue: caramel scent fades into warm Hearthhollow festival aromas. Ask what David chooses to carry or tell others; no automatic inventory item."
+ },
+ {
+  "key": "snoop bugg",
+  "builder": "heroWarlockPrologueDraft",
+  "title": "The Patron’s Favorite",
+  "spotlight": "5–7 minutes",
+  "setup": "Under a giant hanging ornament, polished glass reflects six dim lights; patron identity intentionally secret",
+  "beat2": "The reflection bends into a scimitar-shaped shadow. It mimics your movement a fraction too late. A voice whispers, “There may be many champions. What would make you unforgettable?” The glass shows six lights, then a silver thread leading toward Hearthhollow.",
+  "beat3": "Silence returns. Nothing binds you. The glass remains where it fell, and music from the festival drifts through the roots. Snoop Bugg, what do you say, if anything?",
+  "checks": "Arcana DC 11: recognize an enchantment-like conduit without identifying its source. Insight DC 11: hear that the speaker carefully avoids a promise. Failure: preserve the unanswered mystery and do not imply a pact consequence. Minor Illusion or other spells may be roleplayed, but casting is never required.",
+  "branches": "Answer boldly → voice repeats the question, not a contract. Demand a name → voice stays ambiguous. Investigate glass → notice six lights and a route. Walk away → no punishment, no loss of class features. Record player words only during actual play.",
+  "transition": "Exit cue: the reflected thread points toward the festival. Do not identify Vesper as the patron, force an oath, grant a magic weapon, or preselect any answer."
+ },
+ {
+  "key": "dr.newton sparknic",
+  "builder": "heroRangerPrologueDraft",
+  "title": "The Sixfold Silver Thread",
+  "spotlight": "5–7 minutes",
+  "setup": "Walnut-shell workshop with inventions, a scarlet dwarf dragonfly, and a firefly companion",
+  "beat2": "The silver thread tightens across the workbench each time a distant bell rings. Six pinpricks brighten in sequence. A loose spring bounces off a sketch of Hearthhollow, and a passing courier calls, “Doctor, the lantern festival needs every pair of clever hands!”",
+  "beat3": "The thread goes still. Your two little companions wait for your direction, not moving until you decide. Doctor, what experiment—or journey—comes next?",
+  "checks": "Investigation DC 11: the thread pulses with the bell; Nature DC 11: its shimmer is unlike ordinary spider silk. Failure: still notice six points and the festival link. Guidance, Druidcraft, Living Lantern, cartography or creative gadgets can help, but never invent gadget powers or consume spells automatically.",
+  "branches": "Measure the thread → learn bell-timing clue. Ask companions → player describes their behavior; no free scouting/stat block. Secure thread → record as mundane clue only if chosen. Depart immediately → travel to festival without penalty. Do not dictate Newton's research history.",
+  "transition": "Exit cue: six lights fade and the festival lanterns beckon. Two companions stay narrative-only and safe."
+ },
+ {
+  "key": "mister potts",
+  "builder": "heroPaladinPrologueDraft",
+  "title": "The Guardian and the Dry Grass",
+  "spotlight": "5–7 minutes",
+  "setup": "A patch of brittle dry grass divides the beetle guardian from a lost lantern-bug",
+  "beat2": "A gust sets the grass hissing. The lantern-bug's light dims, but their voice stays steady: “I can hear the bells. I just can't find a safe way back.” A sturdy twig rests nearby, long enough to make a bridge.",
+  "beat3": "Across the clearing, the warm path to Hearthhollow is visible. The lantern-bug looks to you for a plan, not a promise. Mister Potts, how will you respond?",
+  "checks": "Athletics DC 11 to place a twig bridge; Perception DC 11 or Survival DC 11 to find a dry detour. Failure: introduce a brief detour or extra effort, not a fear condition or abandoned child. Persuasion or comforting words can reassure the lantern-bug without a required roll. No Lay on Hands spent automatically.",
+  "branches": "Cross the grass → player narrates courage without forced fear. Build bridge → bring the lantern-bug across. Find route → help from a distance. Ask others → introduce helper only if useful. Any solution reaches the festival; no compelled oath.",
+  "transition": "Exit cue: lost lantern-bug may accompany Potts only if player invites them. Preserve Red Ant Sword as ordinary longsword; no XP or automatic rewards."
+ },
+ {
+  "key": "jawshua red hawk",
+  "builder": "heroFighterPrologueDraft",
+  "title": "The Crossing of Little Giants",
+  "spotlight": "5–7 minutes",
+  "setup": "Icy root channel, human boot print, stuck decorations and a stranded seed-courier",
+  "beat2": "The courier points to a fallen twig lodged against the bank. Six faint pinpricks shine from the decorations they carry. Above the water, the great tree's branches sway like towering bridges.",
+  "beat3": "“I know a dry path to the Hearthhollow lights,” the courier calls, “but I can't free this bundle alone.” Jawshua, what is your plan?",
+  "checks": "Athletics DC 11 to shift the twig or rescue the bundle; Perception DC 11 to find a hidden root bridge; Survival DC 11 to pick a dry path. Failure: noisy effort, broken twig or longer route, never forced immersion or drowning. No combat or automatic Second Wind use.",
+  "branches": "Lift twig → open crossing. Use bridge → dry rescue. Ask for help → courier directs a safe alternate route. Make a joke or daring contraption → reward creativity with a viable route. Ignore rescue → courier still reaches shelter; do not compel bravery.",
+  "transition": "Exit cue: the courier points toward Hearthhollow and its bells. Platform shoes and trap-jaw/scent stay cosmetic; never grant reach or attack."
+ }
+];
+function christmasFinalSoloScript(item){
+ const pc=item.pc;
+ if(!pc)return null;
+ const name=String(pc.name||'').trim().replace(/\s*\.\s*/g,'.').replace(/\s+/g,' ').toLowerCase();
+ const plan=CHRISTMAS_FINAL_SOLO_PLANS.find(x=>x.key===name);
+ if(!plan)return null;
+ const builders={
+  'vismund cygnus':heroWizardPrologueDraft,
+  david:heroRoguePrologueDraft,
+  'snoop bugg':heroWarlockPrologueDraft,
+  'dr.newton sparknic':heroRangerPrologueDraft,
+  'mister potts':heroPaladinPrologueDraft,
+  'jawshua red hawk':heroFighterPrologueDraft
+ };
+ const base=builders[plan.key](pc);
+ return {
+  ...base,
+  readAloud:'SCENE 1 — DISCOVERY (read aloud)\n'+base.readAloud+
+   '\n\nSCENE 2 — THE SIXFOLD CLUE (after the player responds; read aloud)\n'+plan.beat2+
+   '\n\nSCENE 3 — THE INVITATION (when ready to exit; read aloud)\n'+plan.beat3,
+  dmNotes:'DM SCRIPT: '+plan.title+' | '+plan.spotlight+' | '+plan.setup+
+   '\n1. Read Scene 1, then ask the player what their hero does. Pause and listen.\n2. Offer one check or let a feature/creative idea work without a roll. Never require a resource expenditure.\n3. Read Scene 2 after their first meaningful action; run an optional small consequence, then read Scene 3.\n4. Ask what their hero keeps, shares or remembers; record decisions only during the actual session.\n5. '+plan.transition+
+   '\n\nPLAYER BACKSTORY AND DM GUARDRAILS\n'+base.dmNotes,
+  checks:plan.checks+'\n\nGENERAL RULE: Failure changes the texture, not access to the sixfold clue or Hearthhollow. Avoid lethal hazards, forced combat or unavoidable resource loss.',
+  encounters:'3 short narrative beats; no mandatory combat, initiative, damage, death saves or forced fear effects. '+base.encounters,
+  clues:base.clues+'\nContinuity: sixfold imagery is an atmospheric clue, not proof of Vesper, a resolved theft, or a forced possession.',
+  choices:plan.branches+'\nDM FOLLOW-UP: Ask “What does your hero do next?” and accept unexpected solutions.',
+  music:base.music+'\nCue: begin with low ambience; briefly accent the six-light reveal; crossfade to warm Hearthhollow bells at Scene 3. No playback is initiated by the app.',
+  rewards:base.rewards+'\n'+plan.transition+'\nAlways transition to the gathering; no automatic gear, XP, class resources, quest or decision changes.'
+ };
+}
+
 function christmasIntroDefaults(item){
  if(item.id==='gathering')return {
   readAloud:'As Starfall Eve approaches, six separate trails converge upon Hearthhollow. The village lights shimmer like constellations caught in the branches. A bell sounds from the great tree, and for the first time tonight, all six of you can see one another.\n\nOne by one, tell the others what brought you here—and what your hero notices first.',
@@ -1969,6 +2078,8 @@ function christmasIntroDefaults(item){
   music:'Warm winter village ambience and soft festive bells; lower the volume during player introductions.',
   rewards:'An invitation to the Starfall Eve celebration. Move to original Adventure Runner Scene 1: Welcome to Hearthhollow. No XP or items automatically granted.'
  };
+ const finalized=christmasFinalSoloScript(item);
+ if(finalized)return finalized;
  const pc=item.pc||{},name=pc.name||'this hero',label=[pc.species,pc.class].filter(Boolean).join(' '),hook=CHRISTMAS_INTRO_HOOKS[item.index%6];
  return {
   readAloud:'Before the heroes of the garden ever meet, we find '+name+(label?', a '+label:'')+', alone at '+hook.setting+'. Snow drifts past towering human-world objects. '+hook.sound+'. Nearby, '+hook.detail+'.\n\n'+name+', what are you doing when you notice this?',
@@ -2014,6 +2125,20 @@ function christmasIntroOriginal(){
  adventurePreviewIndex=0;
  render();
 }
+// The finalized script can be reviewed safely when a custom intro was already saved.
+// No Apply or Replace action is offered; DM edits remain deliberate in the existing editor.
+function christmasFinalSoloComparison(item){
+ if(!item.pc||!db.christmasPrologueDraft?.scenes?.[item.id])return '';
+ const finalScript=christmasFinalSoloScript(item);
+ if(!finalScript)return '';
+ const names={readAloud:'Read-aloud scenes',dmNotes:'DM running order',npcDialogue:'NPC dialogue',
+  checks:'Checks and consequences',encounters:'Encounter safety',clues:'Mystery clues',
+  choices:'Player branches',music:'Music cues',rewards:'Transition and rewards'};
+ return '<details class="card ar-final-script-preview"><summary>Review finalized three-scene script (read-only; existing saved draft preserved)</summary>'+
+  '<p class="muted">Your existing draft remains active and unchanged. This reference is never applied or saved automatically. Copy only the parts you choose into Draft Editor.</p>'+
+  ADVENTURE_FIELDS.map(k=>'<h4>'+esc(names[k]||k)+'</h4><div class="ar-reading-text">'+esc(finalScript[k]||'')+'</div>').join('')+
+  '</details>';
+}
 function christmasIntroPage(){
  const items=christmasIntroDescriptors(),item=items.find(x=>x.id===christmasIntroSelection)||items[0];
  if(!item)return '<div class="card">Add your heroes to prepare solo introductions.</div>';
@@ -2044,7 +2169,7 @@ function christmasIntroPage(){
   '<div class="ar-scene-list">'+buttons+'</div><button class="btn secondary ar-sidebar-link" onclick="christmasIntroOriginal()">Continue to original Scene 1</button></aside>'+
   '<section class="ar-detail"><div class="card ar-scene-head"><p class="muted">PROLOGUE '+(n+1)+' OF '+items.length+'</p>'+
   '<h3>'+esc(item.title)+'</h3>'+(item.pc?'<p>'+esc([item.pc.species,item.pc.class,item.pc.level?'Level '+item.pc.level:null].filter(Boolean).join(' · '))+'</p>':'<p>All six heroes meet at Hearthhollow before the existing Christmas adventure begins.</p>')+
-  heroGatheringDraftActions(item)+
+  heroGatheringDraftActions(item)+christmasFinalSoloComparison(item)+
   '<div class="ar-nav"><button class="btn secondary" type="button" onclick="christmasIntroGo('+esc(JSON.stringify(items[Math.max(0,n-1)].id))+')" '+(n===0?'disabled':'')+'>← Previous</button>'+
   (n===items.length-1?'<button class="btn" type="button" onclick="christmasIntroOriginal()">Continue to original Scene 1 →</button>':
   '<button class="btn" type="button" onclick="christmasIntroGo('+esc(JSON.stringify(items[n+1].id))+')">Next introduction →</button>')+'</div>'+
