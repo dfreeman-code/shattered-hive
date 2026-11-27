@@ -567,6 +567,37 @@ async function check(label, fn) {
   assert.ok(dims.scroll<=dims.width+5,'Mobile Command Center overflow: '+JSON.stringify(dims));
   await page.setViewportSize({width:1365,height:900});
  });
+ await check('Phase 3 reading view presents distinct cue panels and quick tools without altering story records',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  await page.evaluate(()=>{adventurePreviewIndex=0;adventureSpotlight='all';adventureReadMode=true;christmasIntroSelection=null;goto('runner')});
+  const protectedBefore=await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sessions:db.sessions,decisions:db.decisions,draft:db.adventureScriptDraft}));
+  const panel=page.locator('.ar-reading-panel');
+  assert.equal(await panel.count(),1);
+  assert.equal(await page.locator('.ar-reading-section').count(),9);
+  assert.equal(await panel.locator('.ar-cue-npc-dialogue').count(),1);
+  assert.equal(await panel.locator('.ar-cue-checks').count(),1);
+  assert.equal(await panel.locator('.ar-cue-choices').count(),1);
+  const checksBorder=await panel.locator('.ar-cue-checks').evaluate(x=>getComputedStyle(x).borderLeftColor);
+  const dialogueBorder=await panel.locator('.ar-cue-npc-dialogue').evaluate(x=>getComputedStyle(x).borderLeftColor);
+  assert.notEqual(checksBorder,dialogueBorder,'DM cue colors should differ by category');
+  assert.equal(await panel.locator('.ar-reading-tools').count(),1);
+  assert.equal(await panel.getByRole('button',{name:/Open scene map/}).count(),1);
+  assert.equal(await panel.getByRole('button',{name:/Music & ambience/}).count(),1);
+  assert.equal(await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sessions:db.sessions,decisions:db.decisions,draft:db.adventureScriptDraft})),protectedBefore,'Reading UI must not write story data');
+  await panel.getByRole('button',{name:/Music & ambience/}).click();
+  assert.equal(await page.evaluate(()=>page),'music');
+  assert.equal(await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sessions:db.sessions,decisions:db.decisions,draft:db.adventureScriptDraft})),protectedBefore,'Opening music should not change story data');
+ });
+ await check('Phase 3 reading controls remain usable on mobile',async()=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>{adventurePreviewIndex=0;adventureSpotlight='readAloud';adventureReadMode=true;goto('runner')});
+  assert.equal(await page.locator('.ar-reading-section.ar-narration').count(),1);
+  const fontsize=await page.locator('.ar-narration .ar-reading-text').evaluate(x=>parseFloat(getComputedStyle(x).fontSize));
+  assert.ok(fontsize>=17,'Narration font too small');
+  const dims=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
+  assert.ok(dims.scroll<=dims.width+5,'Phase 3 mobile page overflow: '+JSON.stringify(dims));
+  await page.setViewportSize({width:1365,height:900});
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
