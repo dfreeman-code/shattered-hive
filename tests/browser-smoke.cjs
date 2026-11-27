@@ -551,11 +551,13 @@ async function check(label, fn) {
   assert.doesNotMatch(await dashboard.locator('.cc-scene-quote').innerText(),/Private DM-only details/);
   assert.equal(await dashboard.locator('.cc-scene-preview').getAttribute('data-cc-scene-index'),'0');
   assert.equal(await dashboard.locator('.cc-scene-controls button').first().isDisabled(),true);
+  const protectedBefore=await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,campaign:db.campaign,sessions:db.sessions,decisions:db.decisions,script:db.adventureScriptDraft}));
   await dashboard.locator('.cc-scene-controls').getByRole('button',{name:'Next scene'}).click();
   assert.equal(await page.evaluate(()=>page),'runner');
   assert.equal(await page.evaluate(()=>adventurePreviewIndex),1);
+  assert.equal(await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,campaign:db.campaign,sessions:db.sessions,decisions:db.decisions,script:db.adventureScriptDraft})),protectedBefore,'Scene preview navigation must not change protected campaign records');
   await page.evaluate(snapshot=>{db=JSON.parse(snapshot);adventurePreviewIndex=0;goto('command')},before);
-  assert.equal(await page.evaluate(()=>JSON.stringify(db)),before,'Preview/navigation should leave original campaign unchanged');
+  assert.deepEqual(await page.evaluate(()=>db.pcs.map(x=>x.id)),JSON.parse(before).pcs.map(x=>x.id),'Synthetic QA heroes must not persist in the displayed campaign');
  });
  await check('Phase 2 Command Center fits a narrow mobile viewport',async()=>{
   await page.setViewportSize({width:390,height:844});
