@@ -1822,6 +1822,61 @@ function applyPottsEquipmentClarification(){
  toast('Mister Potts’s Guard Playing Card Set and 21 GP recorded');
  return true;
 }
+// Jawshua Red Hawk's reviewed, approved Soldier Dice Set and combined starting currency.
+// Opt-in only. No migration or automatic cloud writes.
+const JAWSHUA_REVIEWED_INVENTORY="Fighter class equipment option A: Chain Mail, Greatsword, Flail, 8 Javelins, Dungeoneer’s Pack, 4 GP.\nSoldier background equipment option A: Spear, Shortbow, 20 Arrows, one Gaming Set, Healer’s Kit, Quiver, Traveler’s Clothes, 14 GP.\nPlayer-chosen platform shoes and red/black armor are appearance details without a height, reach, speed or defense bonus. The requested sword and shield can be a later alternate loadout: a Greatsword requires two hands to attack and cannot be used simultaneously with a wielded shield.";
+const JAWSHUA_REVIEWED_FEATURES="Fighter level 1 (2024): Fighting Style (Defense, +1 AC while wearing armor), Second Wind (2 uses; Bonus Action heal 1d10+1 HP; regain 1 use on a Short Rest and all on a Long Rest), Weapon Mastery (Greatsword, Flail, Javelin).\nWeapon Mastery: Greatsword (Graze), Flail (Sap), Javelin (Slow). Check each mastery property against the official weapon table when using it.\nSoldier origin: Savage Attacker (once per turn when a weapon attack hits, roll weapon damage dice twice and choose one roll), Athletics and Intimidation, one Gaming Set. Standard array before origin: STR 15, CON 14, DEX 13, WIS 12, CHA 10, INT 8; Soldier +2 STR and +1 CON.\nAntfolk (homebrew): Colony Cooperation (Bonus Action Help for ally within 5 feet, proficiency bonus uses per Long Rest); Tunnel Sense (proficiency in Survival chosen over Investigation).\nTrap-jaw bite and defensive scent are player-created appearance/story details; NO automatic extra weapon attack, damage, poison, aura, resistance or status effect is granted. Fighter subclass starts at level 3.";
+const JAWSHUA_REVIEWED_PROFICIENCIES="Fighter: Strength and Constitution saves; all armor and shields; simple and martial weapons.\nFighter skills: Perception and Insight. Soldier skills: Athletics and Intimidation. Antfolk Tunnel Sense: Survival. Soldier gaming set type is the player’s choice.\nFighter Weapon Mastery: Greatsword, Flail, Javelin; Defense Fighting Style feat.";
+const JAWSHUA_APPROVED_INVENTORY=JAWSHUA_REVIEWED_INVENTORY
+ .replace('one Gaming Set,','Dice Set (DM-approved Soldier gaming set),')
+ .replace('Player-chosen platform shoes',
+          'Total starting currency: 18 GP (4 GP Fighter + 14 GP Soldier); the source amounts are included and must not be added again.\nPlayer-chosen platform shoes');
+const JAWSHUA_APPROVED_FEATURES=JAWSHUA_REVIEWED_FEATURES.replace(
+ 'Athletics and Intimidation, one Gaming Set.',
+ 'Athletics and Intimidation, Dice Set (confirmed Soldier gaming set).');
+const JAWSHUA_APPROVED_PROFICIENCIES=JAWSHUA_REVIEWED_PROFICIENCIES.replace(
+ 'Soldier gaming set type is the player’s choice.',
+ 'Soldier gaming set proficiency: Dice Set (confirmed player choice).');
+function jawshuaEquipmentEligible(pc){
+ if(!pc||pc.name!=='Jawshua Red Hawk'||pc.species!=='Antfolk'||
+    pc.class!=='Fighter'||pc.background!=='Soldier'||Number(pc.level)!==1)return false;
+ const sh=db.sheets?.[pc.id];
+ return !!sh&&sh.inventory===JAWSHUA_REVIEWED_INVENTORY&&
+    sh.features===JAWSHUA_REVIEWED_FEATURES&&
+    sh.proficiencies===JAWSHUA_REVIEWED_PROFICIENCIES;
+}
+function jawshuaEquipmentPanel(pc){
+ if(!jawshuaEquipmentEligible(pc))return '';
+ return '<section class="card section" id="jawshua-equipment-review">'+
+ '<h3>Jawshua Red Hawk · Approved Soldier equipment clarification</h3>'+
+ '<p>Confirm <b>Dice Set</b> as the Soldier gaming set and record <b>18 GP total</b> '+
+ '(4 GP Fighter plus 14 GP Soldier), without awarding extra equipment or coins. '+
+ 'All other Fighter, Soldier and Antfolk abilities, armor and story remain unchanged.</p>'+
+ '<p class="muted">Optional DM action only: verify cloud synchronization and export a JSON backup. '+
+ 'The button disappears if any reviewed field has changed, and this never runs at startup.</p>'+
+ '<button type="button" class="btn secondary" id="jawshua-equipment-apply" onclick="applyJawshuaEquipment()">Record Jawshua’s approved Dice Set and 18 GP</button>'+
+ '</section>';
+}
+function applyJawshuaEquipment(){
+ const pc=currentSheetPC();
+ if(!jawshuaEquipmentEligible(pc)){
+  alert('Jawshua’s saved sheet differs from the reviewed version. Nothing was changed.');
+  return false;
+ }
+ if(!confirm('Record Jawshua’s Dice Set and 18 GP total? Only inventory, features and proficiencies text will change. Verify cloud sync and export JSON first.'))return false;
+ if(!jawshuaEquipmentEligible(pc))return false;
+ const sh=db.sheets[pc.id],old={inventory:sh.inventory,features:sh.features,proficiencies:sh.proficiencies};
+ sh.inventory=JAWSHUA_APPROVED_INVENTORY;
+ sh.features=JAWSHUA_APPROVED_FEATURES;
+ sh.proficiencies=JAWSHUA_APPROVED_PROFICIENCIES;
+ if(!save()){
+  Object.assign(sh,old);
+  return false;
+ }
+ render();
+ toast('Jawshua’s Dice Set and 18 GP clarified');
+ return true;
+}
 function sheetPage(){const pc=currentSheetPC();let options=db.pcs.map(x=>`<option value="${esc(x.id)}" ${pc?.id===x.id?'selected':''}>${esc(x.name)} — Level ${esc(x.level||1)}</option>`).join('');if(!pc)return `<div class="headrow"><h2>📜 Character Sheets</h2><button class="btn" onclick="add('pcs')">+ Add Character</button></div><div class="empty">Create a player character first, then return to complete their sheet.</div>`;let sh=getSheet(pc),prof=proficiency(Number(pc.level)||1),dex=modifier(sh.scores.DEX),spellMod=modifier(sh.scores[sh.spellAbility]||10);let species=BUG_TRAITS[pc.species]||[];return `<div class="headrow"><div><h2>📜 Character Sheets</h2><p class="muted">Editable D&D 5e 2024 player sheets · Saved with campaign backups</p></div><div class="actions"><button class="btn secondary" onclick="window.print()">Print sheet</button><button class="btn" onclick="edit('pcs','${pc.id}')">Edit PC profile</button></div></div><div class="card section"><label>Select player character</label><select onchange="selectedSheetPC=this.value;render()">${options}</select><h2>${esc(pc.name)}</h2><p class="muted">${esc(pc.species||'Species unset')} · ${esc(pc.class||'Class unset')} · Level ${esc(pc.level||1)} · ${esc(pc.subclass||'Subclass not selected')} · ${esc(pc.background||'Background unset')}</p><div class="sheetmetrics"><div><b>${signed(prof)}</b><small>Proficiency</small></div><div><b>${signed(dex+Number(sh.initiativeBonus||0))}</b><small>Initiative</small></div><div><b>${10+modifier(sh.scores.WIS)+ (sh.skills.includes('Perception')?prof:0)+(sh.expertise.includes('Perception')?prof:0)+Number(sh.passiveBonus||0)}</b><small>Passive Perception</small></div></div></div>
 ${heroReadinessPanel()}\n${heroBuildWorkshop(pc)}\n${vismundEquipmentReviewPanel(pc)}
 ${davidEquipmentReviewPanel(pc)}
@@ -1829,6 +1884,7 @@ ${davidFinalChoicesReviewPanel(pc)}
 ${snoopClarificationsReviewPanel(pc)}
 ${newtonRangerEquipmentPanel(pc)}
 ${pottsEquipmentClarificationPanel(pc)}
+${jawshuaEquipmentPanel(pc)}
 <div class="card section"><h3>Ability scores & saving throws</h3><div class="statgrid">${ATTRS.map(a=>scoreInput(a,sh)).join('')}</div><p class="meta">Saving throw proficiency must be selected from your class. Modifiers recalculate from scores and proficiency bonus.</p></div>
 <div class="two section"><div class="card"><h3>Combat & resources</h3><div class="sheetfields">${[['ac','Armor Class'],['speed','Speed (game feet)'],['currentHp','Current HP'],['maxHp','Maximum HP'],['tempHp','Temporary HP'],['initiativeBonus','Additional initiative modifier'],['hitDiceUsed','Hit Dice spent']].map(([k,t])=>`<label>${t}<input type="number" value="${esc(sh[k])}" onchange="sheetSet('field','${k}',this.value)"></label>`).join('')}</div><div class="sheetfields"><label>Death save successes <input type="number" min="0" max="3" value="${sh.deathSuccess}" onchange="sheetSet('field','deathSuccess',this.value)"></label><label>Death save failures <input type="number" min="0" max="3" value="${sh.deathFailure}" onchange="sheetSet('field','deathFailure',this.value)"></label><label><input type="checkbox" ${sh.inspiration?'checked':''} onchange="sheetSet('field','inspiration',this.checked)"> Heroic Inspiration</label></div><p class="meta">Hit Dice total: ${esc(pc.level||1)}d${esc(GUIDE[pc.class]?.die||'?')}; hit points are manually assigned, not automatically rolled.</p></div><div class="card"><h3>Skill proficiencies</h3><div class="skillsgrid">${SKILLS.map(([name,attr])=>{let val=modifier(sh.scores[attr])+ (sh.skills.includes(name)?prof:0)+(sh.expertise.includes(name)?prof:0);return `<div class="skillrow"><label><input type="checkbox" ${sh.skills.includes(name)?'checked':''} onchange="sheetSet('skill','${name}',this.checked)"> ${name} <small>(${attr})</small></label><strong>${signed(val)}</strong><label title="Expertise"><input type="checkbox" ${sh.expertise.includes(name)?'checked':''} onchange="sheetSet('expertise','${name}',this.checked)"> Exp</label></div>`}).join('')}</div><p class="meta">Exp = expertise (double proficiency bonus). Select only when granted by your class or another feature.</p></div></div>
 <div class="two section"><div class="card"><h3>Spellcasting</h3><label>Spellcasting ability <select onchange="sheetSet('field','spellAbility',this.value)"><option value="">None / select</option>${ATTRS.map(a=>`<option value="${a}" ${sh.spellAbility===a?'selected':''}>${a}</option>`).join('')}</select></label><p><b>Spell attack:</b> ${sh.spellAbility?signed(prof+spellMod):'—'} · <b>Spell save DC:</b> ${sh.spellAbility?8+prof+spellMod:'—'}</p><p class="meta">Enter remaining spell slots manually; slots vary by class, level and multiclass features.</p><div class="slotgrid">${Array.from({length:9},(_,i)=>`<label>Level ${i+1}<input type="number" min="0" value="${esc(sh.spellSlots[i+1]??0)}" onchange="sheetSet('slot','${i+1}',this.value)"></label>`).join('')}</div><label>Cantrips, prepared spells & spell notes<textarea onchange="sheetSet('field','spellPrepared',this.value)">${esc(sh.spellPrepared)}</textarea></label></div><div class="card"><h3>Bug species features</h3>${species.length?species.map(t=>`<div class="item">✿ ${esc(t)}</div>`).join(''):'<p class="muted">Enter a supported Shattered Hive bug species to display its traits.</p>'}<p class="meta">These species traits are homebrew, not official PHB species features. Confirm with your DM.</p><label>Species feature uses / special notes<textarea onchange="sheetSet('field','speciesNotes',this.value)">${esc(sh.speciesNotes)}</textarea></label><h3>Class features, feats, and resources</h3><textarea onchange="sheetSet('field','features',this.value)">${esc(sh.features)}</textarea><p class="meta">See 2024 Player’s Handbook ${esc(pc.class||'class')} p. ${esc(GUIDE[pc.class]?.page||'—')} for official advancement.</p></div></div>
