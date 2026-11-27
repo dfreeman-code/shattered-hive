@@ -16,6 +16,7 @@ on:
       - 'tests/snoop-warlock-clarifications.cjs'
       - 'tests/newton-ranger-option-a.cjs'
       - 'tests/mister-potts-playing-cards-21gp.cjs'
+      - 'tests/jawshua-dice-set-18gp.cjs'
       - '.github/workflows/isolated-browser-qa.yml'
   workflow_dispatch:
 jobs:
@@ -49,6 +50,7 @@ jobs:
           node tests/snoop-warlock-clarifications.cjs
           node tests/newton-ranger-option-a.cjs
           node tests/mister-potts-playing-cards-21gp.cjs
+          node tests/jawshua-dice-set-18gp.cjs
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
