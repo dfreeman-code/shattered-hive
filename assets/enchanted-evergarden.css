@@ -1,0 +1,81 @@
+/* Enchanted Evergarden — Phase 1 presentation only.
+   Scoped enhancements layer over existing styling. No campaign data changes. */
+:root{
+ --bg:#edf0eb;--panel:#fffaf0;--ink:#20342e;--muted:#52675e;--line:#ccd9ce;
+ --green:#265d50;--gold:#bb8b3b;--light:#e8f1e8;--danger:#a84640;
+ --shadow:0 9px 25px #18372c13;
+}
+body{background:linear-gradient(150deg,#e8efe7 0%,#f3f0e7 48%,#e9efec 100%) fixed;color:var(--ink);font-size:15.5px;line-height:1.57}
+header{background:linear-gradient(112deg,#102a2b 0%,#204c43 64%,#26463c 100%);border-bottom:3px solid #c9a55b;box-shadow:0 3px 18px #10211c20;padding:17px 25px}
+header h1{font:700 clamp(23px,2.2vw,30px) Georgia,serif;letter-spacing:.012em;color:#f8ecd0}
+header small{color:#d6dfd0;font-size:12px;letter-spacing:.015em}
+header .btn.secondary{background:#e9e4d6;color:#213e32;border:1px solid #d3cdb9}
+header .btn.secondary:hover{background:#fff4d9}
+header .btn:focus-visible{outline:3px solid #f2c96c;outline-offset:3px}
+.shell{min-height:calc(100vh - 90px)}
+@media(min-width:751px){.shell{grid-template-columns:270px minmax(0,1fr)}}
+#nav{background:linear-gradient(180deg,#173630,#203f37 60%,#192f2e);border-right:1px solid #4d685a;padding:19px 12px 24px;color:#e4e9dc}
+#nav .nav-top strong{font:700 15px Georgia,serif;color:#f0dfb2;letter-spacing:.02em}
+#nav .nav-focus-toggle{background:#355e50;color:#f6e8c9;border:1px solid #638479;font-size:12px;font-weight:750}
+#nav .nav-focus-toggle:hover{background:#467668}
+#nav .nav-quick{background:#254a42;border-color:#537365;box-shadow:inset 0 1px #ffffff0f;padding:11px}
+#nav .nav-quick-title{color:#eed9a7;letter-spacing:.11em;font-size:11px}
+#nav button.nav-route{color:#ebeee8;font-size:14px;min-height:44px;padding:10px 12px;border:1px solid transparent;transition:background-color .12s,border-color .12s}
+#nav button.nav-route:hover{background:#345b50;border-color:#547c6f;color:white}
+#nav button.nav-route.active{background:#406a57;color:#fff6d6;border-color:#9baf82;box-shadow:inset 3px 0 #d4ae62}
+#nav .nav-group-toggle{color:#f1e4c8;background:transparent;font-size:15px;min-height:47px;padding:10px 12px}
+#nav .nav-group-toggle:hover,#nav .nav-group-toggle[aria-expanded="true"]{color:#ffefc9;background:#30574b}
+#nav .nav-group-links{border-left:1px solid #557163;margin:5px 0 11px 13px;padding:0 0 0 7px}
+#nav .nav-footer{border-top-color:#526e62}
+#nav .nav-help{color:#c0d0c3;font-size:12px;line-height:1.55}
+#nav button:focus-visible{outline:3px solid #f1c56e;outline-offset:2px}
+#nav .nav-search-label{display:block;font-size:12px;font-weight:750;color:#f1dda9;margin:0 3px 7px}
+#nav #nav-tool-search{background:#f7f7f0;border:2px solid #93a99a;color:#17332c;padding:10px 12px;border-radius:10px;width:100%;font-size:14px}
+#nav #nav-tool-search:focus{outline:2px solid #e8bb5c;outline-offset:2px}
+#nav .nav-search-box{margin:0 0 14px}
+#nav .nav-search-results{display:grid;gap:4px;margin-bottom:12px}
+#nav .nav-search-results[hidden],#nav .nav-browse[hidden]{display:none!important}
+#nav .nav-no-results{color:#e7d8be;font-size:13px;padding:9px}
+#nav .nav-search-results button{display:block;margin:0;text-align:left;background:#315a4f;color:white;border:1px solid #567a6d;border-radius:9px;padding:11px;width:100%;white-space:normal}
+#nav .nav-search-results button:hover{background:#47776b}
+#nav .nav-search-results button:focus-visible{outline:3px solid #e8bb5c}
+main{max-width:1580px;padding:clamp(18px,2.4vw,35px)}
+main h2{font:700 clamp(27px,2.6vw,36px) Georgia,serif;color:#203e33;letter-spacing:.006em}
+main h3{color:#284b3d}
+.card{border-color:#cbd8cc;box-shadow:0 5px 18px #18372c0e;border-radius:16px}
+.card h3{font-size:20px;line-height:1.35}
+.btn{background:#255d50;color:#fff;font-weight:750;border-radius:10px;min-height:40px;border:1px solid transparent}
+.btn.secondary{background:#e5ede2;color:#234839;border-color:#c5d5c8}
+.btn:hover{filter:brightness(1.07)}
+.btn:focus-visible,main button:focus-visible{outline:3px solid #b98b3a;outline-offset:2px}
+input,select,textarea{border-color:#aebfb2;border-radius:10px;background:#fffdf7;color:#20362d;font-size:15px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #d3ae65;outline-offset:1px}
+input[type="checkbox"],input[type="radio"]{accent-color:#236452;min-width:18px;min-height:18px}
+label{font-size:14px}
+.hero{background:linear-gradient(112deg,#16372f 0%,#316356 72%,#5a7551);border:1px solid #bca16a;box-shadow:0 10px 35px #193c2c30}
+.hero h2{color:#ffefcf}
+.hero p{color:#f1f1e4}
+.kpi{color:#235e50}
+.sheetmetrics>div,.statbox{border:1px solid #cad8cd}
+.hero-ready-card{background:#fcfbf3;border-color:#c7d5ca;padding:13px 15px}
+.hero-ready-card summary{font-size:16px;min-height:38px}
+.hero-ready-card summary span{font-size:14px}
+.hero-ready-check{gap:11px;align-items:center;font-size:14px}
+.hero-ready-check input{min-width:19px;min-height:19px}
+.ar-field textarea{line-height:1.62}
+.ar-reading-section{line-height:1.7}
+.pill{background:#e2eee6;color:#275346}
+@media(max-width:750px){
+ #nav{background:#173b32;border-right:0;border-bottom:2px solid #c9a55b;padding:12px;display:block;overflow:visible}
+ #nav .nav-top{margin-bottom:9px}
+ #nav .nav-quick-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #nav .nav-quick-links button{width:100%;white-space:normal}
+ #nav .nav-group-links{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+ #nav .nav-search-results{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #nav .nav-group-toggle{width:100%}
+ main{padding:17px}
+ header{padding:13px 17px}
+}
+@media(max-width:450px){#nav .nav-group-links,#nav .nav-search-results{grid-template-columns:1fr}header .actions{gap:6px}}
+@media print{body{background:white}#nav{display:none!important}main{padding:0}}
+@media(prefers-reduced-motion:reduce){#nav button.nav-route{transition:none}}
