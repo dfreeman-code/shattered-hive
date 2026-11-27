@@ -5,7 +5,7 @@
  --green:#265d50;--gold:#bb8b3b;--light:#e8f1e8;--danger:#a84640;
  --shadow:0 9px 25px #18372c13;
 }
-body{background:linear-gradient(150deg,#e8efe7 0%,#f3f0e7 48%,#e9efec 100%) fixed;color:var(--ink);font-size:15.5px;line-height:1.57}
+body{background:linear-gradient(150deg,#e8efe7 0%,#f3f0e7 48%,#e9efec 100%) fixed;color:var(--ink);font-size:16px;line-height:1.57}
 header{background:linear-gradient(112deg,#102a2b 0%,#204c43 64%,#26463c 100%);border-bottom:3px solid #c9a55b;box-shadow:0 3px 18px #10211c20;padding:17px 25px}
 header h1{font:700 clamp(23px,2.2vw,30px) Georgia,serif;letter-spacing:.012em;color:#f8ecd0}
 header small{color:#d6dfd0;font-size:12px;letter-spacing:.015em}
@@ -19,11 +19,11 @@ header .btn:focus-visible{outline:3px solid #f2c96c;outline-offset:3px}
 #nav .nav-focus-toggle{background:#355e50;color:#f6e8c9;border:1px solid #638479;font-size:12px;font-weight:750}
 #nav .nav-focus-toggle:hover{background:#467668}
 #nav .nav-quick{background:#254a42;border-color:#537365;box-shadow:inset 0 1px #ffffff0f;padding:11px}
-#nav .nav-quick-title{color:#eed9a7;letter-spacing:.11em;font-size:11px}
+#nav .nav-quick-title{color:#eed9a7;letter-spacing:.11em;font-size:13px}
 #nav button.nav-route{color:#ebeee8;font-size:14px;min-height:44px;padding:10px 12px;border:1px solid transparent;transition:background-color .12s,border-color .12s}
 #nav button.nav-route:hover{background:#345b50;border-color:#547c6f;color:white}
 #nav button.nav-route.active{background:#406a57;color:#fff6d6;border-color:#9baf82;box-shadow:inset 3px 0 #d4ae62}
-#nav .nav-group-toggle{color:#f1e4c8;background:transparent;font-size:15px;min-height:47px;padding:10px 12px}
+#nav .nav-group-toggle{color:#f1e4c8;background:transparent;font-size:16px;min-height:47px;padding:10px 12px}
 #nav .nav-group-toggle:hover,#nav .nav-group-toggle[aria-expanded="true"]{color:#ffefc9;background:#30574b}
 #nav .nav-group-links{border-left:1px solid #557163;margin:5px 0 11px 13px;padding:0 0 0 7px}
 #nav .nav-footer{border-top-color:#526e62}
@@ -67,7 +67,7 @@ label{font-size:14px}
 .pill{background:#e2eee6;color:#275346}
 @media(max-width:750px){
  #nav{background:#173b32;border-right:0;border-bottom:2px solid #c9a55b;padding:12px;display:block;overflow:visible}
- #nav .nav-top{margin-bottom:9px}
+ #nav .nav-top{display:flex;margin-bottom:9px}
  #nav .nav-quick-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
  #nav .nav-quick-links button{width:100%;white-space:normal}
  #nav .nav-group-links{display:grid;grid-template-columns:1fr 1fr;gap:4px}
