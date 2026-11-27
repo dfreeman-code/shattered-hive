@@ -314,9 +314,9 @@ async function check(label, fn) {
     linkSize:parseFloat(navLink.fontSize),titleFont:title.fontFamily};
   });
   assert.equal(styles.bodySize,16);
-  assert.equal(styles.bg,'#f5f0df');
-  assert.equal(styles.foreground,'#38312b');
-  assert.equal(styles.headerBg,'rgb(32, 61, 48)');
+  assert.equal(styles.bg,'#edf0eb');
+  assert.equal(styles.foreground,'#20342e');
+  assert.match(await page.locator('header').evaluate(el=>getComputedStyle(el).backgroundImage),/linear-gradient/);
   assert.ok(styles.linkSize>=14);
   assert.match(styles.titleFont,/Georgia|serif/);
   await page.locator('#nav .nav-route[data-route="command"]').focus();
