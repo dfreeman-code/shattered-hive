@@ -666,7 +666,7 @@ async function ready(url){
       assert.match(aloud,/SCENE 3 — THE INVITATION/);
       assert.match(aloud,new RegExp(clues[i],'i'));
       assert.match(notes,/DM SCRIPT:/);
-      assert.match(notes,new RegExp(names[i].replace(/[.*+?^${}()|[\]\\]/g,'\\  const after=await read();')));
+      assert.ok(notes.includes(names[i]),'DM notes include named scene: '+names[i]);
       assert.match(checks,/Failure changes the texture/);
       assert.match(await solosPage.locator('#ar-choices').inputValue(),/DM FOLLOW-UP/);
     }
