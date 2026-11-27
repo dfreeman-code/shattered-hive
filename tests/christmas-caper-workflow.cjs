@@ -58,7 +58,7 @@ async function ready(url){
   await page.getByRole('button',{name:'Tabletop View'}).click();
   assert.match(await page.locator('.ar-reading-text').first().innerText(),/Custom introduction/);
   await page.locator('.ar-scene').last().click();
-  assert.match(await page.locator('.ar-reading-text').first().innerText(),/six separate trails converge/i);
+  assert.match(await page.locator('.ar-reading-text').first().innerText(),/BEAT 1 — HEARTHHOLLOW AT STARFALL EVE|six separate trails converge/i);
   await page.getByRole('button',{name:'Continue to original Scene 1'}).first().click();
   assert.equal(await page.locator('.ar-scene').count(),10,'Original 10-scene structure must remain');
   await page.reload();
