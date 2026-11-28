@@ -5,7 +5,7 @@ on:
   pull_request:
     paths:
       - 'index.html'
-      - 'assets/maps/mushroom-market-top-down.svg'
+      - 'assets/maps/mushroom-market-approved-top-down.webp'
       - 'tests/topdown-mushroom-market-smoke.cjs'
   workflow_dispatch:
 permissions:

@@ -3048,7 +3048,7 @@ function mapExpandAllSides(){
 
 function mapAvailable(m){return m.playerShared===true}
 function mapPlayerScenes(){return mapState().scenes.filter(mapAvailable)}
-function mapAssetUrl(m,mode){if(m.id==='mushroom-market-orthographic-v1')return 'assets/maps/mushroom-market-top-down.svg';if(m.id==='home-hive-orthographic-v1')return 'assets/maps/home-hive-approved-top-down.webp';if(m.id==='evergarden-home-hive')return 'assets/maps/home_hive_'+(mode==='dm'?'dm_annotated':'player_gridless')+'.png?v=2';if(m.id.startsWith('caper-'))return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'player')+'.png';return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'gridless')+'.svg'}
+function mapAssetUrl(m,mode){if(m.id==='mushroom-market-orthographic-v1')return 'assets/maps/mushroom-market-approved-top-down.webp';if(m.id==='home-hive-orthographic-v1')return 'assets/maps/home-hive-approved-top-down.webp';if(m.id==='evergarden-home-hive')return 'assets/maps/home_hive_'+(mode==='dm'?'dm_annotated':'player_gridless')+'.png?v=2';if(m.id.startsWith('caper-'))return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'player')+'.png';return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'gridless')+'.svg'}
 
 function mapState(){
  let migrationChanged=false;
@@ -3204,7 +3204,7 @@ function mapFogTiles(m){
  const explored=new Set(mapFog(m)),current=mapCurrentVisible(m),vision=mapVisionEnabled(m),walls=new Set(mapWallCells(m));
  return Array.from({length:mapCols(m)*mapRows(m)},(_,i)=>`<div data-fog-cell="${i}" class="${vision?(current.has(i)?'fog-clear':explored.has(i)?'fog-memory':'fog-cell'):(explored.has(i)?'fog-clear':'fog-cell')}${walls.has(i)?' fog-wall-mark':''}"></div>`).join('');
 }
-function mapOriginalBackground(m,mode='dm'){if(m.id==='mushroom-market-orthographic-v1')return '<img class="map-custom-image" src="assets/maps/mushroom-market-top-down.svg" alt="True top-down Mushroom Market map" draggable="false">';if(m.id==='home-hive-orthographic-v1')return '<img class="map-custom-image" src="assets/maps/home-hive-approved-top-down.webp" alt="Approved true top-down Home Hive map" draggable="false">';if(m.id.startsWith('caper-'))return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/great-christmas-caper-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} ${mode==='dm'?'DM':'player'} map">`;if(m.id==='evergarden-home-hive')return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" alt="${mode==='dm'?'Dungeon Master':'Player-safe'} Home Hive map">`;return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/home-hive-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
+function mapOriginalBackground(m,mode='dm'){if(m.id==='mushroom-market-orthographic-v1')return '<img class="map-custom-image" src="assets/maps/mushroom-market-approved-top-down.webp" alt="True top-down Mushroom Market map" draggable="false">';if(m.id==='home-hive-orthographic-v1')return '<img class="map-custom-image" src="assets/maps/home-hive-approved-top-down.webp" alt="Approved true top-down Home Hive map" draggable="false">';if(m.id.startsWith('caper-'))return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/great-christmas-caper-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} ${mode==='dm'?'DM':'player'} map">`;if(m.id==='evergarden-home-hive')return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" alt="${mode==='dm'?'Dungeon Master':'Player-safe'} Home Hive map">`;return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/home-hive-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
 // Whitelisted illustrated side terrain shared by DM and Player View; never contains secrets.
 function mapWideSideArt(m){
  if(!mapArtCenter(m))return '';
@@ -3910,7 +3910,7 @@ function mapRestoreFromArchive(id){
 }
 
 const SH_MUSHROOM_MARKET_ID='mushroom-market-orthographic-v1';
-const SH_MUSHROOM_MARKET_ART='assets/maps/mushroom-market-top-down.svg';
+const SH_MUSHROOM_MARKET_ART='assets/maps/mushroom-market-approved-top-down.webp';
 function mapTopDownMushroomPreset(){
  const places=SH_WORLD_ATLAS['mushroom-market'].places.map(p=>({...p,description:'Public Mushroom Market landmark',dmNotes:'',playerVisible:true,status:'available',scriptScene:null}));
  return {id:SH_MUSHROOM_MARKET_ID,name:'Mushroom Market — Top-Down',theme:'village',
