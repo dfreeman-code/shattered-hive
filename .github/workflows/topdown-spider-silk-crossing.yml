@@ -1,0 +1,27 @@
+name: Top-down Spider Silk Crossing safe addition
+on:
+  push:
+    branches: [feature/topdown-spider-silk-crossing-v1]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'assets/maps/spider-silk-crossing-approved-top-down.webp'
+      - 'tests/topdown-spider-silk-crossing-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  spider-silk-crossing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Check opt-in Spider Silk Crossing and TV safety
+        run: node tests/topdown-spider-silk-crossing-smoke.cjs
