@@ -13,7 +13,13 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((resolve,reje
   page.on('dialog',d=>d.accept().catch(()=>{}));
   await page.goto('http://127.0.0.1:8790/',{waitUntil:'load'});
   await page.evaluate(()=>{
-   db.pcs.push({id:'tabletop-hero',name:'Vismund Cygnus',species:'Spiderkin',class:'Wizard',level:1,status:'Active',tokenColor:'Ruby',tokenRing:'Gold',tokenSymbol:'★'});
+   const heroes=[['Vismund Cygnus','Spiderkin','Wizard'],['David','Mantisborn','Rogue'],['Snoop Bugg','Spiderkin','Warlock'],['Dr. Newton Sparknic','Firefly Folk','Ranger'],['Mister Potts','Beetlekin','Paladin'],['Jawshua Red Hawk','Antfolk','Fighter']];
+   db.sheets||={};
+   heroes.forEach(([name,species,cls],i)=>{
+    const id=i===0?'tabletop-hero':'fullscreen-hud-'+i;
+    db.pcs.push({id,name,species,class:cls,level:1,status:'Active',tokenColor:'Ruby',tokenRing:'Gold',tokenSymbol:'★'});
+    db.sheets[id]={currentHp:8+i,maxHp:12+i,ac:11+i,scores:{DEX:14},tempHp:i===0?2:0,initiativeBonus:1,conditions:i===0?'Blessed':'',spellSlots:i===0?{'1':2}:i===2?{'1':1}:i===3?{'1':0}:{},notes:'PRIVATE VESPER SPOILER'};
+   });
    const ms=mapState();ms.active='evergarden-home-hive';ms.viewMode='dm';ms.fogTool='off';
    const m=currentMap();m.tokens.push({id:'tabletop-pc',kind:'pc',ref:'tabletop-hero',name:'Vismund Cygnus',x:8,y:11});
    m.tokens.push({id:'tabletop-secret',kind:'npc',name:'Secret NPC',x:13,y:15,showToPlayers:false});
@@ -24,13 +30,28 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((resolve,reje
   await page.getByRole('button',{name:'Full-screen tabletop'}).first().click();
   assert.equal(await page.locator('.tabletop-shell').count(),1);
   assert.equal(await page.locator('.tabletop-map-stage #map-board').count(),1);
+  assert.equal(await page.locator('.tabletop-party-top .tabletop-hero-card').count(),3);
+  assert.equal(await page.locator('.tabletop-party-bottom .tabletop-hero-card').count(),3);
+  assert.equal(await page.locator('.tabletop-hero-portrait').count(),6);
+  assert.match(await page.locator('.tabletop-party-top .tabletop-hero-card').first().innerText(),/HP 8\/12/);
+  assert.match(await page.locator('.tabletop-party-top .tabletop-hero-card').first().innerText(),/Lv1: 2 left/);
+  assert.equal(await page.locator('.tabletop-party-top .tabletop-hero-card').nth(1).locator('.tabletop-hero-slot').count(),0);
+  assert.match(await page.locator('.tabletop-party-bottom .tabletop-hero-card').first().innerText(),/Lv1: 0 left/);
+  assert(!(await page.locator('.tabletop-shell').innerText()).includes('PRIVATE VESPER SPOILER'));
+  await page.getByRole('button',{name:'Hide party HUD'}).click();
+  assert.equal(await page.locator('.tabletop-shell.tabletop-party-hidden').count(),1);
+  assert.equal(await page.locator('.tabletop-party-top').evaluate(el=>getComputedStyle(el).display),'none');
+  await page.getByRole('button',{name:'Show party HUD'}).click();
+  assert.equal(await page.locator('.tabletop-shell.tabletop-party-hidden').count(),0);
+  assert.equal(await page.locator('.tabletop-party-top .tabletop-hero-card').count(),3);
+
   const dimensions=await page.locator('.tabletop-map-stage #map-board').evaluate(el=>{const r=el.getBoundingClientRect();return {w:r.width,h:r.height,top:r.top,ratio:r.width/r.height,cols:Number(el.style.getPropertyValue('--map-cols')),rows:Number(el.style.getPropertyValue('--map-rows'))}});
   assert(Math.abs(dimensions.ratio-1)<0.025,'Square board distorted in tabletop');
   assert(dimensions.top>=0&&dimensions.top+dimensions.h<=901,'Board must fit available viewport height: '+JSON.stringify(dimensions));
   assert(dimensions.w>=400,'Tabletop board too small on desktop');
   assert.equal(await page.locator('[data-token="tabletop-pc"]').count(),1);
   assert.equal(await page.locator('[data-token="tabletop-secret"]').count(),1);
-  assert.equal(await page.evaluate(()=>JSON.stringify(db)),original,'Entering tabletop modified campaign data');
+  assert.equal(await page.evaluate(()=>JSON.stringify(db)),original,'Showing and toggling party HUD in tabletop modified campaign data');
   await page.locator('[data-token="tabletop-pc"]').click();
   await page.keyboard.press('ArrowRight');
   let pos=await page.evaluate(()=>currentMap().tokens.find(x=>x.id==='tabletop-pc').x);
@@ -40,6 +61,8 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((resolve,reje
   assert.equal(await page.locator('[data-token="tabletop-pc"]').count(),1);
   assert.equal(await page.locator('[data-token="tabletop-secret"]').count(),0,'Hidden NPC exposed in Player View');
   assert.equal(await page.locator('.map-dm-marker-layer').count(),0,'DM marker layer exposed in Player View');
+  assert.equal(await page.locator('.tabletop-party-top .tabletop-hero-card').count(),3,'Player View must retain party cards');
+  assert(!(await page.locator('.tabletop-shell').innerText()).includes('PRIVATE VESPER SPOILER'));
   assert.equal(await page.locator('.tabletop-toolbar #map-mini-token-size').count(),1);
   await page.selectOption('#map-mini-token-size','large');
   assert.equal(await page.locator('.tabletop-shell').count(),1);
