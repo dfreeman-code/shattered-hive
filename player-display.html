@@ -96,8 +96,13 @@ body.tv-mode.tv-fill .board{width:max(100vw,calc(100dvh * var(--ratio,1)));min-w
 body.tv-mode.tv-fit .board{width:min(100vw,calc(100dvh * var(--ratio,1)));max-width:100%;max-height:100dvh}
 /* Keep camera controls in the map-side lane rather than across the top hero cards.
    Use the vertical center and allow scrolling on short TV viewports. */
-#tv-camera-controls{display:none;position:fixed;z-index:32;top:50%;right:clamp(12px,1.4vw,24px);transform:translateY(-50%);flex-direction:column;gap:6px;align-items:stretch;max-height:calc(100dvh - 230px);overflow-y:auto;max-width:min(190px,35vw)}
-body.tv-mode #tv-camera-controls{display:flex}
+/* Keep presentation controls fully hidden during play, available on demand.
+   The tiny edge tab is the only persistent control and needs no map/HUD reflow. */
+#tv-controls-toggle{display:none;position:fixed;z-index:34;right:6px;top:50%;transform:translateY(-50%);padding:9px 5px;background:#163a2ce0;color:#ffebba;border:1px solid #b9a9758c;border-radius:8px 0 0 8px;font-size:12px;opacity:.48}
+body.tv-mode #tv-controls-toggle{display:block}
+#tv-controls-toggle:hover,#tv-controls-toggle:focus-visible,body.tv-mode.tv-controls-open #tv-controls-toggle{opacity:1}
+#tv-camera-controls{display:none;position:fixed;z-index:32;top:50%;right:32px;transform:translateY(-50%);flex-direction:column;gap:6px;align-items:stretch;max-height:calc(100dvh - 230px);overflow-y:auto;max-width:min(190px,35vw);padding:8px;background:#10271fe8;border:1px solid #b9a975a1;border-radius:10px}
+body.tv-mode.tv-controls-open #tv-camera-controls{display:flex}
 #tv-camera-controls button{font-size:13px;background:#122d25e6;color:#fff6de;border:1px solid #d6ddb577}
 #tv-camera-controls button[aria-pressed="true"]{background:#d4c79b;color:#1e3529}
 #tv-camera-controls button:focus-visible{outline:3px solid #ffdc75}
@@ -108,7 +113,7 @@ body.tv-mode #tv-camera-controls{display:flex}
 @keyframes map-mote-glow{from{opacity:.16}to{opacity:.7}}
 body.ambient-off .map-ambient{display:none}
 @media(prefers-reduced-motion:reduce){.map-ambient .mote,.map-ambient .glint{animation:none;opacity:.24}}
-@media(max-width:760px){#tv-camera-controls{top:57px;right:10px}#tv-camera-controls button{font-size:12px;padding:6px}}
+@media(max-width:760px){#tv-camera-controls{right:29px}#tv-camera-controls button{font-size:12px;padding:6px}}
 /* Height-aware HUD bands keep portraits/slot badges clear of the battle map. */
 body.tv-mode.party-hud-on{--party-band:clamp(100px,12vh,136px)}
 body.tv-mode.party-hud-on main{padding:var(--party-band) 0}
@@ -168,7 +173,7 @@ body.tv-mode::before,body.tv-mode::after{position:fixed}
  <div class="status" id="status" role="status" aria-live="polite" data-online="false">Connecting to DM tab…</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="tv-mode">📺 TV Mode</button><button type="button" id="fullscreen">⛶ Fullscreen</button></div>
 </header>
-<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button><button type="button" id="tv-party-toggle" aria-pressed="true" title="Show character cards in TV Mode">Party HUD On</button><button type="button" id="tv-screen-button" aria-pressed="false" aria-controls="tv-screen-report">Screen info</button></div><div id="tv-screen-report" role="status" aria-live="polite" data-visible="false"></div>
+<button type="button" id="tv-controls-toggle" aria-label="Show TV controls" aria-expanded="false" aria-controls="tv-camera-controls" title="Show TV controls">⚙</button><div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button><button type="button" id="tv-party-toggle" aria-pressed="true" title="Show character cards in TV Mode">Party HUD On</button><button type="button" id="tv-screen-button" aria-pressed="false" aria-controls="tv-screen-report">Screen info</button></div><div id="tv-screen-report" role="status" aria-live="polite" data-visible="false"></div>
 <div id="tv-hud" aria-hidden="true"><div id="tv-hud-scene"></div><div id="tv-hud-status" data-online="false">Connecting…</div></div><button type="button" id="tv-mode-exit" aria-label="Exit TV Mode" title="Exit TV Mode (Esc)">✕ Exit TV Mode</button>
 <section id="party-top" class="party-hud" aria-label="Party status top row"></section><section id="party-bottom" class="party-hud" aria-label="Party status bottom row"></section><main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
 <footer id="footer">Player-safe display · Read-only · Same-browser session</footer>
@@ -336,8 +341,21 @@ screenButton.addEventListener('click',()=>{
 });
 window.addEventListener('resize',()=>{if(screenReport.dataset.visible==='true')tvUpdateScreenReport()});
 document.addEventListener('keydown',e=>{if(!tvMode)return;if(e.key==='f'||e.key==='F')tvSetFraming(!tvFill);if(e.key==='a'||e.key==='A')tvSetAmbient(!tvAmbient)});
+const tvControlsToggle=document.getElementById('tv-controls-toggle');
+const tvControls=document.getElementById('tv-camera-controls');
+function tvShowControls(show){
+ document.body.classList.toggle('tv-controls-open',!!show);
+ tvControlsToggle.setAttribute('aria-expanded',String(!!show));
+ tvControlsToggle.setAttribute('aria-label',show?'Hide TV controls':'Show TV controls');
+ tvControlsToggle.title=show?'Hide TV controls':'Show TV controls';
+}
+tvControlsToggle.addEventListener('click',()=>tvShowControls(!document.body.classList.contains('tv-controls-open')));
+tvControls.addEventListener('click',event=>{
+ if(event.target.closest('button'))tvShowControls(false);
+});
 function setTvMode(on){
- tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);document.body.classList.toggle('party-hud-on',tvParty);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);if(screenReport.dataset.visible==='true')tvUpdateScreenReport();
+ tvMode=!!on;
+ if(!tvMode)tvShowControls(false);document.body.classList.toggle('tv-mode',tvMode);document.body.classList.toggle('party-hud-on',tvParty);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);if(screenReport.dataset.visible==='true')tvUpdateScreenReport();
  document.getElementById('tv-mode').setAttribute('aria-pressed',String(tvMode));
  document.getElementById('tv-hud').setAttribute('aria-hidden',String(!tvMode));
  if(tvMode){
