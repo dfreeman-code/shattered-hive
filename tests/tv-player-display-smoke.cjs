@@ -16,14 +16,19 @@ try{
  // Synthetic-only party sheets. Never modify actual campaign records.
  await dm.evaluate(()=>{
   const names=['Vismund Cygnus','David','Snoop Bugg','Dr. Newton Sparknic','Mister Potts','Jawshua Red Hawk'];
-  db.pcs=names.map((name,i)=>({id:'tv-hud-'+i,name,class:['Wizard','Rogue','Warlock','Ranger','Paladin','Fighter'][i],hp:10+i,maxHp:20+i,ac:13+i}));
-  db.sheets=Object.fromEntries(db.pcs.map((p,i)=>[p.id,{currentHp:10+i,maxHp:20+i,ac:13+i,tempHp:i===0?3:0,scores:{DEX:14},initiativeBonus:1,conditions:i===0?'Blessed':i===1?'Poisoned':'',inspiration:i===2,notes:'PRIVATE VESPER SPOILER',spellPrepared:'PRIVATE VESPER SPOILER'}]));
+  db.pcs=names.map((name,i)=>({id:'tv-hud-'+i,name,class:['Wizard','Rogue','Warlock','Ranger','Paladin','Fighter'][i],species:['Spiderkin','Mantisborn','Spiderkin','Firefly Folk','Beetlekin','Antfolk'][i],hp:10+i,maxHp:20+i,ac:13+i}));
+  db.sheets=Object.fromEntries(db.pcs.map((p,i)=>[p.id,{currentHp:10+i,maxHp:20+i,ac:13+i,tempHp:i===0?3:0,scores:{DEX:14},initiativeBonus:1,conditions:i===0?'Blessed':i===1?'Poisoned':'',inspiration:i===2,spellSlots:i===0?{'1':2}:i===2?{'1':1}:i===3?{'1':0}:{},notes:'PRIVATE VESPER SPOILER',spellPrepared:'PRIVATE VESPER SPOILER'}]));
  });
  const hudPacket=await dm.evaluate(()=>livePlayerSnapshot());
  assert.equal(hudPacket.party.length,6);
  assert.equal(hudPacket.party[0].hp,10);
  assert.equal(hudPacket.party[0].conditions,'Blessed');
  assert.equal(hudPacket.party[0].initiative,3);
+ assert.equal(hudPacket.party[0].portrait,'assets/hero-tokens/portraits/vismund_cygnus_miniature.png');
+ assert.deepEqual(hudPacket.party[0].spellSlots,[{level:1,remaining:2}]);
+ assert.deepEqual(hudPacket.party[1].spellSlots,[]);
+ assert.deepEqual(hudPacket.party[2].spellSlots,[{level:1,remaining:1}]);
+ assert.deepEqual(hudPacket.party[3].spellSlots,[{level:1,remaining:0}]);
  assert(!JSON.stringify(hudPacket).includes('PRIVATE VESPER SPOILER'),'private sheet fields leaked');
  const prior=await dm.evaluate(()=>JSON.stringify(db));
  const opened=context.waitForEvent('page');
@@ -36,6 +41,14 @@ try{
  assert.equal(await player.locator('#party-bottom .party-card').count(),3);
  assert.match(await player.locator('#party-top .party-card').first().innerText(),/HP 10\/20/);
  assert.match(await player.locator('#party-top .party-card').first().innerText(),/Blessed/);
+ assert.equal(await player.locator('.party-portrait').count(),6);
+ assert.equal(await player.locator('#party-top .party-card').first().locator('.party-portrait').getAttribute('src'),'assets/hero-tokens/portraits/vismund_cygnus_miniature.png');
+ assert.match(await player.locator('#party-top .party-card').first().innerText(),/Level 1: 2 left/);
+ assert.equal(await player.locator('#party-top .party-card').nth(1).locator('.party-slot').count(),0,'Noncaster must not have spell slots');
+ assert.match(await player.locator('#party-top .party-card').nth(2).innerText(),/Level 1: 1 left/);
+ assert.match(await player.locator('#party-bottom .party-card').first().innerText(),/Level 1: 0 left/);
+ assert.equal(await player.locator('#party-bottom .party-card').last().locator('.party-slot').count(),0);
+ for(const img of await player.locator('.party-portrait').all()){assert.equal(await img.evaluate(el=>el.naturalWidth>0),true,'Party portrait failed to load')}
  assert(!(await player.locator('body').innerText()).includes('PRIVATE VESPER SPOILER'));
  await player.getByRole('button',{name:'Party HUD On'}).click();
  assert.equal(await player.locator('body.party-hud-on').count(),0);
