@@ -110,9 +110,9 @@ try{
  assert.match(await player.locator('#party-top .party-empty').innerText(),/No matching heroes found/);
  await dm.evaluate(()=>window.SHLive.publish());
  await until(()=>player.locator('.party-card').count().then(x=>x===6));
- await player.getByRole('button',{name:'Party HUD On'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Party HUD On'}).click();
  assert.equal(await player.locator('body.party-hud-on').count(),0);
- await player.getByRole('button',{name:'Party HUD Off'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Party HUD Off'}).click();
  assert.equal(await player.locator('body.party-hud-on').count(),1);
  const hudBefore=await dm.evaluate(()=>JSON.stringify(db));
  await dm.evaluate(()=>{db.sheets['tv-hud-0'].currentHp=4;window.SHLive.publish()});
@@ -128,7 +128,7 @@ try{
  assert(!((await player.locator('body').innerText()).includes('PRIVATE VESPER SPOILER')));
  assert(!((await player.locator('body').innerText()).includes('HIDDEN VESPER ENTRY')));
  // Whole-map fit remains available even though immersive TV Mode now defaults to Fill.
- await player.getByRole('button',{name:'Fit whole map'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Fit whole map'}).click();
  const visual=await player.evaluate(()=>{const b=document.querySelector('#live-board').getBoundingClientRect();return {vw:innerWidth,vh:innerHeight,w:b.width,h:b.height,header:getComputedStyle(document.querySelector('header')).display,footer:getComputedStyle(document.querySelector('footer')).display,label:getComputedStyle(document.querySelector('.token .label')).fontSize}});
  assert.equal(visual.header,'none');assert.equal(visual.footer,'none');
  assert(visual.w<=visual.vw+2&&visual.h<=visual.vh+2);
@@ -147,7 +147,7 @@ try{
  await player.setViewportSize({width:1280,height:720});
  await player.getByRole('button',{name:'TV Mode'}).click();
  assert.equal(await player.locator('body.tv-mode').count(),1);
- await player.getByRole('button',{name:'Screen info'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Screen info'}).click();
  assert.equal(await player.locator('#tv-screen-report').getAttribute('data-visible'),'true');
  const screenReadout=await player.locator('#tv-screen-report').innerText();
  assert.match(screenReadout,/Browser-reported screen:/);
@@ -160,7 +160,7 @@ try{
  await player.getByRole('button',{name:'TV Mode'}).click();
  assert.equal(await player.locator('body.tv-mode').count(),1);
  assert.match(await player.locator('#tv-screen-report').innerText(),/TV tab viewport: 1200 × 700 CSS px/);
- await player.getByRole('button',{name:'Screen info'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Screen info'}).click();
  assert.equal(await player.locator('#tv-screen-report').getAttribute('data-visible'),'false');
  await player.keyboard.press('Escape');
  await until(()=>player.locator('body.tv-mode').count().then(x=>x===0));
