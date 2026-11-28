@@ -19,8 +19,11 @@ try{
   db.pcs=names.map((name,i)=>({id:'tv-hud-'+i,name,class:['Wizard','Rogue','Warlock','Ranger','Paladin','Fighter'][i],species:['Spiderkin','Mantisborn','Spiderkin','Firefly Folk','Beetlekin','Antfolk'][i],hp:10+i,maxHp:20+i,ac:13+i}));
   db.sheets=Object.fromEntries(db.pcs.map((p,i)=>[p.id,{currentHp:10+i,maxHp:20+i,ac:13+i,tempHp:i===0?3:0,scores:{DEX:14},initiativeBonus:1,conditions:i===0?'Blessed':i===1?'Poisoned':'',inspiration:i===2,spellSlots:i===0?{'1':2}:i===2?{'1':1}:i===3?{'1':0}:{},notes:'PRIVATE VESPER SPOILER',spellPrepared:'PRIVATE VESPER SPOILER'}]));
  });
+ // Whitespace and punctuation variants must not hide the approved heroes.
+ await dm.evaluate(()=>{db.pcs[3].name='Dr.Newton  Sparknic'});
  const hudPacket=await dm.evaluate(()=>livePlayerSnapshot());
  assert.equal(hudPacket.party.length,6);
+ assert.equal(hudPacket.party[3].name,'Dr.Newton  Sparknic');
  assert.equal(hudPacket.party[0].hp,10);
  assert.equal(hudPacket.party[0].conditions,'Blessed');
  assert.equal(hudPacket.party[0].initiative,3);
@@ -50,6 +53,11 @@ try{
  assert.equal(await player.locator('#party-bottom .party-card').last().locator('.party-slot').count(),0);
  await player.waitForFunction(()=>[...document.querySelectorAll('.party-portrait')].length===6&&[...document.querySelectorAll('.party-portrait')].every(img=>img.complete&&img.naturalWidth>0));
  assert(!(await player.locator('body').innerText()).includes('PRIVATE VESPER SPOILER'));
+ // A disconnected or unmatched roster should explain the missing cards.
+ await player.evaluate(()=>renderPartyHud([]));
+ assert.match(await player.locator('#party-top .party-empty').innerText(),/No matching heroes found/);
+ await dm.evaluate(()=>window.SHLive.publish());
+ await until(()=>player.locator('.party-card').count().then(x=>x===6));
  await player.getByRole('button',{name:'Party HUD On'}).click();
  assert.equal(await player.locator('body.party-hud-on').count(),0);
  await player.getByRole('button',{name:'Party HUD Off'}).click();
