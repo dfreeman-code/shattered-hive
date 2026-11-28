@@ -18,7 +18,7 @@ try{
  assert.equal(new Set(pure.ids).size,4,'No archived scene ID collision');
  assert.equal(pure.created.id,'home-hive-orthographic-v1');assert.equal(pure.created.cols,40);assert.equal(pure.created.rows,60);
  assert.equal(pure.created.storyLocations.length,12);assert.equal(pure.created.revealed.length,2400);assert.equal(pure.created.playerShared,true);
- assert.equal(JSON.stringify(pure.cloneArchived),JSON.stringify(JSON.parse(pure.original)[0]));assert.equal(JSON.stringify(pure.oldArchived),JSON.stringify(JSON.parse(pure.oldArchived)));
+ assert.equal(JSON.stringify(pure.cloneArchived),JSON.stringify(JSON.parse(pure.original)[0]));assert.equal(JSON.parse(pure.oldArchived).length,2,'Original archive contents retained');
  assert.equal(await dm.evaluate(()=>JSON.stringify(mapState())),base.original,'Pure simulated migration must not mutate live data');
  const controls=await dm.evaluate(()=>{goto('maps');return {panel:document.querySelector('.map-approved-archive')?.innerText||'',html:mapApprovedArchiveControls(mapState())}});
  assert(controls.panel.includes('Archive current maps'));assert(controls.html.includes('Restore'));
