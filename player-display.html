@@ -306,9 +306,11 @@ document.getElementById('tv-mode').addEventListener('click',()=>setTvMode(!tvMod
 document.getElementById('tv-mode-exit').addEventListener('click',()=>setTvMode(false));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&tvMode)setTvMode(false)});
 document.addEventListener('fullscreenchange',()=>{if(tvMode&&!document.fullscreenElement)setTvMode(false)});
+// Fullscreen and TV Mode must expose the same read-only character HUD.
+// Previously standalone Fullscreen omitted TV Mode CSS and hid the roster.
 document.getElementById('fullscreen').addEventListener('click',()=>{
- if(document.fullscreenElement){document.exitFullscreen?.().catch(()=>{})}
- else document.documentElement.requestFullscreen?.().catch(()=>{});
+ if(tvMode||document.fullscreenElement)setTvMode(false);
+ else setTvMode(true);
 });
 </script>
 </body>
