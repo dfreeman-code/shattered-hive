@@ -43,5 +43,6 @@ try{
  assert.equal(await tv.locator('#live-board .token').count(),1);
  await tv.getByRole('button',{name:'TV Mode'}).click();assert.equal(await tv.locator('body.tv-fill').count(),1);
  await tv.getByRole('button',{name:'Fit whole map'}).click();assert.equal(await tv.locator('body.tv-fit').count(),1);
+ assert.equal(assetResp.status(),200,'Approved Home Hive image asset is missing. Upload assets/maps/home-hive-approved-top-down.webp to the feature branch before merging.');
  assert.deepEqual(errors,[]);console.log('PASS: controlled archive, collision preservation, idempotency, no startup mutation, 40x60 portrait Home Hive, location markers, TV safe WebP, fog/token protection');
 }finally{if(browser)await browser.close();server.kill()}})().catch(e=>{console.error(e);process.exitCode=1});
