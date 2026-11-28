@@ -104,13 +104,12 @@ body.tv-mode #tv-camera-controls{display:flex}
 body.ambient-off .map-ambient{display:none}
 @media(prefers-reduced-motion:reduce){.map-ambient .mote,.map-ambient .glint{animation:none;opacity:.24}}
 @media(max-width:760px){#tv-camera-controls{top:57px;right:10px}#tv-camera-controls button{font-size:12px;padding:6px}}
-/* Final camera overrides reserve the top/bottom HUD strips in either framing mode. */
-body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - 180px)*var(--ratio,1)));max-height:calc(100dvh - 180px)}
-body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 180px)*var(--ratio,1)));max-height:none}
-@media(max-height:650px){
- body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - 140px)*var(--ratio,1)));max-height:calc(100dvh - 140px)}
- body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 140px)*var(--ratio,1)));max-height:none}
-}
+/* Height-aware HUD bands keep portraits/slot badges clear of the battle map. */
+body.tv-mode.party-hud-on{--party-band:clamp(100px,12vh,136px)}
+body.tv-mode.party-hud-on main{padding:var(--party-band) 0}
+body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - var(--party-band) - var(--party-band))*var(--ratio,1)));max-height:calc(100dvh - var(--party-band) - var(--party-band))}
+body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - var(--party-band) - var(--party-band))*var(--ratio,1)));max-height:none}
+@media(max-height:650px){body.tv-mode.party-hud-on{--party-band:85px}}
 </style>
 </head>
 <body>
