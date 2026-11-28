@@ -69,6 +69,7 @@ body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacit
 .party-hud{display:none;position:fixed;left:0;right:0;z-index:23;pointer-events:none;padding:6px clamp(8px,1.4vw,24px);gap:clamp(6px,1vw,16px);grid-template-columns:repeat(3,minmax(0,1fr));}
 body.tv-mode.party-hud-on .party-hud:not(:empty){display:grid}
 #party-top{top:0}#party-bottom{bottom:0}
+.party-empty{grid-column:1/-1;text-align:center;color:#f8d4a7;font-weight:700;font-size:clamp(13px,1.15vw,19px)}
 .party-card{min-width:0;min-height:72px;padding:8px 13px;border:1px solid #c2b78b;border-radius:10px;background:#10271ff5;color:#fff5dc;box-shadow:0 2px 15px #000b}
 .party-card-main{display:flex;gap:9px;align-items:center;min-width:0}
 .party-portrait{width:clamp(46px,4.5vw,76px);height:clamp(46px,4.5vw,76px);flex:none;border:2px solid #d4c490;border-radius:10px;object-fit:cover;background:#29483d}
@@ -126,7 +127,7 @@ body.ambient-off .map-ambient{display:none}
  <div class="status" id="status" role="status" aria-live="polite" data-online="false">Connecting to DM tab…</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="tv-mode">📺 TV Mode</button><button type="button" id="fullscreen">⛶ Fullscreen</button></div>
 </header>
-<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button><button type="button" id="tv-party-toggle" aria-pressed="true">Party HUD On</button><button type="button" id="tv-screen-button" aria-pressed="false" aria-controls="tv-screen-report">Screen info</button></div><div id="tv-screen-report" role="status" aria-live="polite" data-visible="false"></div>
+<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button><button type="button" id="tv-party-toggle" aria-pressed="true" title="Show character cards in TV Mode">Party HUD On</button><button type="button" id="tv-screen-button" aria-pressed="false" aria-controls="tv-screen-report">Screen info</button></div><div id="tv-screen-report" role="status" aria-live="polite" data-visible="false"></div>
 <div id="tv-hud" aria-hidden="true"><div id="tv-hud-scene"></div><div id="tv-hud-status" data-online="false">Connecting…</div></div><button type="button" id="tv-mode-exit" aria-label="Exit TV Mode" title="Exit TV Mode (Esc)">✕ Exit TV Mode</button>
 <section id="party-top" class="party-hud" aria-label="Party status top row"></section><section id="party-bottom" class="party-hud" aria-label="Party status bottom row"></section><main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
 <footer id="footer">Player-safe display · Read-only · Same-browser session</footer>
@@ -152,7 +153,11 @@ function safeAsset(path){
 function renderPartyHud(party){
  const top=document.getElementById('party-top'),bottom=document.getElementById('party-bottom');
  top.replaceChildren();bottom.replaceChildren();
- if(!Array.isArray(party))return;
+ if(!Array.isArray(party)||party.length===0){
+  const message=document.createElement('div');message.className='party-card party-empty';
+  message.textContent='Party HUD: No matching heroes found. Check the DM character names and refresh both tabs.';
+  top.append(message);return;
+ }
  for(const [i,p] of party.slice(0,6).entries()){
   if(!p||typeof p.name!=='string')continue;
   const card=document.createElement('article');card.className='party-card';
@@ -193,7 +198,7 @@ function renderPartyHud(party){
 }
 function playerRender(packet){
  const scene=packet?.scene;
- if(!scene){renderPartyHud([]);waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
+ if(!scene){document.getElementById('party-top').replaceChildren();document.getElementById('party-bottom').replaceChildren();waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
  tvHudScene.textContent=String(scene.name||'Shared map').slice(0,100);renderPartyHud(packet?.party);
  const cols=Number(scene.cols),rows=Number(scene.rows);
  if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<4||cols>100||rows<4||rows>100)return;
