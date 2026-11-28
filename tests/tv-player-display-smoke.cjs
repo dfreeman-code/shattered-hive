@@ -42,6 +42,21 @@ try{
  await until(()=>player.locator('.party-card').count().then(x=>x===6));
  assert.equal(await player.locator('#party-top .party-card').count(),3);
  assert.equal(await player.locator('#party-bottom .party-card').count(),3);
+ // Camera controls must not cover any top-row hero cards on HDMI TV.
+ const hudAndControls=await player.evaluate(()=>{
+  const a=document.querySelector('#party-top').getBoundingClientRect();
+  const b=document.querySelector('#party-bottom').getBoundingClientRect();
+  const c=document.querySelector('#tv-camera-controls').getBoundingClientRect();
+  const style=getComputedStyle(document.querySelector('#tv-camera-controls'));
+  return {topBottom:a.bottom,bottomTop:b.top,controlsTop:c.top,controlsBottom:c.bottom,controlsRight:c.right,viewportWidth:innerWidth,visible:style.display};
+ });
+ assert.equal(hudAndControls.visible,'flex');
+ assert(hudAndControls.controlsTop>=hudAndControls.topBottom+4,
+  'Camera toolbar overlays top HUD: '+JSON.stringify(hudAndControls));
+ assert(hudAndControls.controlsBottom<=hudAndControls.bottomTop-4,
+  'Camera toolbar overlays bottom HUD: '+JSON.stringify(hudAndControls));
+ assert(hudAndControls.controlsRight<=hudAndControls.viewportWidth+1,'Camera toolbar outside TV viewport');
+
  assert.match(await player.locator('#party-top .party-card').first().innerText(),/HP 10\/20/);
  assert.match(await player.locator('#party-top .party-card').first().innerText(),/Blessed/);
  assert.equal(await player.locator('.party-portrait').count(),6);

@@ -94,7 +94,9 @@ body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 180px)*v
 body.tv-mode.tv-fill main{overflow:hidden}
 body.tv-mode.tv-fill .board{width:max(100vw,calc(100dvh * var(--ratio,1)));min-width:0;max-width:none;max-height:none;flex-shrink:0}
 body.tv-mode.tv-fit .board{width:min(100vw,calc(100dvh * var(--ratio,1)));max-width:100%;max-height:100dvh}
-#tv-camera-controls{display:none;position:fixed;z-index:32;top:12px;right:152px;gap:6px;align-items:center}
+/* Keep camera controls in the map-side lane rather than across the top hero cards.
+   Use the vertical center and allow scrolling on short TV viewports. */
+#tv-camera-controls{display:none;position:fixed;z-index:32;top:50%;right:clamp(12px,1.4vw,24px);transform:translateY(-50%);flex-direction:column;gap:6px;align-items:stretch;max-height:calc(100dvh - 230px);overflow-y:auto;max-width:min(190px,35vw)}
 body.tv-mode #tv-camera-controls{display:flex}
 #tv-camera-controls button{font-size:13px;background:#122d25e6;color:#fff6de;border:1px solid #d6ddb577}
 #tv-camera-controls button[aria-pressed="true"]{background:#d4c79b;color:#1e3529}
