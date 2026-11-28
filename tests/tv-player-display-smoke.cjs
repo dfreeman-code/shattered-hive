@@ -42,20 +42,23 @@ try{
  await until(()=>player.locator('.party-card').count().then(x=>x===6));
  assert.equal(await player.locator('#party-top .party-card').count(),3);
  assert.equal(await player.locator('#party-bottom .party-card').count(),3);
- // Camera controls must not cover any top-row hero cards on HDMI TV.
- const hudAndControls=await player.evaluate(()=>{
-  const a=document.querySelector('#party-top').getBoundingClientRect();
-  const b=document.querySelector('#party-bottom').getBoundingClientRect();
-  const c=document.querySelector('#tv-camera-controls').getBoundingClientRect();
-  const style=getComputedStyle(document.querySelector('#tv-camera-controls'));
-  return {topBottom:a.bottom,bottomTop:b.top,controlsTop:c.top,controlsBottom:c.bottom,controlsRight:c.right,viewportWidth:innerWidth,visible:style.display};
- });
- assert.equal(hudAndControls.visible,'flex');
- assert(hudAndControls.controlsTop>=hudAndControls.topBottom+4,
-  'Camera toolbar overlays top HUD: '+JSON.stringify(hudAndControls));
- assert(hudAndControls.controlsBottom<=hudAndControls.bottomTop-4,
-  'Camera toolbar overlays bottom HUD: '+JSON.stringify(hudAndControls));
- assert(hudAndControls.controlsRight<=hudAndControls.viewportWidth+1,'Camera toolbar outside TV viewport');
+ // Presentation controls should never cover heroes until explicitly summoned.
+ assert.equal(await player.locator('#tv-camera-controls').evaluate(el=>getComputedStyle(el).display),'none');
+ assert.equal(await player.locator('#tv-controls-toggle').getAttribute('aria-expanded'),'false');
+ const tab=await player.locator('#tv-controls-toggle').boundingBox();
+ const hudTop=await player.locator('#party-top').boundingBox();
+ const hudBottom=await player.locator('#party-bottom').boundingBox();
+ assert(tab&&tab.y>=hudTop.y+hudTop.height,'Tiny TV controls tab must clear the upper HUD');
+ assert(tab.y+tab.height<=hudBottom.y,'Tiny TV controls tab must clear the lower HUD');
+ await player.locator('#tv-controls-toggle').click();
+ assert.equal(await player.locator('#tv-camera-controls').evaluate(el=>getComputedStyle(el).display),'flex');
+ assert.equal(await player.locator('#tv-controls-toggle').getAttribute('aria-expanded'),'true');
+ await player.locator('#tv-fit').click();
+ assert.equal(await player.locator('#tv-camera-controls').evaluate(el=>getComputedStyle(el).display),'none','Camera controls should auto-close after selection');
+ assert.equal(await player.locator('#tv-controls-toggle').getAttribute('aria-expanded'),'false');
+ await player.locator('#tv-controls-toggle').click();
+ await player.locator('#tv-fill').click();
+ assert.equal(await player.locator('#tv-camera-controls').evaluate(el=>getComputedStyle(el).display),'none');
 
  assert.match(await player.locator('#party-top .party-card').first().innerText(),/HP 10\/20/);
  assert.match(await player.locator('#party-top .party-card').first().innerText(),/Blessed/);
