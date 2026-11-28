@@ -58,6 +58,20 @@ try{
  await player.waitForFunction(()=>!document.fullscreenElement);
  await player.getByRole('button',{name:'Fullscreen'}).click();
  assert.equal(await player.locator('body.tv-mode.party-hud-on').count(),1);
+ const frame=await player.evaluate(()=>{
+  const body=document.body,before=getComputedStyle(body,'::before'),after=getComputedStyle(body,'::after');
+  const board=document.querySelector('#live-board').getBoundingClientRect();
+  return {before:before.content,after:after.content,beforePosition:before.position,afterPosition:after.position,pointerBefore:before.pointerEvents,pointerAfter:after.pointerEvents,art:after.backgroundImage,boardWidth:board.width};
+ });
+ assert.notEqual(frame.before,'none','TV-mode Evergarden border missing');
+ assert.notEqual(frame.after,'none','TV-mode leafy corner flourishes missing');
+ assert.equal(frame.beforePosition,'fixed');
+ assert.equal(frame.afterPosition,'fixed');
+ assert.equal(frame.pointerBefore,'none');
+ assert.equal(frame.pointerAfter,'none');
+ assert.match(frame.art,/gradient/,'TV frame should use CSS without assets');
+ assert(frame.boardWidth>400,'Decorative overlay must not shrink the map');
+
  assert.equal(await player.locator('.party-card').count(),6);
  assert.equal(await player.locator('#party-top').evaluate(el=>getComputedStyle(el).display),'grid');
  assert((await player.locator('#party-top').boundingBox()).height>50,'Fullscreen party cards must be visibly laid out');
