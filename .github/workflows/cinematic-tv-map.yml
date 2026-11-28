@@ -1,0 +1,27 @@
+name: Cinematic television maps
+on:
+  push:
+    branches: [feature/cinematic-tv-maps-ambient-detail]
+  pull_request:
+    paths:
+      - 'player-display.html'
+      - 'assets/maps/world-redesign/**'
+      - 'tests/cinematic-tv-map-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cinematic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Browser check full-bleed presentation and effects
+        run: node tests/cinematic-tv-map-smoke.cjs
