@@ -3251,7 +3251,7 @@ const SH_VERTICAL_DISTRICTS={
  'caper-glass-doors':['Prismatic Gallery','Mirrorstone Threshold']
 };
 function mapVerticalPlan(m){
- if(!m||!mapWorldAtlasKey(m)||m.verticalJourneyV1)return null;
+ if(!m||m.id==='home-hive-orthographic-v1'||!mapWorldAtlasKey(m)||m.verticalJourneyV1)return null;
  const rows=mapRows(m),newRows=Math.round(rows*4/3);
  if(newRows>100||newRows<=rows)return null;
  const top=Math.floor((newRows-rows)/2);
@@ -3369,8 +3369,8 @@ function mapWorldControls(m){
  const all=mapWorldPlaces(m),selected=all.find(p=>p.id===mapWorldSelectedId);
  const link=selected&&Number.isInteger(selected.scriptScene)&&selected.scriptScene>=0&&selected.scriptScene<ADVENTURE_ONE_SCENES.length;
  return '<div class="card map-world-controls"><h3>✦ World locations <span class="pill">'+all.length+'</span></h3><p class="map-file-note">Each public landmark is illustrated on the map. These DM-only controls let you navigate, add locations, and connect places to Adventure Runner. Changes never trigger story outcomes.</p>'+
- '<label class="hero-ready-check"><input type="checkbox" '+(m.worldRedesignEnabled!==false?'checked':'')+' '+(m.imageData?'disabled':'')+' onchange="mapWorldToggle(this.checked)"> Use redesigned full-map artwork</label>'+ 
- (m.verticalJourneyV1?'<p class="map-file-note">✓ Tall layout active · '+mapCols(m)+' × '+mapRows(m)+' squares, with upper and lower exploration districts</p>':'<button type="button" class="btn secondary" onclick="mapVerticalExpandAll()">↕ Make all story maps taller (backup required)</button>')+
+ (m.id==='home-hive-orthographic-v1'?'<p class="map-file-note">✓ Approved top-down village artwork. Grid: 40 × 60, portrait 2:3.</p>':'<label class="hero-ready-check"><input type="checkbox" '+(m.worldRedesignEnabled!==false?'checked':'')+' '+(m.imageData?'disabled':'')+' onchange="mapWorldToggle(this.checked)"> Use redesigned full-map artwork</label>')+ 
+ (m.id==='home-hive-orthographic-v1'?'':m.verticalJourneyV1?'<p class="map-file-note">✓ Tall layout active · '+mapCols(m)+' × '+mapRows(m)+' squares, with upper and lower exploration districts</p>':'<button type="button" class="btn secondary" onclick="mapVerticalExpandAll()">↕ Make all story maps taller (backup required)</button>')+
  '<div class="map-world-list">'+all.map(p=>'<div class="map-world-entry"><button type="button" class="btn secondary small" onclick="mapWorldSelect(\''+esc(p.id)+'\')">'+esc(p.name)+'</button><button type="button" class="btn small secondary" onclick="mapWorldJump(\''+esc(p.id)+'\')" aria-label="Zoom to '+esc(p.name)+'">⌖ Find</button></div>').join('')+'</div>'+
  '<button type="button" class="btn secondary" onclick="mapWorldAdd()">＋ Add future shop or story location</button>'+
  (selected?'<div class="map-world-fields"><h4>Editing: '+esc(selected.name)+'</h4>'+
