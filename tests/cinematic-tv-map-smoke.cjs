@@ -10,7 +10,7 @@ assert.equal(await tv.locator('.map-ambient .mote,.map-ambient .glint').count(),
 assert.equal(await tv.locator('#live-board .fog div').count(),3600);
 await tv.locator('#tv-controls-toggle').click();await tv.getByRole('button',{name:'Fit whole map'}).click();const fit=await tv.locator('#live-board').evaluate(e=>e.getBoundingClientRect());assert(fit.width<=1082&&fit.height<=1082,'Fit must show entire square board on TV');
 await tv.locator('#tv-controls-toggle').click();await tv.getByRole('button',{name:'Fill TV'}).click();assert((await tv.locator('#live-board').evaluate(e=>e.getBoundingClientRect().width))>=1918);
-await tv.getByRole('button',{name:'Effects On'}).click();assert.equal(await tv.locator('body.ambient-off').count(),1);
+await tv.locator('#tv-controls-toggle').click();await tv.getByRole('button',{name:'Effects On'}).click();assert.equal(await tv.locator('body.ambient-off').count(),1);
 const before=await tv.locator('.token').first().getAttribute('style');
 await tv.evaluate(data=>playerRender(data),p);assert.equal(await tv.locator('body.ambient-off').count(),1);assert.equal(await tv.locator('.token').first().getAttribute('style'),before);
 await tv.keyboard.press('a');assert.equal(await tv.locator('body.ambient-off').count(),0);
