@@ -3228,7 +3228,7 @@ const SH_WORLD_SCENE_ASSETS={
  'caper-frozen-berry':'caper-frozen-berry',
  'caper-glass-doors':'caper-glass-doors'
 };
-const SH_WORLD_TYPES=['council','market','hut','workshop','plot','plaza','tree','grove','shrine','web','bridge','tower','water','ice','berry','gift','door','gate','hazard','path','secret','other'];
+const SH_WORLD_TYPES=['council','market','hut','workshop','plot','plaza','tree','grove','shrine','web','bridge','tower','water','ice','berry','gift','door','gate','hazard','path','secret','district','other'];
 function mapWorldAtlasKey(m){
  const k=SH_WORLD_SCENE_ASSETS[m?.id];
  return typeof SH_WORLD_ATLAS!=='undefined'&&k&&Object.prototype.hasOwnProperty.call(SH_WORLD_ATLAS,k)?k:'';
