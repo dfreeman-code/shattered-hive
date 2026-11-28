@@ -98,6 +98,13 @@ body.tv-mode #tv-camera-controls{display:flex}
 body.ambient-off .map-ambient{display:none}
 @media(prefers-reduced-motion:reduce){.map-ambient .mote,.map-ambient .glint{animation:none;opacity:.24}}
 @media(max-width:760px){#tv-camera-controls{top:57px;right:10px}#tv-camera-controls button{font-size:12px;padding:6px}}
+/* Final camera overrides reserve the top/bottom HUD strips in either framing mode. */
+body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - 180px)*var(--ratio,1)));max-height:calc(100dvh - 180px)}
+body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 180px)*var(--ratio,1)));max-height:none}
+@media(max-height:650px){
+ body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - 140px)*var(--ratio,1)));max-height:calc(100dvh - 140px)}
+ body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 140px)*var(--ratio,1)));max-height:none}
+}
 </style>
 </head>
 <body>
