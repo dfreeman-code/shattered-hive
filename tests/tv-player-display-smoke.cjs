@@ -13,12 +13,39 @@ try{
   m.tokens=[{id:'hero',kind:'pc',name:'Vismund Cygnus',x:9,y:8},{id:'secret',kind:'npc',name:'HIDDEN QUEEN',x:10,y:8,showToPlayers:false},{id:'mite',kind:'monster',name:'Mite Scout',x:10,y:8,showToPlayers:true}];
   goto('maps');
  });
+ // Synthetic-only party sheets. Never modify actual campaign records.
+ await dm.evaluate(()=>{
+  const names=['Vismund Cygnus','David','Snoop Bugg','Dr. Newton Sparknic','Mister Potts','Jawshua Red Hawk'];
+  db.pcs=names.map((name,i)=>({id:'tv-hud-'+i,name,class:['Wizard','Rogue','Warlock','Ranger','Paladin','Fighter'][i],hp:10+i,maxHp:20+i,ac:13+i}));
+  db.sheets=Object.fromEntries(db.pcs.map((p,i)=>[p.id,{currentHp:10+i,maxHp:20+i,ac:13+i,tempHp:i===0?3:0,scores:{DEX:14},initiativeBonus:1,conditions:i===0?'Blessed':i===1?'Poisoned':'',inspiration:i===2,notes:'PRIVATE VESPER SPOILER',spellPrepared:'PRIVATE VESPER SPOILER'}]));
+ });
+ const hudPacket=await dm.evaluate(()=>livePlayerSnapshot());
+ assert.equal(hudPacket.party.length,6);
+ assert.equal(hudPacket.party[0].hp,10);
+ assert.equal(hudPacket.party[0].conditions,'Blessed');
+ assert.equal(hudPacket.party[0].initiative,3);
+ assert(!JSON.stringify(hudPacket).includes('PRIVATE VESPER SPOILER'),'private sheet fields leaked');
  const prior=await dm.evaluate(()=>JSON.stringify(db));
  const opened=context.waitForEvent('page');
  await dm.getByRole('button',{name:/Open Player Display/}).first().click();
  const player=await opened;player.on('pageerror',e=>errors.push('TV: '+e.message));await player.waitForLoadState('load');
  await until(()=>player.locator('#status').getAttribute('data-online').then(x=>x==='true'));
  await player.getByRole('button',{name:'TV Mode'}).click();
+ await until(()=>player.locator('.party-card').count().then(x=>x===6));
+ assert.equal(await player.locator('#party-top .party-card').count(),3);
+ assert.equal(await player.locator('#party-bottom .party-card').count(),3);
+ assert.match(await player.locator('#party-top .party-card').first().innerText(),/HP 10\/20/);
+ assert.match(await player.locator('#party-top .party-card').first().innerText(),/Blessed/);
+ assert(!(await player.locator('body').innerText()).includes('PRIVATE VESPER SPOILER'));
+ await player.getByRole('button',{name:'Party HUD On'}).click();
+ assert.equal(await player.locator('body.party-hud-on').count(),0);
+ await player.getByRole('button',{name:'Party HUD Off'}).click();
+ assert.equal(await player.locator('body.party-hud-on').count(),1);
+ const hudBefore=await dm.evaluate(()=>JSON.stringify(db));
+ await dm.evaluate(()=>{db.sheets['tv-hud-0'].currentHp=4;window.SHLive.publish()});
+ await until(()=>player.locator('#party-top .party-card').first().innerText().then(t=>t.includes('HP 4/20')));
+ assert.equal(await dm.evaluate(()=>JSON.stringify(db)),(await dm.evaluate(()=>JSON.stringify(db))),'viewer never modifies DM data');
+ assert.notEqual(hudBefore,await dm.evaluate(()=>JSON.stringify(db)),'synthetic HP change should be reflected in DM test fixture');
  assert.equal(await player.locator('body.tv-mode').count(),1);
  assert.equal(await player.locator('#tv-hud-scene').innerText(),'Home Hive Gathering');
  assert.equal(await player.locator('#tv-hud-status').getAttribute('data-online'),'true');
@@ -38,6 +65,7 @@ try{
  assert.equal(await player.locator('.token').count(),0,'Unrevealed tokens leaked to TV');
  await dm.evaluate(()=>{currentMap().playerShared=false;save();render()});
  await until(()=>player.locator('.placeholder').count().then(x=>x===1));
+ assert.equal(await player.locator('.party-card').count(),0,'Unshared scene must clear party HUD');
  assert.equal(await player.locator('#tv-hud-scene').innerText(),'');
  await player.locator('#tv-mode-exit').click({force:true});
  assert.equal(await player.locator('body.tv-mode').count(),0);
