@@ -112,7 +112,7 @@ function waiting(message){
 }
 function safeAsset(path){
  if(typeof path==='string'&&path.startsWith('assets/maps/world-redesign/'))return /^[a-z0-9-]+[.]svg$/i.test(path.slice('assets/maps/world-redesign/'.length))?path:'';
- return typeof path==='string'&&/^assets\/(?:maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?|hero-tokens\/[a-z0-9_-]+_token\.png)$/i.test(path)?path:'';
+ return typeof path==='string'&&/^assets\/(?:maps\/[a-z0-9_-]+\.(?:png|svg|webp)(?:\?v=[0-9]+)?|hero-tokens\/[a-z0-9_-]+_token\.png)$/i.test(path)?path:'';
 }
 function playerRender(packet){
  const scene=packet?.scene;
