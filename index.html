@@ -3787,6 +3787,25 @@ function liveSessionId(){
  }
  return id;
 }
+// Read-only, explicitly allowlisted player HUD projection. Never send full sheets or DM notes.
+const TV_HERO_NAMES=['Vismund Cygnus','David','Snoop Bugg','Dr. Newton Sparknic','Mister Potts','Jawshua Red Hawk'];
+function livePartyHud(){
+ const pcs=Array.isArray(db.pcs)?db.pcs:[],sheets=db.sheets||{};
+ const finite=(x)=>x!==''&&x!==null&&x!==undefined&&Number.isFinite(Number(x))?Number(x):null;
+ return TV_HERO_NAMES.map(name=>{
+  const pc=pcs.find(p=>String(p.name||'').trim().toLowerCase()===name.toLowerCase());
+  if(!pc)return null;
+  const sh=sheets[pc.id]||{};
+  const hp=finite(sh.currentHp)??finite(pc.hp),maxHp=finite(sh.maxHp)??finite(pc.maxHp);
+  const ac=finite(sh.ac)??finite(pc.ac),tempHp=finite(sh.tempHp);
+  const dex=finite(sh.scores?.DEX);
+  const initiative=dex===null?null:Math.floor((dex-10)/2)+(finite(sh.initiativeBonus)??0);
+  return {name:String(pc.name||'').slice(0,80),className:String(pc.class||'').slice(0,40),
+   hp,maxHp,ac,tempHp,initiative,
+   conditions:typeof sh.conditions==='string'?sh.conditions.trim().slice(0,160):'',
+   inspiration:sh.inspiration===true};
+ }).filter(Boolean);
+}
 function livePlayerSnapshot(){
  const ms=mapState(),m=currentMap();
  if(!m||!mapAvailable(m))return {version:1,scene:null,notice:'The DM has not shared this map.'};
@@ -3808,7 +3827,7 @@ function livePlayerSnapshot(){
  const worldArt=mapWorldArt(m);
  const image=worldArt||(m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'');
  const safeImage=worldArt||(/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg|webp)(?:\?v=[0-9]+)?$/i.test(image)?image:'');
- return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:worldArt?null:mapArtCenter(m),sideArt:worldArt?'':mapWideSideArt(m),territory:worldArt?null:mapTerritoryCore(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
+ return {version:1,party:livePartyHud(),scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:worldArt?null:mapArtCenter(m),sideArt:worldArt?'':mapWideSideArt(m),territory:worldArt?null:mapTerritoryCore(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
 }
 function initLivePlayerDisplay(){
  if(!('BroadcastChannel' in window))return {available:false,publish(){},open(){alert('This browser does not support live tab updates. Please use a current Chrome, Edge or Firefox browser.')}};
