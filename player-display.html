@@ -70,6 +70,12 @@ body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacit
 body.tv-mode.party-hud-on .party-hud:not(:empty){display:grid}
 #party-top{top:0}#party-bottom{bottom:0}
 .party-card{min-width:0;min-height:72px;padding:8px 13px;border:1px solid #c2b78b;border-radius:10px;background:#10271ff5;color:#fff5dc;box-shadow:0 2px 15px #000b}
+.party-card-main{display:flex;gap:9px;align-items:center;min-width:0}
+.party-portrait{width:clamp(46px,4.5vw,76px);height:clamp(46px,4.5vw,76px);flex:none;border:2px solid #d4c490;border-radius:10px;object-fit:cover;background:#29483d}
+.party-card-info{min-width:0;flex:1}
+.party-slots{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;font-size:clamp(10px,.9vw,15px);font-weight:750;color:#aadaef}
+.party-slot{border:1px solid #668b9b;border-radius:5px;padding:1px 5px;background:#173543}
+@media(max-width:900px){.party-portrait{width:40px;height:40px}.party-card-main{gap:5px}.party-slots{gap:2px}}
 .party-card strong{display:block;font:750 clamp(12px,1.12vw,19px) Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .party-card .party-meta{font-size:clamp(10px,.86vw,14px);color:#d3dfcf}
 .party-card .party-stats{display:flex;gap:clamp(7px,1.1vw,22px);flex-wrap:wrap;font-size:clamp(12px,1.12vw,20px);font-weight:800;margin-top:3px}
@@ -143,6 +149,7 @@ function renderPartyHud(party){
  for(const [i,p] of party.slice(0,6).entries()){
   if(!p||typeof p.name!=='string')continue;
   const card=document.createElement('article');card.className='party-card';
+  const info=document.createElement('div');info.className='party-card-info';
   const name=document.createElement('strong');name.textContent=p.name.slice(0,80);
   const meta=document.createElement('div');meta.className='party-meta';meta.textContent=String(p.className||'').slice(0,40);
   const stats=document.createElement('div');stats.className='party-stats';
@@ -153,7 +160,28 @@ function renderPartyHud(party){
   for(const txt of stat){const el=document.createElement('span');el.textContent=txt;stats.append(el)}
   const effects=document.createElement('div');effects.className='party-effect';
   effects.textContent=(p.inspiration===true?'★ Inspiration · ':'')+(typeof p.conditions==='string'&&p.conditions.trim()?p.conditions.slice(0,160):'No active effects');
-  card.append(name,meta,stats,effects);(i<3?top:bottom).append(card);
+  info.append(name,meta,stats,effects);
+  // Use only the app's preapproved miniature portrait asset directory.
+  const main=document.createElement('div');main.className='party-card-main';
+  const portrait=typeof p.portrait==='string'&&/^assets\/hero-tokens\/portraits\/[a-z0-9_-]+_miniature\.png$/i.test(p.portrait)?p.portrait:'';
+  if(portrait){
+   const img=document.createElement('img');img.className='party-portrait';img.src=portrait;
+   img.alt=String(p.name).slice(0,80)+' character portrait';img.loading='eager';
+   img.addEventListener('error',()=>img.remove());
+   main.append(img);
+  }
+  main.append(info);card.append(main);
+  if(Array.isArray(p.spellSlots)&&p.spellSlots.length){
+   const slots=document.createElement('div');slots.className='party-slots';
+   slots.setAttribute('aria-label','Remaining spell slots');
+   for(const slot of p.spellSlots.slice(0,9)){
+    if(!slot||!Number.isInteger(slot.level)||slot.level<1||slot.level>9||!Number.isInteger(slot.remaining)||slot.remaining<0)continue;
+    const el=document.createElement('span');el.className='party-slot';
+    el.textContent='Level '+slot.level+': '+slot.remaining+' left';slots.append(el);
+   }
+   if(slots.childElementCount)card.append(slots);
+  }
+  (i<3?top:bottom).append(card);
  }
 }
 function playerRender(packet){
