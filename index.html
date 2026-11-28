@@ -3800,8 +3800,16 @@ function livePartyHud(){
   const ac=finite(sh.ac)??finite(pc.ac),tempHp=finite(sh.tempHp);
   const dex=finite(sh.scores?.DEX);
   const initiative=dex===null?null:Math.floor((dex-10)/2)+(finite(sh.initiativeBonus)??0);
+  const portrait=pcMiniatureAsset(pc)?.portrait||'';
+  // The existing sheet stores remaining slots only, not a reliable maximum.
+  // Never infer a maximum or show unused slot records for martial characters.
+  const slotData=sh.spellSlots;
+  const spellSlots=slotData&&typeof slotData==='object'&&!Array.isArray(slotData)
+   ?Object.entries(slotData).filter(([level,count])=>/^[1-9]$/.test(level)&&Number.isInteger(Number(count))&&Number(count)>=0)
+    .sort((a,b)=>Number(a[0])-Number(b[0])).slice(0,9).map(([level,count])=>({level:Number(level),remaining:Number(count)}))
+   :[];
   return {name:String(pc.name||'').slice(0,80),className:String(pc.class||'').slice(0,40),
-   hp,maxHp,ac,tempHp,initiative,
+   hp,maxHp,ac,tempHp,initiative,portrait,spellSlots,
    conditions:typeof sh.conditions==='string'?sh.conditions.trim().slice(0,160):'',
    inspiration:sh.inspiration===true};
  }).filter(Boolean);
