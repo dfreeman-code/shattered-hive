@@ -45,6 +45,16 @@ try{
  await player.setViewportSize({width:1280,height:720});
  await player.getByRole('button',{name:'TV Mode'}).click();
  assert.equal(await player.locator('body.tv-mode').count(),1);
+ await player.getByRole('button',{name:'Screen info'}).click();
+ assert.equal(await player.locator('#tv-screen-report').getAttribute('data-visible'),'true');
+ const screenReadout=await player.locator('#tv-screen-report').innerText();
+ assert.match(screenReadout,/Browser-reported screen:/);
+ assert.match(screenReadout,/TV tab viewport: 1280 × 720 CSS px/);
+ assert.match(screenReadout,/Estimated device pixels:/);
+ await player.setViewportSize({width:1200,height:700});
+ assert.match(await player.locator('#tv-screen-report').innerText(),/TV tab viewport: 1200 × 700 CSS px/);
+ await player.getByRole('button',{name:'Screen info'}).click();
+ assert.equal(await player.locator('#tv-screen-report').getAttribute('data-visible'),'false');
  await player.keyboard.press('Escape');
  await until(()=>player.locator('body.tv-mode').count().then(x=>x===0));
  assert.equal(await dm.evaluate(()=>JSON.stringify(db)),await dm.evaluate(()=>JSON.stringify(db)),'TV must not touch DM records');
