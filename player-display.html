@@ -65,6 +65,24 @@ body.tv-mode #tv-hud{display:block}
 body.tv-mode #tv-mode-exit{display:block}
 body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacity:1}
 @media(prefers-reduced-motion:reduce){#tv-mode-exit{transition:none}}
+
+/* TV camera: immersive cover framing preserves the same full-resolution fog and token coordinate system. */
+body.tv-mode.tv-fill main{overflow:hidden}
+body.tv-mode.tv-fill .board{width:max(100vw,calc(100dvh * var(--ratio,1)));min-width:0;max-width:none;max-height:none;flex-shrink:0}
+body.tv-mode.tv-fit .board{width:min(100vw,calc(100dvh * var(--ratio,1)));max-width:100%;max-height:100dvh}
+#tv-camera-controls{display:none;position:fixed;z-index:32;top:12px;right:152px;gap:6px;align-items:center}
+body.tv-mode #tv-camera-controls{display:flex}
+#tv-camera-controls button{font-size:13px;background:#122d25e6;color:#fff6de;border:1px solid #d6ddb577}
+#tv-camera-controls button[aria-pressed="true"]{background:#d4c79b;color:#1e3529}
+#tv-camera-controls button:focus-visible{outline:3px solid #ffdc75}
+.map-ambient{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.map-ambient .mote{position:absolute;width:var(--mote-size,9px);height:var(--mote-size,9px);border-radius:50%;left:var(--mote-x);top:var(--mote-y);background:radial-gradient(circle,#fffdea 0%,#e4d59999 30%,transparent 70%);filter:drop-shadow(0 0 5px #fff6c1b0);animation:map-mote-drift var(--mote-duration,7s) ease-in-out infinite alternate,map-mote-glow calc(var(--mote-duration,7s)*.65) ease-in-out infinite alternate;animation-delay:var(--mote-delay,0s)}
+.map-ambient .glint{position:absolute;width:34px;height:34px;left:var(--mote-x);top:var(--mote-y);background:radial-gradient(circle,#fff9d6 0%,#fff7d7aa 12%,transparent 48%);animation:map-mote-glow var(--mote-duration,7s) ease-in-out infinite alternate;animation-delay:var(--mote-delay,0s)}
+@keyframes map-mote-drift{from{transform:translate3d(-7px,5px,0)}to{transform:translate3d(10px,-13px,0)}}
+@keyframes map-mote-glow{from{opacity:.16}to{opacity:.7}}
+body.ambient-off .map-ambient{display:none}
+@media(prefers-reduced-motion:reduce){.map-ambient .mote,.map-ambient .glint{animation:none;opacity:.24}}
+@media(max-width:760px){#tv-camera-controls{top:57px;right:10px}#tv-camera-controls button{font-size:12px;padding:6px}}
 </style>
 </head>
 <body>
@@ -73,6 +91,7 @@ body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacit
  <div class="status" id="status" role="status" aria-live="polite" data-online="false">Connecting to DM tab…</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="tv-mode">📺 TV Mode</button><button type="button" id="fullscreen">⛶ Fullscreen</button></div>
 </header>
+<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button></div>
 <div id="tv-hud" aria-hidden="true"><div id="tv-hud-scene"></div><div id="tv-hud-status" data-online="false">Connecting…</div></div><button type="button" id="tv-mode-exit" aria-label="Exit TV Mode" title="Exit TV Mode (Esc)">✕ Exit TV Mode</button>
 <main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
 <footer id="footer">Player-safe display · Read-only · Same-browser session</footer>
@@ -81,7 +100,7 @@ body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacit
 // Standalone display: never loads the campaign app, localStorage, Supabase, or DM data.
 const status=document.getElementById('status'),stage=document.getElementById('stage'),footer=document.getElementById('footer');
 const session=new URLSearchParams(location.hash.slice(1)).get('session')||'';
-let channel=null,lastUpdate=0,lastSequence=0,tvMode=false;
+let channel=null,lastUpdate=0,lastSequence=0,tvMode=false,tvFill=true,tvAmbient=true;
 const tvHudScene=document.getElementById('tv-hud-scene'),tvHudStatus=document.getElementById('tv-hud-status');
 function setStatus(label,online){status.textContent=label;status.dataset.online=online?'true':'false';tvHudStatus.textContent=label;tvHudStatus.dataset.online=online?'true':'false'}
 function waiting(message){
@@ -122,6 +141,11 @@ function playerRender(packet){
   while(art.firstChild)inner.append(art.firstChild);
   art.classList.add('territory-art');art.append(inner);
  }
+ const ambience=document.createElement('div');ambience.className='map-ambient';ambience.setAttribute('aria-hidden','true');
+ if(src&&src.startsWith('assets/maps/world-redesign/')){
+  // Deterministic, public decorative lights; never read DM notes, character data or hidden markers.
+  for(let i=0;i<24;i++){const el=document.createElement('span');el.className=i%5===0?'glint':'mote';const x=(17+i*37)%94+3,y=(21+i*29)%88+6;el.style.setProperty('--mote-x',x+'%');el.style.setProperty('--mote-y',y+'%');el.style.setProperty('--mote-size',(i%3+6)+'px');el.style.setProperty('--mote-duration',(5+i%6)+'s');el.style.setProperty('--mote-delay',(-i*.43)+'s');ambience.append(el)}
+ }
  const grid=document.createElement('div');grid.className='grid';if(!scene.grid)grid.style.display='none';
  const tokens=document.createElement('div');tokens.className='tokens';
  for(const t of Array.isArray(scene.tokens)?scene.tokens:[]){
@@ -138,7 +162,7 @@ function playerRender(packet){
  }
  const fog=document.createElement('div');fog.className='fog';const cells=document.createDocumentFragment();
  for(let i=0;i<cols*rows;i++){const cell=document.createElement('div');if(visible.has(i))cell.className='revealed';else if(reveal.has(i))cell.className='explored';cells.append(cell)}
- fog.append(cells);board.append(art,grid,tokens,fog);
+ fog.append(cells);art.append(ambience);board.append(art,grid,tokens,fog);
  stage.replaceChildren(board);
  footer.textContent=String(scene.name||'Shared map').slice(0,100)+' · '+cols+' × '+rows+' · Player-safe display';
 }
@@ -162,8 +186,14 @@ if(!/^[a-f0-9-]{24,64}$/.test(session)||!('BroadcastChannel' in window)){
  },2000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)hello()});
 }
+function tvSetFraming(fill){tvFill=!!fill;document.body.classList.toggle('tv-fill',tvFill);document.body.classList.toggle('tv-fit',!tvFill);document.getElementById('tv-fill').setAttribute('aria-pressed',String(tvFill));document.getElementById('tv-fit').setAttribute('aria-pressed',String(!tvFill));}
+function tvSetAmbient(enabled){tvAmbient=!!enabled;document.body.classList.toggle('ambient-off',!tvAmbient);const button=document.getElementById('tv-ambient');button.setAttribute('aria-pressed',String(tvAmbient));button.textContent=tvAmbient?'✨ Effects On':'✨ Effects Off';}
+document.getElementById('tv-fill').addEventListener('click',()=>tvSetFraming(true));
+document.getElementById('tv-fit').addEventListener('click',()=>tvSetFraming(false));
+document.getElementById('tv-ambient').addEventListener('click',()=>tvSetAmbient(!tvAmbient));
+document.addEventListener('keydown',e=>{if(!tvMode)return;if(e.key==='f'||e.key==='F')tvSetFraming(!tvFill);if(e.key==='a'||e.key==='A')tvSetAmbient(!tvAmbient)});
 function setTvMode(on){
- tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);
+ tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);
  document.getElementById('tv-mode').setAttribute('aria-pressed',String(tvMode));
  document.getElementById('tv-hud').setAttribute('aria-hidden',String(!tvMode));
  if(tvMode){document.documentElement.requestFullscreen?.().catch(()=>{});}
