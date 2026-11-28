@@ -68,7 +68,9 @@ body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacit
 /* Player-only cards; no changes to fog/token geometry or saved campaign state. */
 .party-hud{display:none;position:fixed;left:0;right:0;z-index:23;pointer-events:none;padding:6px clamp(8px,1.4vw,24px);gap:clamp(6px,1vw,16px);grid-template-columns:repeat(3,minmax(0,1fr));}
 body.tv-mode.party-hud-on .party-hud:not(:empty){display:grid}
-#party-top{top:0}#party-bottom{bottom:0}
+/* Keep status cards inside TV safe area rather than against overscanned edges. */
+#party-top{top:clamp(24px,3.2vh,44px)}
+#party-bottom{bottom:clamp(20px,2.8vh,38px)}
 .party-empty{grid-column:1/-1;text-align:center;color:#f8d4a7;font-weight:700;font-size:clamp(13px,1.15vw,19px)}
 .party-card{min-width:0;min-height:72px;padding:8px 13px;border:1px solid #c2b78b;border-radius:10px;background:#10271ff5;color:#fff5dc;box-shadow:0 2px 15px #000b}
 .party-card-main{display:flex;gap:9px;align-items:center;min-width:0}
