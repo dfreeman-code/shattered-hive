@@ -198,7 +198,7 @@ function renderPartyHud(party){
 }
 function playerRender(packet){
  const scene=packet?.scene;
- if(!scene){renderPartyHud([]);waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
+ if(!scene){document.getElementById('party-top').replaceChildren();document.getElementById('party-bottom').replaceChildren();waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
  tvHudScene.textContent=String(scene.name||'Shared map').slice(0,100);renderPartyHud(packet?.party);
  const cols=Number(scene.cols),rows=Number(scene.rows);
  if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<4||cols>100||rows<4||rows>100)return;
