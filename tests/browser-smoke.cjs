@@ -598,6 +598,37 @@ async function check(label, fn) {
   assert.ok(dims.scroll<=dims.width+5,'Phase 3 mobile page overflow: '+JSON.stringify(dims));
   await page.setViewportSize({width:1365,height:900});
  });
+ await check('Phase 4 hero sheet overview preserves existing stats and sheet sections',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  await page.evaluate(()=>{
+    db.pcs=[{id:'qa-phase4-hero',name:'Frost Lantern',species:'Firefly Folk',class:'Ranger',background:'Guide',level:1,status:'Active',hp:9,maxHp:11,ac:13}];
+    db.sheets={'qa-phase4-hero':{...defaultSheet(db.pcs[0]),currentHp:9,maxHp:11,ac:13,speed:30}};
+    selectedSheetPC='qa-phase4-hero';goto('sheet');
+  });
+  const protectedBefore=await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,decisions:db.decisions,sessions:db.sessions}));
+  assert.equal(await page.locator('.sheet-hero-banner').count(),1);
+  assert.match(await page.locator('.sheet-hero-heading h2').innerText(),/Frost Lantern/);
+  const hp=await page.locator('.sheet-hero-stats').innerText();
+  assert.match(hp,/9 \/ 11/);assert.match(hp,/13/);assert.match(hp,/30/);
+  assert.equal(await page.locator('.sheet-quick-nav a').count(),6);
+  for(const id of ['sheet-abilities','sheet-combat','sheet-skills','sheet-spells','sheet-equipment','sheet-features']){
+    assert.equal(await page.locator('#'+id).count(),1,'Missing anchor '+id);
+  }
+  assert.match(await page.locator('.sheet-hero-avatar').innerText(),/FL/);
+  assert.equal(await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,decisions:db.decisions,sessions:db.sessions})),protectedBefore,'Pure sheet presentation must not modify records');
+  await page.locator('.sheet-quick-nav a[href="#sheet-spells"]').click();
+  assert.equal(await page.evaluate(()=>location.hash),'#sheet-spells');
+  assert.equal(await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,decisions:db.decisions,sessions:db.sessions})),protectedBefore,'Jump link must not save data');
+ });
+ await check('Phase 4 sheet maintains narrow screen readability and accessible character picker',async()=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>{selectedSheetPC=db.pcs[0]?.id;goto('sheet')});
+  assert.equal(await page.locator('#sheet-pc-picker').count(),1);
+  assert.equal(await page.locator('.sheet-hero-stat').count(),3);
+  const dims=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
+  assert.ok(dims.scroll<=dims.width+5,'Phase 4 sheet mobile overflow: '+JSON.stringify(dims));
+  await page.setViewportSize({width:1365,height:900});
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));

@@ -1,0 +1,46 @@
+/* Character Sheets Phase 4 — a presentation layer only; no character or sync data changes. */
+.sheet-hero-banner{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;background:linear-gradient(116deg,#17392f,#315d50);color:#f4ecd5;border:1px solid #b9a06c;border-radius:16px;padding:20px 24px;margin-top:18px;box-shadow:0 10px 25px #18352a26}
+.sheet-hero-identity{display:flex;align-items:center;gap:17px;min-width:0}
+.sheet-hero-avatar{position:relative;width:100px;height:100px;flex:none;display:grid;place-items:center;overflow:hidden;border:3px solid #d3b578;border-radius:18px;background:#255346;color:#ffe7b7;font:700 34px Georgia,serif;box-shadow:0 4px 12px #10231d55}
+.sheet-hero-avatar img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover}
+.sheet-hero-heading{min-width:0}
+.sheet-hero-heading small{font-size:11px;color:#e6d59f;letter-spacing:.1em;text-transform:uppercase;font-weight:800}
+.sheet-hero-heading h2{margin:4px 0 6px;color:#fff2d5;font:700 clamp(23px,2.5vw,33px) Georgia,serif;overflow-wrap:anywhere}
+.sheet-hero-heading p{margin:0;color:#e3e9db;font-size:14px}
+.sheet-hero-stats{display:grid;grid-template-columns:repeat(3,minmax(80px,1fr));gap:10px}
+.sheet-hero-stat{border:1px solid #789587;border-radius:12px;background:#ffffff14;min-width:83px;text-align:center;padding:9px 11px}
+.sheet-hero-stat strong{font:700 27px Georgia,serif;color:#fff2d6;display:block}
+.sheet-hero-stat small{display:block;color:#d4dfd2;font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.04em}
+.sheet-page .sheet-character-picker{display:flex;align-items:center;gap:12px;background:#faf6e9;border:1px solid #d2d9c9;padding:12px 15px;border-radius:12px;margin-top:13px}
+.sheet-page .sheet-character-picker label{min-width:155px;margin:0}
+.sheet-page .sheet-character-picker select{flex:1}
+.sheet-page .sheet-quick-nav{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0 0}
+.sheet-page .sheet-quick-nav a{font-weight:750;font-size:13px;background:#e6efe5;border:1px solid #c1d0c0;color:#295846;text-decoration:none;padding:8px 11px;border-radius:9px;min-height:38px;display:inline-flex;align-items:center}
+.sheet-page .sheet-quick-nav a:hover{background:#d9e8d8}
+.sheet-page .sheet-quick-nav a:focus-visible{outline:3px solid #bf9856;outline-offset:2px}
+.sheet-page .sheetmetrics{gap:9px;margin-top:12px}
+.sheet-page .sheetmetrics>div{background:#f6f0dc;border:1px solid #d4caa8;padding:12px;min-width:110px}
+.sheet-page .sheetmetrics b{color:#275749}
+.sheet-page .statgrid{gap:12px}
+.sheet-page .statbox{background:#fffcf3;border:1px solid #d0d9c8;padding:13px 9px;box-shadow:0 2px 9px #1637270a}
+.sheet-page .statbox>label:first-child{font:700 15px Georgia,serif;color:#294e3c}
+.sheet-page .statbox>strong{font-size:28px;color:#285b4c}
+.sheet-page .statbox .tiny{font-size:12px;line-height:1.55}
+.sheet-page .statbox input[type=checkbox],.sheet-page .skillrow input[type=checkbox]{width:19px;height:19px;min-width:19px;accent-color:#286e57}
+.sheet-page .skillsgrid{gap:8px 15px}
+.sheet-page .skillrow{min-height:39px;gap:9px;font-size:14px;border-color:#d6e0d5}
+.sheet-page .skillrow label{font-size:13px}
+.sheet-page .skillrow label:last-child{font-size:12px}
+.sheet-page .skillrow strong{font-size:15px;color:#254b3f}
+.sheet-page .card{scroll-margin-top:18px}
+.sheet-page .card h3{font:700 21px Georgia,serif;color:#294e3c}
+.sheet-page .two.section>.card{background:#fffaf0}
+.sheet-page textarea{line-height:1.65;min-height:110px}
+.sheet-page .sheetfields label{font-size:14px}
+.sheet-page .card .meta{font-size:12.5px;line-height:1.55}
+.sheet-page .hero-ready-card summary{font-size:16px}
+.sheet-page .hero-ready-check{min-height:36px}
+@media(max-width:1100px){.sheet-hero-banner{grid-template-columns:1fr}.sheet-hero-stats{max-width:530px}}
+@media(max-width:700px){.sheet-hero-banner{padding:15px}.sheet-hero-avatar{width:76px;height:76px}.sheet-hero-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.sheet-hero-stat{min-width:0}.sheet-page .sheet-character-picker{display:block}.sheet-page .sheet-character-picker label{margin-bottom:7px}.sheet-page .sheet-quick-nav a{flex:1 1 120px;justify-content:center}.sheet-page .statgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:430px){.sheet-hero-avatar{width:63px;height:63px;font-size:25px}.sheet-hero-identity{gap:10px}.sheet-hero-stat strong{font-size:22px}.sheet-hero-stat{padding:8px 5px}.sheet-page .statgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media print{.sheet-hero-banner{background:white;color:black;box-shadow:none}.sheet-hero-heading h2,.sheet-hero-heading p,.sheet-hero-stat strong,.sheet-hero-stat small{color:black}.sheet-page .sheet-quick-nav{display:none}.sheet-page .card{break-inside:avoid}}
