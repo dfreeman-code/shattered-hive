@@ -62,6 +62,7 @@ try{
  assert.equal(await player.locator('#party-top').evaluate(el=>getComputedStyle(el).display),'grid');
  assert((await player.locator('#party-top').boundingBox()).height>50,'Fullscreen party cards must be visibly laid out');
  await player.locator('#tv-mode-exit').click({force:true});
+ await player.waitForFunction(()=>!document.body.classList.contains('tv-mode'));
  await player.waitForFunction(()=>!document.fullscreenElement);
  await player.getByRole('button',{name:'TV Mode'}).click();
  assert.equal(await player.locator('.party-card').count(),6);
