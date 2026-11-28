@@ -27,6 +27,8 @@ try{
  assert(!((await player.locator('body').innerText()).includes('HIDDEN QUEEN')));
  assert(!((await player.locator('body').innerText()).includes('PRIVATE VESPER SPOILER')));
  assert(!((await player.locator('body').innerText()).includes('HIDDEN VESPER ENTRY')));
+ // Whole-map fit remains available even though immersive TV Mode now defaults to Fill.
+ await player.getByRole('button',{name:'Fit whole map'}).click();
  const visual=await player.evaluate(()=>{const b=document.querySelector('#live-board').getBoundingClientRect();return {vw:innerWidth,vh:innerHeight,w:b.width,h:b.height,header:getComputedStyle(document.querySelector('header')).display,footer:getComputedStyle(document.querySelector('footer')).display,label:getComputedStyle(document.querySelector('.token .label')).fontSize}});
  assert.equal(visual.header,'none');assert.equal(visual.footer,'none');
  assert(visual.w<=visual.vw+2&&visual.h<=visual.vh+2);
