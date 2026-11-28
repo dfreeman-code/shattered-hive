@@ -2003,7 +2003,7 @@ function applyJawshuaEquipment(){
 }
 function sheetPage(){const pc=currentSheetPC();let options=db.pcs.map(x=>`<option value="${esc(x.id)}" ${pc?.id===x.id?'selected':''}>${esc(x.name)} — Level ${esc(x.level||1)}</option>`).join('');if(!pc)return `<div class="headrow"><h2>📜 Character Sheets</h2><button class="btn" onclick="add('pcs')">+ Add Character</button></div><div class="empty">Create a player character first, then return to complete their sheet.</div>`;let sh=getSheet(pc),prof=proficiency(Number(pc.level)||1),dex=modifier(sh.scores.DEX),spellMod=modifier(sh.scores[sh.spellAbility]||10);let species=BUG_TRAITS[pc.species]||[];
 const art=pcMiniatureAsset(pc);
-const initials=String(pc.name||'?').trim().split(/\\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+const initials=String(pc.name||'?').trim().split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 const current=sh.currentHp!==''&&sh.currentHp!=null?sh.currentHp:pc.hp;
 const maximum=sh.maxHp!==''&&sh.maxHp!=null?sh.maxHp:pc.maxHp;
 const currentLabel=current!==''&&current!=null?esc(current):'—';
