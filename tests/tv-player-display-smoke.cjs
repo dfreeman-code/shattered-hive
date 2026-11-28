@@ -42,20 +42,23 @@ try{
  await until(()=>player.locator('.party-card').count().then(x=>x===6));
  assert.equal(await player.locator('#party-top .party-card').count(),3);
  assert.equal(await player.locator('#party-bottom .party-card').count(),3);
- // Camera controls must not cover any top-row hero cards on HDMI TV.
- const hudAndControls=await player.evaluate(()=>{
-  const a=document.querySelector('#party-top').getBoundingClientRect();
-  const b=document.querySelector('#party-bottom').getBoundingClientRect();
-  const c=document.querySelector('#tv-camera-controls').getBoundingClientRect();
-  const style=getComputedStyle(document.querySelector('#tv-camera-controls'));
-  return {topBottom:a.bottom,bottomTop:b.top,controlsTop:c.top,controlsBottom:c.bottom,controlsRight:c.right,viewportWidth:innerWidth,visible:style.display};
- });
- assert.equal(hudAndControls.visible,'flex');
- assert(hudAndControls.controlsTop>=hudAndControls.topBottom+4,
-  'Camera toolbar overlays top HUD: '+JSON.stringify(hudAndControls));
- assert(hudAndControls.controlsBottom<=hudAndControls.bottomTop-4,
-  'Camera toolbar overlays bottom HUD: '+JSON.stringify(hudAndControls));
- assert(hudAndControls.controlsRight<=hudAndControls.viewportWidth+1,'Camera toolbar outside TV viewport');
+ // Presentation controls should never cover heroes until explicitly summoned.
+ assert.equal(await player.locator('#tv-camera-controls').evaluate(el=>getComputedStyle(el).display),'none');
+ assert.equal(await player.locator('#tv-controls-toggle').getAttribute('aria-expanded'),'false');
+ const tab=await player.locator('#tv-controls-toggle').boundingBox();
+ const hudTop=await player.locator('#party-top').boundingBox();
+ const hudBottom=await player.locator('#party-bottom').boundingBox();
+ assert(tab&&tab.y>=hudTop.y+hudTop.height,'Tiny TV controls tab must clear the upper HUD');
+ assert(tab.y+tab.height<=hudBottom.y,'Tiny TV controls tab must clear the lower HUD');
+ await player.locator('#tv-controls-toggle').click();
+ assert.equal(await player.locator('#tv-camera-controls').evaluate(el=>getComputedStyle(el).display),'flex');
+ assert.equal(await player.locator('#tv-controls-toggle').getAttribute('aria-expanded'),'true');
+ await player.locator('#tv-fit').click();
+ assert.equal(await player.locator('#tv-camera-controls').evaluate(el=>getComputedStyle(el).display),'none','Camera controls should auto-close after selection');
+ assert.equal(await player.locator('#tv-controls-toggle').getAttribute('aria-expanded'),'false');
+ await player.locator('#tv-controls-toggle').click();
+ await player.locator('#tv-fill').click();
+ assert.equal(await player.locator('#tv-camera-controls').evaluate(el=>getComputedStyle(el).display),'none');
 
  assert.match(await player.locator('#party-top .party-card').first().innerText(),/HP 10\/20/);
  assert.match(await player.locator('#party-top .party-card').first().innerText(),/Blessed/);
@@ -107,9 +110,9 @@ try{
  assert.match(await player.locator('#party-top .party-empty').innerText(),/No matching heroes found/);
  await dm.evaluate(()=>window.SHLive.publish());
  await until(()=>player.locator('.party-card').count().then(x=>x===6));
- await player.getByRole('button',{name:'Party HUD On'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Party HUD On'}).click();
  assert.equal(await player.locator('body.party-hud-on').count(),0);
- await player.getByRole('button',{name:'Party HUD Off'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Party HUD Off'}).click();
  assert.equal(await player.locator('body.party-hud-on').count(),1);
  const hudBefore=await dm.evaluate(()=>JSON.stringify(db));
  await dm.evaluate(()=>{db.sheets['tv-hud-0'].currentHp=4;window.SHLive.publish()});
@@ -125,7 +128,7 @@ try{
  assert(!((await player.locator('body').innerText()).includes('PRIVATE VESPER SPOILER')));
  assert(!((await player.locator('body').innerText()).includes('HIDDEN VESPER ENTRY')));
  // Whole-map fit remains available even though immersive TV Mode now defaults to Fill.
- await player.getByRole('button',{name:'Fit whole map'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Fit whole map'}).click();
  const visual=await player.evaluate(()=>{const b=document.querySelector('#live-board').getBoundingClientRect();return {vw:innerWidth,vh:innerHeight,w:b.width,h:b.height,header:getComputedStyle(document.querySelector('header')).display,footer:getComputedStyle(document.querySelector('footer')).display,label:getComputedStyle(document.querySelector('.token .label')).fontSize}});
  assert.equal(visual.header,'none');assert.equal(visual.footer,'none');
  assert(visual.w<=visual.vw+2&&visual.h<=visual.vh+2);
@@ -144,7 +147,7 @@ try{
  await player.setViewportSize({width:1280,height:720});
  await player.getByRole('button',{name:'TV Mode'}).click();
  assert.equal(await player.locator('body.tv-mode').count(),1);
- await player.getByRole('button',{name:'Screen info'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Screen info'}).click();
  assert.equal(await player.locator('#tv-screen-report').getAttribute('data-visible'),'true');
  const screenReadout=await player.locator('#tv-screen-report').innerText();
  assert.match(screenReadout,/Browser-reported screen:/);
@@ -157,7 +160,7 @@ try{
  await player.getByRole('button',{name:'TV Mode'}).click();
  assert.equal(await player.locator('body.tv-mode').count(),1);
  assert.match(await player.locator('#tv-screen-report').innerText(),/TV tab viewport: 1200 × 700 CSS px/);
- await player.getByRole('button',{name:'Screen info'}).click();
+ await player.locator('#tv-controls-toggle').click();await player.getByRole('button',{name:'Screen info'}).click();
  assert.equal(await player.locator('#tv-screen-report').getAttribute('data-visible'),'false');
  await player.keyboard.press('Escape');
  await until(()=>player.locator('body.tv-mode').count().then(x=>x===0));

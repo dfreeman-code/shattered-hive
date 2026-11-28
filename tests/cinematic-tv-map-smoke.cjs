@@ -8,9 +8,9 @@ await tv.getByRole('button',{name:'TV Mode'}).click();assert.equal(await tv.loca
 const dims=await tv.locator('#live-board').evaluate(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height}));assert(dims.w>=1918,'Square TV board must fill full 16:9 TV width, actual '+dims.w);assert(dims.h>=1918,'Full-bleed square board may extend past screen height');
 assert.equal(await tv.locator('.map-ambient .mote,.map-ambient .glint').count(),24);
 assert.equal(await tv.locator('#live-board .fog div').count(),3600);
-await tv.getByRole('button',{name:'Fit whole map'}).click();const fit=await tv.locator('#live-board').evaluate(e=>e.getBoundingClientRect());assert(fit.width<=1082&&fit.height<=1082,'Fit must show entire square board on TV');
-await tv.getByRole('button',{name:'Fill TV'}).click();assert((await tv.locator('#live-board').evaluate(e=>e.getBoundingClientRect().width))>=1918);
-await tv.getByRole('button',{name:'Effects On'}).click();assert.equal(await tv.locator('body.ambient-off').count(),1);
+await tv.locator('#tv-controls-toggle').click();await tv.getByRole('button',{name:'Fit whole map'}).click();const fit=await tv.locator('#live-board').evaluate(e=>e.getBoundingClientRect());assert(fit.width<=1082&&fit.height<=1082,'Fit must show entire square board on TV');
+await tv.locator('#tv-controls-toggle').click();await tv.getByRole('button',{name:'Fill TV'}).click();assert((await tv.locator('#live-board').evaluate(e=>e.getBoundingClientRect().width))>=1918);
+await tv.locator('#tv-controls-toggle').click();await tv.getByRole('button',{name:'Effects On'}).click();assert.equal(await tv.locator('body.ambient-off').count(),1);
 const before=await tv.locator('.token').first().getAttribute('style');
 await tv.evaluate(data=>playerRender(data),p);assert.equal(await tv.locator('body.ambient-off').count(),1);assert.equal(await tv.locator('.token').first().getAttribute('style'),before);
 await tv.keyboard.press('a');assert.equal(await tv.locator('body.ambient-off').count(),0);
@@ -19,6 +19,6 @@ await tv.keyboard.press('Escape');assert.equal(await tv.locator('body.tv-mode').
 const legacy=JSON.parse(JSON.stringify(p));legacy.scene.image='assets/maps/home_hive_player_gridless.png?v=2';await tv.evaluate(data=>playerRender(data),legacy);
 assert.equal(await tv.locator('.map-ambient span').count(),0,'Effects limited to redesigned art');
 for(const slug of ['home-hive','great-christmas-caper','frosted-root-tunnels','spider-silk-crossing','mushroom-market','forgotten-garden-shed','caper-tree-base','caper-gift-maze','caper-tinsel-crossing','caper-starlight-shrine','caper-frozen-berry','caper-glass-doors']){const res=await tv.request.get('http://127.0.0.1:8811/assets/maps/world-redesign/'+slug+'.svg');assert.equal(res.status(),200);const data=await res.text();assert(data.includes('id="ambient-world-detail"'));const err=await tv.evaluate(text=>new DOMParser().parseFromString(text,'image/svg+xml').querySelector('parsererror')?.textContent||'',data);assert.equal(err,'','invalid '+slug)}
-await tv.setViewportSize({width:1280,height:720});await tv.getByRole('button',{name:'TV Mode'}).click();await tv.getByRole('button',{name:'Fill TV'}).click();assert((await tv.locator('#live-board').evaluate(e=>e.getBoundingClientRect().width))>=1278);
+await tv.setViewportSize({width:1280,height:720});await tv.getByRole('button',{name:'TV Mode'}).click();await tv.locator('#tv-controls-toggle').click();await tv.getByRole('button',{name:'Fill TV'}).click();assert((await tv.locator('#live-board').evaluate(e=>e.getBoundingClientRect().width))>=1278);
 assert.deepEqual(errors,[]);console.log('PASS: TV fill/fit at 1080p+720p, keyboard shortcuts, ambient toggle, fog and token alignment, 12 enriched public SVG maps, fallback');
 }finally{if(browser)await browser.close();server.kill()}})().catch(e=>{console.error(e);process.exitCode=1});
