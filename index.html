@@ -3048,7 +3048,7 @@ function mapExpandAllSides(){
 
 function mapAvailable(m){return m.playerShared===true}
 function mapPlayerScenes(){return mapState().scenes.filter(mapAvailable)}
-function mapAssetUrl(m,mode){if(m.id==='evergarden-home-hive')return 'assets/maps/home_hive_'+(mode==='dm'?'dm_annotated':'player_gridless')+'.png?v=2';if(m.id.startsWith('caper-'))return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'player')+'.png';return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'gridless')+'.svg'}
+function mapAssetUrl(m,mode){if(m.id==='home-hive-orthographic-v1')return 'assets/maps/home-hive-approved-top-down.webp';if(m.id==='evergarden-home-hive')return 'assets/maps/home_hive_'+(mode==='dm'?'dm_annotated':'player_gridless')+'.png?v=2';if(m.id.startsWith('caper-'))return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'player')+'.png';return 'assets/maps/'+m.asset+'-'+(mode==='dm'?'dm':'gridless')+'.svg'}
 
 function mapState(){
  let migrationChanged=false;
@@ -3204,7 +3204,7 @@ function mapFogTiles(m){
  const explored=new Set(mapFog(m)),current=mapCurrentVisible(m),vision=mapVisionEnabled(m),walls=new Set(mapWallCells(m));
  return Array.from({length:mapCols(m)*mapRows(m)},(_,i)=>`<div data-fog-cell="${i}" class="${vision?(current.has(i)?'fog-clear':explored.has(i)?'fog-memory':'fog-cell'):(explored.has(i)?'fog-clear':'fog-cell')}${walls.has(i)?' fog-wall-mark':''}"></div>`).join('');
 }
-function mapOriginalBackground(m,mode='dm'){if(m.id.startsWith('caper-'))return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/great-christmas-caper-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} ${mode==='dm'?'DM':'player'} map">`;if(m.id==='evergarden-home-hive')return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" alt="${mode==='dm'?'Dungeon Master':'Player-safe'} Home Hive map">`;return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/home-hive-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
+function mapOriginalBackground(m,mode='dm'){if(m.id==='home-hive-orthographic-v1')return '<img class="map-custom-image" src="assets/maps/home-hive-approved-top-down.webp" alt="Approved true top-down Home Hive map" draggable="false">';if(m.id.startsWith('caper-'))return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/great-christmas-caper-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} ${mode==='dm'?'DM':'player'} map">`;if(m.id==='evergarden-home-hive')return `<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" alt="${mode==='dm'?'Dungeon Master':'Player-safe'} Home Hive map">`;return m.imageData?`<img class="map-custom-image" src="${esc(m.imageData)}" alt="Custom map background">`:m.asset?`<img class="map-custom-image" src="${esc(mapAssetUrl(m,mode))}" onerror="this.onerror=null;this.src='assets/maps/home-hive-'+(this.closest('.map-board')?.classList.contains('is-player-view')?'gridless':'dm')+'.svg'" alt="${esc(m.name)} tactical map">`:mapArtwork(m.theme)}
 // Whitelisted illustrated side terrain shared by DM and Player View; never contains secrets.
 function mapWideSideArt(m){
  if(!mapArtCenter(m))return '';
@@ -3216,6 +3216,7 @@ function mapWideSideArt(m){
 // World atlas is public geometry only: secrets remain in the existing DM-only marker layer.
 const SH_WORLD_SCENE_ASSETS={
  'evergarden-home-hive':'home-hive',
+ 'home-hive-orthographic-v1':'home-hive',
  'evergarden-christmas-caper':'great-christmas-caper',
  'evergarden-frosted-roots':'frosted-root-tunnels',
  'evergarden-spider-crossing':'spider-silk-crossing',
@@ -3250,7 +3251,7 @@ const SH_VERTICAL_DISTRICTS={
  'caper-glass-doors':['Prismatic Gallery','Mirrorstone Threshold']
 };
 function mapVerticalPlan(m){
- if(!m||!mapWorldAtlasKey(m)||m.verticalJourneyV1)return null;
+ if(!m||m.id==='home-hive-orthographic-v1'||!mapWorldAtlasKey(m)||m.verticalJourneyV1)return null;
  const rows=mapRows(m),newRows=Math.round(rows*4/3);
  if(newRows>100||newRows<=rows)return null;
  const top=Math.floor((newRows-rows)/2);
@@ -3291,6 +3292,7 @@ function mapVerticalExpandAll(){
 }
 
 function mapWorldArt(m){
+ if(m?.id==='home-hive-orthographic-v1')return '';
  const k=mapWorldAtlasKey(m);
  return k&&!m.imageData&&m.worldRedesignEnabled!==false?'assets/maps/world-redesign/'+k+(m.verticalJourneyV1?'-tall':'')+'.svg':'';
 }
@@ -3367,8 +3369,8 @@ function mapWorldControls(m){
  const all=mapWorldPlaces(m),selected=all.find(p=>p.id===mapWorldSelectedId);
  const link=selected&&Number.isInteger(selected.scriptScene)&&selected.scriptScene>=0&&selected.scriptScene<ADVENTURE_ONE_SCENES.length;
  return '<div class="card map-world-controls"><h3>✦ World locations <span class="pill">'+all.length+'</span></h3><p class="map-file-note">Each public landmark is illustrated on the map. These DM-only controls let you navigate, add locations, and connect places to Adventure Runner. Changes never trigger story outcomes.</p>'+
- '<label class="hero-ready-check"><input type="checkbox" '+(m.worldRedesignEnabled!==false?'checked':'')+' '+(m.imageData?'disabled':'')+' onchange="mapWorldToggle(this.checked)"> Use redesigned full-map artwork</label>'+ 
- (m.verticalJourneyV1?'<p class="map-file-note">✓ Tall layout active · '+mapCols(m)+' × '+mapRows(m)+' squares, with upper and lower exploration districts</p>':'<button type="button" class="btn secondary" onclick="mapVerticalExpandAll()">↕ Make all story maps taller (backup required)</button>')+
+ (m.id==='home-hive-orthographic-v1'?'<p class="map-file-note">✓ Approved top-down village artwork. Grid: 40 × 60, portrait 2:3.</p>':'<label class="hero-ready-check"><input type="checkbox" '+(m.worldRedesignEnabled!==false?'checked':'')+' '+(m.imageData?'disabled':'')+' onchange="mapWorldToggle(this.checked)"> Use redesigned full-map artwork</label>')+ 
+ (m.id==='home-hive-orthographic-v1'?'':m.verticalJourneyV1?'<p class="map-file-note">✓ Tall layout active · '+mapCols(m)+' × '+mapRows(m)+' squares, with upper and lower exploration districts</p>':'<button type="button" class="btn secondary" onclick="mapVerticalExpandAll()">↕ Make all story maps taller (backup required)</button>')+
  '<div class="map-world-list">'+all.map(p=>'<div class="map-world-entry"><button type="button" class="btn secondary small" onclick="mapWorldSelect(\''+esc(p.id)+'\')">'+esc(p.name)+'</button><button type="button" class="btn small secondary" onclick="mapWorldJump(\''+esc(p.id)+'\')" aria-label="Zoom to '+esc(p.name)+'">⌖ Find</button></div>').join('')+'</div>'+
  '<button type="button" class="btn secondary" onclick="mapWorldAdd()">＋ Add future shop or story location</button>'+
  (selected?'<div class="map-world-fields"><h4>Editing: '+esc(selected.name)+'</h4>'+
@@ -3797,7 +3799,7 @@ function livePlayerSnapshot(){
  // Explicitly choose the PLAYER asset; never forward DM art, markers, notes or campaign records.
  const worldArt=mapWorldArt(m);
  const image=worldArt||(m.asset||m.id==='evergarden-home-hive'?mapAssetUrl(m,'player'):'');
- const safeImage=worldArt||(/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg)(?:\?v=[0-9]+)?$/i.test(image)?image:'');
+ const safeImage=worldArt||(/^assets\/maps\/[a-z0-9_-]+\.(?:png|svg|webp)(?:\?v=[0-9]+)?$/i.test(image)?image:'');
  return {version:1,scene:{name:String(m.name||'Shared map').slice(0,100),cols,rows,theme:String(m.theme||'blank').slice(0,32),image:safeImage,grid:!!ms.showGrid,tokenSize:miniTokenSizePreference,revealed,tokens,artCenter:worldArt?null:mapArtCenter(m),sideArt:worldArt?'':mapWideSideArt(m),territory:worldArt?null:mapTerritoryCore(m),visibleNow:mapVisionEnabled(m)?[...visible]:null},notice:''};
 }
 function initLivePlayerDisplay(){
@@ -3839,6 +3841,83 @@ function tabletopPage(board,m,ms,player){
 }
 document.addEventListener('keydown',e=>{if(tabletopMode&&page==='maps'&&e.key==='Escape'){e.preventDefault();tabletopExit()}});
 
+
+const SH_APPROVED_HOME_HIVE_ID='home-hive-orthographic-v1';
+const SH_APPROVED_HOME_HIVE_ART='assets/maps/home-hive-approved-top-down.webp';
+function mapApprovedHomeHivePreset(){
+ const locations=[
+ ['rootwatch','Rootwatch Lookout',51,9],
+ ['upper-burrow','Upper Burrow Terraces',20,18],
+ ['herbal-gardens','Herbal Gardens',78,19],
+ ['council-acorn','Council Acorn',52,31],
+ ['market-row','Market Row',23,43],
+ ['crafters-circle',"Crafter's Circle",81,40],
+ ['heartroot-plaza','The Heartroot Plaza',52,55],
+ ['provision-storehouse','Provision Storehouse',18,60],
+ ['hollow-inn','The Hollow Inn',82,58],
+ ['training-grounds','Training Grounds',17,78],
+ ['guard-burrow','Guard Burrow',83,77],
+ ['lower-burrow','Lower Burrow Ward',51,91]
+ ].map(([id,name,x,y])=>({id,name,x,y,type:'district',description:'Public Home Hive landmark',dmNotes:'',playerVisible:true,status:'available',scriptScene:null}));
+ // Artwork aspect ratio is exactly 2:3. Keep grid dimensions matched (40 × 60).
+ return {id:SH_APPROVED_HOME_HIVE_ID,name:'Home Hive — Approved Top-Down',
+  theme:'village',desc:'True orthographic, portrait-format Home Hive — approved for bug-scale tabletop play',
+  asset:'home-hive-approved-top-down',cols:40,rows:60,
+  tokens:[],dmMarkers:[],revealed:Array.from({length:40*60},(_,i)=>i),
+  storyLocations:locations,playerShared:true,approvedTopDownV1:true,worldRedesignEnabled:false};
+}
+function mapArchiveActivateApproved(ms){
+ if(!ms||!Array.isArray(ms.scenes)||!Array.isArray(ms.archivedScenes))return false;
+ if(ms.approvedTopDownHomeHiveV1)return false;
+ const active=ms.scenes;
+ if(!active.length)return false;
+ const ids=new Set(ms.archivedScenes.map(x=>x.id));
+ for(const original of active){
+  // Never lose a scene if an archived item already uses the same ID.
+  const copy=clone(original);
+  if(ids.has(copy.id)){copy.archivedFromId=copy.id;copy.id='archived-copy-'+uid();}
+  ms.archivedScenes.push(copy);ids.add(copy.id);
+ }
+ ms.scenes=[mapApprovedHomeHivePreset()];
+ ms.active=SH_APPROVED_HOME_HIVE_ID;
+ ms.selected=null;ms.selectedDmMarker=null;ms.fogTool='off';ms.viewMode='dm';
+ ms.approvedTopDownHomeHiveV1=true;
+ return true;
+}
+async function mapArchiveStartApproved(){
+ const ms=mapState();
+ if(ms.viewMode==='player')return;
+ if(ms.approvedTopDownHomeHiveV1)return alert('The approved Home Hive is already active.');
+ const picture=await new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(true);img.onerror=()=>resolve(false);img.src=SH_APPROVED_HOME_HIVE_ART});
+ if(!picture)return alert('The approved Home Hive image has not been uploaded to assets/maps/home-hive-approved-top-down.webp yet. No map was archived.');
+ if(!confirm('This will ARCHIVE every current active map, including its tokens, fog and DM notes, then create a NEW 40 × 60 Home Hive. No existing map content will be deleted. Export a campaign JSON backup first. Continue?'))return;
+ if(!confirm('Have you exported and saved a current campaign JSON backup? Cancel to stop without changes.'))return;
+ const oldMaps=clone(ms),oldInspect=[mapInspectZoom,mapInspectScrollX,mapInspectScrollY];
+ if(!mapArchiveActivateApproved(ms))return;
+ mapWorldSelectedId=null;mapInspectZoom=1;mapInspectScrollX=0;mapInspectScrollY=0;
+ if(!save()){db.maps=oldMaps;[mapInspectZoom,mapInspectScrollX,mapInspectScrollY]=oldInspect;render();return alert('Saving the archive failed. The previous maps have been restored in memory; export your backup before retrying.')}
+ render();toast(oldMaps.scenes.length+' maps archived. Approved top-down Home Hive is active.');
+}
+function mapRestoreFromArchive(id){
+ const ms=mapState();if(ms.viewMode==='player')return;
+ const i=ms.archivedScenes.findIndex(m=>m.id===id);if(i<0)return;
+ const m=ms.archivedScenes[i];if(ms.scenes.some(x=>x.id===m.id))return alert('This archived map ID already exists among active maps.');
+ if(!confirm('Restore "'+m.name+'" to the ACTIVE map list? It will be removed from the archive but no other map will be changed.'))return;
+ const original=clone(ms);
+ ms.archivedScenes.splice(i,1);ms.scenes.push(m);
+ if(!save()){db.maps=original;render();return alert('Restore could not be saved; the archive is unchanged.')}
+ render();toast(m.name+' restored to active maps');
+}
+function mapApprovedArchiveControls(ms){
+ const archived=ms.archivedScenes||[];
+ return '<section class="card section map-approved-archive"><h3>🗃 Map archive & new Home Hive</h3>'+
+ '<p class="map-file-note">Keep previous maps (including all tokens, revealed fog, walls and markers) as recoverable archived scenes. Start again with the approved top-down 40 × 60 Home Hive. This does not affect character sheets or story records.</p>'+
+ (ms.approvedTopDownHomeHiveV1?'<p class="map-file-note">✓ Approved top-down Home Hive activated. Previous maps are preserved in the archive.</p>':'<button type="button" class="btn secondary" onclick="mapArchiveStartApproved()">Archive current maps & start approved Home Hive</button>')+
+ '<details><summary>Previously archived maps ('+archived.length+')</summary>'+
+ (archived.map(x=>'<div class="map-world-entry"><span>'+esc(x.name||'Unnamed scene')+' ('+mapCols(x)+' × '+mapRows(x)+')</span><button type="button" class="btn secondary small" onclick="mapRestoreFromArchive(\''+esc(x.id)+'\')">Restore</button></div>').join('')||'<p class="muted">No archived maps.</p>')+
+ '</details></section>';
+}
+
 function mapsPage(){let ms=mapState(),m=currentMap(),player=ms.viewMode==='player',t=m.tokens.find(t=>t.id===ms.selected), available=[...db.pcs.map(p=>({id:p.id,n:p.name,k:'pc'})),...db.npcs.map(p=>({id:p.id,n:p.name,k:'npc'}))];
 let board=`<div id="map-board" class="map-board theme-${esc(m.theme)} ${player?'is-player-view':''} ${!player&&ms.fogTool!=='off'?'is-fog-edit':''}" role="group" aria-label="${esc(m.name)} playable map" style="--map-cols:${mapCols(m)};--map-rows:${mapRows(m)};--mini-pc-token-width:${miniTokenSize()};--mini-wide-token-cap:${miniWideTokenCap()}"><div class="map-backdrop">${mapCustomBackground(m,ms.viewMode)}</div><div class="map-view-indicator" aria-label="${player?'Player-safe map':'Dungeon Master map'}">${player?'PLAYER VIEW · NO SECRETS':'DM VIEW · SECRETS VISIBLE'}</div><div class="map-grid ${ms.showGrid?'':'no-grid'}"></div><div class="map-tokens">${m.tokens.filter(o=>mapVisibleToken(o,m,ms.viewMode)).map(o=>mapTokenHtml(o,m)).join('')}</div><div class="map-fog">${mapFogTiles(m)}</div>${player?'':`<div class="map-dm-marker-layer">${dmMarkerList(m).map(a=>dmMarkerHtml(a,m)).join('')}</div>${mapWorldMarkers(m)}`}</div>`;
 if(tabletopMode)return tabletopPage(board,m,ms,player);
@@ -3846,6 +3925,7 @@ let heading=`<div class="headrow"><div><h2>🗺 Battle Maps & Tokens</h2><p clas
 if(player)return `${heading}<div class="map-player-panel"><label for="player-map-picker">Shared map</label><select id="player-map-picker" onchange="mapSwitchPlayer(this.value)">${mapPlayerScenes().map(x=>`<option value="${esc(x.id)}" ${x.id===m.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select><b>Player View — ${esc(m.name)}</b><p style="margin:4px 0 0">Only revealed terrain, PCs and NPCs marked visible are shown. Use DM View to control the map. This is a presentation mode, not a secure separate player account.</p></div><div class="map-player-stage ${mapWidePreference?'is-wide':''}"><div class="map-adjacent-view-switch">${miniTokenSizeControl()}${mapWideButton()}${mapInspectControls()}${tabletopButton()}${player?'':livePlayerDisplayButton()}<b>Map display:</b><button class="btn small secondary" onclick="mapSetView('dm')">⚙ Switch to DM View</button></div>${mapInspectWrap(board,m)}</div><div class="actions" style="margin-top:12px"><button class="btn secondary" onclick="mapSetView('dm')">Return to DM controls</button></div>`;
 return `${heading}
 <div class="map-toolbar card section"><div class="field"><label for="map-picker">Location / scene</label><select id="map-picker" onchange="mapSwitch(this.value)">${mapOptions()}</select></div><div class="field"><label>Display</label><button class="btn secondary" onclick="mapGridToggle()">${ms.showGrid?'▦ Hide grid':'▤ Show grid'}</button></div>${miniTokenSizeControl()}${mapInspectControls()}<div class="field"><label>Map space</label>${mapWideButton()}${tabletopButton()}${livePlayerDisplayButton()}</div><div class="field"><label>Map tools</label><div class="actions"><button class="btn secondary" onclick="mapRename()">Rename</button><button class="btn secondary" onclick="mapClear()">Clear tokens</button><button class="btn danger" onclick="mapDelete()">Delete map</button></div></div></div>
+${player?'':mapApprovedArchiveControls(ms)}
 <div class="card section map-territory-expansion"><h3>Explore a much larger world</h3><p class="map-file-note">Double the width and height of each map for <strong>four times the playable territory</strong>. Existing illustrated scenes, discoveries, tokens, fog, and secret markers remain together in the center. New outer regions start under fog until explored.</p><p class="map-file-note">Example: 46 × 30 → <b>92 × 60</b> squares. Use Zoom + Pan to explore the new territory, and export a campaign JSON backup first.</p><button type="button" class="btn secondary" onclick="mapExpandTerritories()" ${[...mapState().scenes,...mapState().archivedScenes].every(m=>!!m.territoryV1)?'disabled':''}>🌿 ${[...mapState().scenes,...mapState().archivedScenes].every(m=>!!m.territoryV1)?'Maps expanded':'Make maps 4× larger'}</button></div>
 <div class="card section"><h3>Map canvas width</h3><p class="map-file-note">Add 25% new playable terrain to both the left and right edges of every existing and archived map. Keeps the original artwork and tokens aligned in the center; added sides feature illustrated scenery designed for each location.</p><button type="button" class="btn secondary" onclick="mapExpandAllSides()" ${mapState().wideSidesEnabled||[...mapState().scenes,...mapState().archivedScenes].some(m=>!!m.territoryV1)?'disabled':''}>${mapState().wideSidesEnabled?'✓ All maps expanded':'↔ Expand all map sides +25% each'}</button></div>
 <div class="card section"><h3>Custom map background</h3><div class="actions"><label class="btn secondary" for="map-image-upload" style="cursor:pointer">⬆ Upload image</label><input type="file" id="map-image-upload" accept="image/png,image/jpeg,image/webp" hidden onchange="mapUploadImage(event)"><button class="btn secondary" ${!m.imageData?'disabled':''} onclick="mapRemoveImage()">Use illustrated theme</button></div><p class="map-file-note">PNG, JPG or WebP up to 2 MB. Stored in the browser and included in JSON backups. Choose an image matching the original artwork’s ${mapArtCenter(m)?m.wideSidesV1.originalCols:mapCols(m)}:${mapRows(m)} aspect ratio for accurate alignment. Large images may exceed browser storage capacity.</p></div>
