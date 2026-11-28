@@ -3922,7 +3922,7 @@ function tabletopPartyHudRows(){
  const heroes=livePartyHud();
  const fmt=x=>typeof x==='number'&&Number.isFinite(x)?String(x):'—';
  function card(p){
-  const safePortrait=/^assets\\/hero-tokens\\/portraits\\/[a-z0-9_-]+_miniature\\.png$/i.test(p.portrait||'');
+  const safePortrait=/^assets\/hero-tokens\/portraits\/[a-z0-9_-]+_miniature\.png$/i.test(p.portrait||'');
   const img=safePortrait?'<img class="tabletop-hero-portrait" src="'+esc(p.portrait)+'" alt="" loading="eager">':'';
   const effect=(p.inspiration?'★ Inspiration · ':'')+(p.conditions||'No active effects');
   const slots=(Array.isArray(p.spellSlots)?p.spellSlots:[]).filter(x=>x&&Number.isInteger(x.level)&&x.level>=1&&x.level<=9&&Number.isInteger(x.remaining)&&x.remaining>=0).map(x=>'<span class="tabletop-hero-slot">Lv'+x.level+': '+x.remaining+' left</span>').join('');
