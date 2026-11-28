@@ -1,0 +1,27 @@
+name: Top-down Frosted Root Tunnels safe addition
+on:
+  push:
+    branches: [feature/topdown-frosted-root-tunnels-v1]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'assets/maps/frosted-root-tunnels-approved-top-down.webp'
+      - 'tests/topdown-frosted-root-tunnels-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frosted-root-tunnels:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Check opt-in Frosted Root Tunnels and TV safety
+        run: node tests/topdown-frosted-root-tunnels-smoke.cjs
