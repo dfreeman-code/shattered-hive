@@ -3233,9 +3233,66 @@ function mapWorldAtlasKey(m){
  const k=SH_WORLD_SCENE_ASSETS[m?.id];
  return typeof SH_WORLD_ATLAS!=='undefined'&&k&&Object.prototype.hasOwnProperty.call(SH_WORLD_ATLAS,k)?k:'';
 }
+
+// Optional and explicit per-map vertical migration. The drawing is never stretched over old coordinates.
+const SH_VERTICAL_DISTRICTS={
+ 'home-hive':['Upper Root Terraces','Lower Burrow Ward'],
+ 'great-christmas-caper':['Starfall Overlook','Candleberry Walk'],
+ 'frosted-root-tunnels':['Crystal Root Fork','Deep Root Gallery'],
+ 'spider-silk-crossing':['High Silk Anchorage','Low Thread Passage'],
+ 'mushroom-market':['Canopy Bazaar','Lower Merchant Row'],
+ 'forgotten-garden-shed':['High Shelf Ledge','Underboard Crawlway'],
+ 'caper-tree-base':['Starlight Branch Walk','Evergreen Root Bend'],
+ 'caper-gift-maze':['Ribbon Parcel Towers','Cardboard Underway'],
+ 'caper-tinsel-crossing':['High Garland Route','Lower Bell Landing'],
+ 'caper-starlight-shrine':['Upper Root Gallery','Lower Memory Walk'],
+ 'caper-frozen-berry':['Snow-Crested Trail','Thawwater Bend'],
+ 'caper-glass-doors':['Prismatic Gallery','Mirrorstone Threshold']
+};
+function mapVerticalPlan(m){
+ if(!m||!mapWorldAtlasKey(m)||m.verticalJourneyV1)return null;
+ const rows=mapRows(m),newRows=Math.round(rows*4/3);
+ if(newRows>100||newRows<=rows)return null;
+ const top=Math.floor((newRows-rows)/2);
+ return {oldRows:rows,newRows,top,bottom:newRows-rows-top,cols:mapCols(m)};
+}
+function mapVerticalExpand(m){
+ const plan=mapVerticalPlan(m);if(!plan)return false;
+ const cols=plan.cols,oldRows=plan.oldRows,top=plan.top,newRows=plan.newRows;
+ const remap=arr=>[...new Set(arr.filter(v=>Number.isInteger(v)&&v>=0&&v<cols*oldRows).map(i=>i+top*cols))].sort((a,b)=>a-b);
+ // An absent array means the old map had no fog: ONLY the original core was visible.
+ m.revealed=remap(Array.isArray(m.revealed)?m.revealed:Array.from({length:cols*oldRows},(_,i)=>i));
+ if(Array.isArray(m.fogWalls))m.fogWalls=remap(m.fogWalls);
+ for(const token of Array.isArray(m.tokens)?m.tokens:[])if(Number.isFinite(token.y))token.y+=top;
+ for(const marker of Array.isArray(m.dmMarkers)?m.dmMarkers:[])if(Number.isFinite(marker.y))marker.y+=top;
+ // Reposition the old territory artwork for the legacy fallback.
+ if(m.territoryV1)m.territoryV1.top+=top;
+ const locations=mapWorldPlaces(m).map(p=>({...p,y:Math.max(0,Math.min(100,(Number(p.y)/100*oldRows+top)/newRows*100))}));
+ const labels=SH_VERTICAL_DISTRICTS[mapWorldAtlasKey(m)];
+ if(labels){locations.push({id:'vertical-upper',name:labels[0],type:'district',x:50,y:top/newRows*50,description:'New upper route and future adventure space',dmNotes:'',playerVisible:true,status:'available',scriptScene:null});
+ locations.push({id:'vertical-lower',name:labels[1],type:'district',x:50,y:(top+oldRows+plan.bottom/2)/newRows*100,description:'New lower route and future story space',dmNotes:'',playerVisible:true,status:'available',scriptScene:null});}
+ m.storyLocations=locations;
+ m.rows=newRows;
+ m.verticalJourneyV1={originalRows:oldRows,top,bottom:plan.bottom};
+ return true;
+}
+function mapVerticalExpandAll(){
+ if(mapState().viewMode==='player')return;
+ const ms=mapState(),all=[...ms.scenes,...ms.archivedScenes].filter(m=>mapWorldAtlasKey(m)&&!m.verticalJourneyV1);
+ const overflow=all.filter(m=>!mapVerticalPlan(m));
+ if(overflow.length)return alert('Some story maps would exceed the maximum 100 rows. No maps were changed: '+overflow.map(m=>m.name).join(', '));
+ if(!all.length)return alert('Every available story map is already vertically expanded.');
+ if(!confirm('Export a JSON campaign backup BEFORE proceeding. This one-time operation will make '+all.length+' official story map(s) about 33% taller and remap tokens, fog, fog walls, DM markers and story-location positions. Newly added rows start hidden. Continue?'))return;
+ const backup=confirm('Final backup check: have you already exported and safely stored your latest campaign JSON backup? Click Cancel to stop without changing anything.');
+ if(!backup)return;
+ const count=all.reduce((n,m)=>n+(mapVerticalExpand(m)?1:0),0);
+ mapInspectScrollX=0;mapInspectScrollY=0;mapWorldSelectedId=null;
+ save();render();toast(count+' story maps expanded vertically. Explore upper and lower districts!');
+}
+
 function mapWorldArt(m){
  const k=mapWorldAtlasKey(m);
- return k&&!m.imageData&&m.worldRedesignEnabled!==false?'assets/maps/world-redesign/'+k+'.svg':'';
+ return k&&!m.imageData&&m.worldRedesignEnabled!==false?'assets/maps/world-redesign/'+k+(m.verticalJourneyV1?'-tall':'')+'.svg':'';
 }
 function mapWorldToggle(checked){if(mapState().viewMode==='player')return;const m=currentMap();if(!mapWorldAtlasKey(m))return;m.worldRedesignEnabled=!!checked;save();render()}
 function mapWorldDefaults(m){
@@ -3310,7 +3367,8 @@ function mapWorldControls(m){
  const all=mapWorldPlaces(m),selected=all.find(p=>p.id===mapWorldSelectedId);
  const link=selected&&Number.isInteger(selected.scriptScene)&&selected.scriptScene>=0&&selected.scriptScene<ADVENTURE_ONE_SCENES.length;
  return '<div class="card map-world-controls"><h3>✦ World locations <span class="pill">'+all.length+'</span></h3><p class="map-file-note">Each public landmark is illustrated on the map. These DM-only controls let you navigate, add locations, and connect places to Adventure Runner. Changes never trigger story outcomes.</p>'+
- '<label class="hero-ready-check"><input type="checkbox" '+(m.worldRedesignEnabled!==false?'checked':'')+' '+(m.imageData?'disabled':'')+' onchange="mapWorldToggle(this.checked)"> Use redesigned full-map artwork</label>'+
+ '<label class="hero-ready-check"><input type="checkbox" '+(m.worldRedesignEnabled!==false?'checked':'')+' '+(m.imageData?'disabled':'')+' onchange="mapWorldToggle(this.checked)"> Use redesigned full-map artwork</label>'+ 
+ (m.verticalJourneyV1?'<p class="map-file-note">✓ Tall layout active · '+mapCols(m)+' × '+mapRows(m)+' squares, with upper and lower exploration districts</p>':'<button type="button" class="btn secondary" onclick="mapVerticalExpandAll()">↕ Make all story maps taller (backup required)</button>')+
  '<div class="map-world-list">'+all.map(p=>'<div class="map-world-entry"><button type="button" class="btn secondary small" onclick="mapWorldSelect(\''+esc(p.id)+'\')">'+esc(p.name)+'</button><button type="button" class="btn small secondary" onclick="mapWorldJump(\''+esc(p.id)+'\')" aria-label="Zoom to '+esc(p.name)+'">⌖ Find</button></div>').join('')+'</div>'+
  '<button type="button" class="btn secondary" onclick="mapWorldAdd()">＋ Add future shop or story location</button>'+
  (selected?'<div class="map-world-fields"><h4>Editing: '+esc(selected.name)+'</h4>'+
@@ -3333,7 +3391,7 @@ function mapCustomBackground(m,mode='dm'){
  const c=mapArtCenter(m),art=mapOriginalBackground(m,mode);
  const content=c?'<img class="map-side-illustration" src="'+mapWideSideArt(m)+'" alt="" aria-hidden="true"><div class="map-art-center" style="left:'+c.left+'%;width:'+c.width+'%">'+art+'</div>':art;
  const core=mapTerritoryCore(m);
- if(!core)return content;
+ if(!core){const v=m.verticalJourneyV1;if(v){const top=v.top/mapRows(m)*100,height=v.originalRows/mapRows(m)*100;return '<div class="map-territory-surround" aria-hidden="true"></div><div class="map-territory-core" style="left:0%;top:'+top+'%;width:100%;height:'+height+'%">'+content+'</div>'}return content;}
  return '<div class="map-territory-surround" aria-hidden="true"></div><div class="map-territory-core" style="left:'+core.left+'%;top:'+core.top+'%;width:'+core.width+'%;height:'+core.height+'%">'+content+'</div>';
 }
 function mapArtwork(theme){let deco='';
