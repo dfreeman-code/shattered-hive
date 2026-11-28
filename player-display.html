@@ -65,6 +65,21 @@ body.tv-mode #tv-hud{display:block}
 body.tv-mode #tv-mode-exit{display:block}
 body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacity:1}
 @media(prefers-reduced-motion:reduce){#tv-mode-exit{transition:none}}
+/* Player-only cards; no changes to fog/token geometry or saved campaign state. */
+.party-hud{display:none;position:fixed;left:0;right:0;z-index:23;pointer-events:none;padding:6px clamp(8px,1.4vw,24px);gap:clamp(6px,1vw,16px);grid-template-columns:repeat(3,minmax(0,1fr));}
+body.tv-mode.party-hud-on .party-hud:not(:empty){display:grid}
+#party-top{top:0}#party-bottom{bottom:0}
+.party-card{min-width:0;min-height:72px;padding:8px 13px;border:1px solid #c2b78b;border-radius:10px;background:#10271ff5;color:#fff5dc;box-shadow:0 2px 15px #000b}
+.party-card strong{display:block;font:750 clamp(12px,1.12vw,19px) Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.party-card .party-meta{font-size:clamp(10px,.86vw,14px);color:#d3dfcf}
+.party-card .party-stats{display:flex;gap:clamp(7px,1.1vw,22px);flex-wrap:wrap;font-size:clamp(12px,1.12vw,20px);font-weight:800;margin-top:3px}
+.party-card .party-effect{font-size:clamp(10px,.8vw,13px);color:#ffe19a;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+body.tv-mode.party-hud-on main{padding:90px 0;min-height:0}
+body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - 180px)*var(--ratio,1)));max-height:calc(100dvh - 180px)}
+body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 180px)*var(--ratio,1)))}
+@media(max-height:650px){body.tv-mode.party-hud-on main{padding:70px 0}body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - 140px)*var(--ratio,1)));max-height:calc(100dvh - 140px)}body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 140px)*var(--ratio,1)))}.party-card{min-height:57px;padding:4px 9px}}
+@media(max-width:700px){.party-hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:3px}.party-card{padding:4px;font-size:11px}.party-card .party-stats{gap:5px}.party-card .party-meta{display:none}}
+
 
 /* TV camera: immersive cover framing preserves the same full-resolution fog and token coordinate system. */
 body.tv-mode.tv-fill main{overflow:hidden}
@@ -91,16 +106,16 @@ body.ambient-off .map-ambient{display:none}
  <div class="status" id="status" role="status" aria-live="polite" data-online="false">Connecting to DM tab…</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="tv-mode">📺 TV Mode</button><button type="button" id="fullscreen">⛶ Fullscreen</button></div>
 </header>
-<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button></div>
+<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button><button type="button" id="tv-party-toggle" aria-pressed="true">Party HUD On</button></div>
 <div id="tv-hud" aria-hidden="true"><div id="tv-hud-scene"></div><div id="tv-hud-status" data-online="false">Connecting…</div></div><button type="button" id="tv-mode-exit" aria-label="Exit TV Mode" title="Exit TV Mode (Esc)">✕ Exit TV Mode</button>
-<main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
+<section id="party-top" class="party-hud" aria-label="Party status top row"></section><section id="party-bottom" class="party-hud" aria-label="Party status bottom row"></section><main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
 <footer id="footer">Player-safe display · Read-only · Same-browser session</footer>
 <script>
 'use strict';
 // Standalone display: never loads the campaign app, localStorage, Supabase, or DM data.
 const status=document.getElementById('status'),stage=document.getElementById('stage'),footer=document.getElementById('footer');
 const session=new URLSearchParams(location.hash.slice(1)).get('session')||'';
-let channel=null,lastUpdate=0,lastSequence=0,tvMode=false,tvFill=true,tvAmbient=true;
+let channel=null,lastUpdate=0,lastSequence=0,tvMode=false,tvFill=true,tvAmbient=true,tvParty=true;
 const tvHudScene=document.getElementById('tv-hud-scene'),tvHudStatus=document.getElementById('tv-hud-status');
 function setStatus(label,online){status.textContent=label;status.dataset.online=online?'true':'false';tvHudStatus.textContent=label;tvHudStatus.dataset.online=online?'true':'false'}
 function waiting(message){
@@ -114,10 +129,30 @@ function safeAsset(path){
  if(typeof path==='string'&&path.startsWith('assets/maps/world-redesign/'))return /^[a-z0-9-]+[.]svg$/i.test(path.slice('assets/maps/world-redesign/'.length))?path:'';
  return typeof path==='string'&&/^assets\/(?:maps\/[a-z0-9_-]+\.(?:png|svg|webp)(?:\?v=[0-9]+)?|hero-tokens\/[a-z0-9_-]+_token\.png)$/i.test(path)?path:'';
 }
+function renderPartyHud(party){
+ const top=document.getElementById('party-top'),bottom=document.getElementById('party-bottom');
+ top.replaceChildren();bottom.replaceChildren();
+ if(!Array.isArray(party))return;
+ for(const [i,p] of party.slice(0,6).entries()){
+  if(!p||typeof p.name!=='string')continue;
+  const card=document.createElement('article');card.className='party-card';
+  const name=document.createElement('strong');name.textContent=p.name.slice(0,80);
+  const meta=document.createElement('div');meta.className='party-meta';meta.textContent=String(p.className||'').slice(0,40);
+  const stats=document.createElement('div');stats.className='party-stats';
+  const num=n=>typeof n==='number'&&Number.isFinite(n)?String(n):'—';
+  const stat=[ 'HP '+num(p.hp)+'/'+num(p.maxHp),'AC '+num(p.ac)];
+  if(typeof p.tempHp==='number'&&p.tempHp>0)stat.push('Temp +'+num(p.tempHp));
+  if(typeof p.initiative==='number')stat.push('Init '+(p.initiative>=0?'+':'')+num(p.initiative));
+  for(const txt of stat){const el=document.createElement('span');el.textContent=txt;stats.append(el)}
+  const effects=document.createElement('div');effects.className='party-effect';
+  effects.textContent=(p.inspiration===true?'★ Inspiration · ':'')+(typeof p.conditions==='string'&&p.conditions.trim()?p.conditions.slice(0,160):'No active effects');
+  card.append(name,meta,stats,effects);(i<3?top:bottom).append(card);
+ }
+}
 function playerRender(packet){
  const scene=packet?.scene;
- if(!scene){waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
- tvHudScene.textContent=String(scene.name||'Shared map').slice(0,100);
+ if(!scene){renderPartyHud([]);waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
+ tvHudScene.textContent=String(scene.name||'Shared map').slice(0,100);renderPartyHud(packet?.party);
  const cols=Number(scene.cols),rows=Number(scene.rows);
  if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<4||cols>100||rows<4||rows>100)return;
  const reveal=new Set((Array.isArray(scene.revealed)?scene.revealed:[]).filter(x=>Number.isInteger(x)&&x>=0&&x<cols*rows));
@@ -191,9 +226,13 @@ function tvSetAmbient(enabled){tvAmbient=!!enabled;document.body.classList.toggl
 document.getElementById('tv-fill').addEventListener('click',()=>tvSetFraming(true));
 document.getElementById('tv-fit').addEventListener('click',()=>tvSetFraming(false));
 document.getElementById('tv-ambient').addEventListener('click',()=>tvSetAmbient(!tvAmbient));
+document.getElementById('tv-party-toggle').addEventListener('click',()=>{
+ tvParty=!tvParty;document.body.classList.toggle('party-hud-on',tvParty);
+ const control=document.getElementById('tv-party-toggle');control.setAttribute('aria-pressed',String(tvParty));control.textContent=tvParty?'Party HUD On':'Party HUD Off';
+});
 document.addEventListener('keydown',e=>{if(!tvMode)return;if(e.key==='f'||e.key==='F')tvSetFraming(!tvFill);if(e.key==='a'||e.key==='A')tvSetAmbient(!tvAmbient)});
 function setTvMode(on){
- tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);
+ tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);document.body.classList.toggle('party-hud-on',tvParty);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);
  document.getElementById('tv-mode').setAttribute('aria-pressed',String(tvMode));
  document.getElementById('tv-hud').setAttribute('aria-hidden',String(!tvMode));
  if(tvMode){document.documentElement.requestFullscreen?.().catch(()=>{});}
