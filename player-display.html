@@ -299,16 +299,22 @@ function setTvMode(on){
  tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);document.body.classList.toggle('party-hud-on',tvParty);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);if(screenReport.dataset.visible==='true')tvUpdateScreenReport();
  document.getElementById('tv-mode').setAttribute('aria-pressed',String(tvMode));
  document.getElementById('tv-hud').setAttribute('aria-hidden',String(!tvMode));
- if(tvMode){document.documentElement.requestFullscreen?.().catch(()=>{});}
- else if(document.fullscreenElement){document.exitFullscreen?.().catch(()=>{});}
+ if(tvMode){
+  // Guard against an exit click while the asynchronous fullscreen request is pending.
+  document.documentElement.requestFullscreen?.().then(()=>{
+   if(!tvMode&&document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});
+  }).catch(()=>{});
+ }else if(document.fullscreenElement){document.exitFullscreen?.().catch(()=>{});}
 }
 document.getElementById('tv-mode').addEventListener('click',()=>setTvMode(!tvMode));
 document.getElementById('tv-mode-exit').addEventListener('click',()=>setTvMode(false));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&tvMode)setTvMode(false)});
 document.addEventListener('fullscreenchange',()=>{if(tvMode&&!document.fullscreenElement)setTvMode(false)});
+// Fullscreen and TV Mode must expose the same read-only character HUD.
+// Previously standalone Fullscreen omitted TV Mode CSS and hid the roster.
 document.getElementById('fullscreen').addEventListener('click',()=>{
- if(document.fullscreenElement){document.exitFullscreen?.().catch(()=>{})}
- else document.documentElement.requestFullscreen?.().catch(()=>{});
+ if(tvMode||document.fullscreenElement)setTvMode(false);
+ else setTvMode(true);
 });
 </script>
 </body>

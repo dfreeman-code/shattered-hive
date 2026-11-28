@@ -53,6 +53,20 @@ try{
  assert.equal(await player.locator('#party-bottom .party-card').last().locator('.party-slot').count(),0);
  await player.waitForFunction(()=>[...document.querySelectorAll('.party-portrait')].length===6&&[...document.querySelectorAll('.party-portrait')].every(img=>img.complete&&img.naturalWidth>0));
  assert(!(await player.locator('body').innerText()).includes('PRIVATE VESPER SPOILER'));
+ // Both Fullscreen and TV Mode entry paths must visibly show the six-hero HUD.
+ await player.locator('#tv-mode-exit').click({force:true});
+ await player.waitForFunction(()=>!document.fullscreenElement);
+ await player.getByRole('button',{name:'Fullscreen'}).click();
+ assert.equal(await player.locator('body.tv-mode.party-hud-on').count(),1);
+ assert.equal(await player.locator('.party-card').count(),6);
+ assert.equal(await player.locator('#party-top').evaluate(el=>getComputedStyle(el).display),'grid');
+ assert((await player.locator('#party-top').boundingBox()).height>50,'Fullscreen party cards must be visibly laid out');
+ await player.locator('#tv-mode-exit').click({force:true});
+ await player.waitForFunction(()=>!document.body.classList.contains('tv-mode'));
+ await player.waitForFunction(()=>!document.fullscreenElement);
+ await player.getByRole('button',{name:'TV Mode'}).click();
+ assert.equal(await player.locator('.party-card').count(),6);
+
  // A disconnected or unmatched roster should explain the missing cards.
  await player.evaluate(()=>renderPartyHud([]));
  assert.match(await player.locator('#party-top .party-empty').innerText(),/No matching heroes found/);
