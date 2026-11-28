@@ -30,6 +30,18 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((resolve,reje
   await page.getByRole('button',{name:'Full-screen tabletop'}).first().click();
   assert.equal(await page.locator('.tabletop-shell').count(),1);
   assert.equal(await page.locator('.tabletop-map-stage #map-board').count(),1);
+  const ornaments=await page.locator('.tabletop-shell').evaluate(el=>{
+   const before=getComputedStyle(el,'::before'),after=getComputedStyle(el,'::after');
+   const shell=el.getBoundingClientRect();
+   return {before:before.content,after:after.content,pointerBefore:before.pointerEvents,pointerAfter:after.pointerEvents,bg:after.backgroundImage,shellWidth:shell.width,shellHeight:shell.height};
+  });
+  assert.notEqual(ornaments.before,'none','Fullscreen storybook border missing');
+  assert.notEqual(ornaments.after,'none','Fullscreen corner decorations missing');
+  assert.equal(ornaments.pointerBefore,'none');
+  assert.equal(ornaments.pointerAfter,'none');
+  assert.match(ornaments.bg,/gradient/,'Corner leaves should be CSS-only');
+  assert(ornaments.shellWidth>=1439&&ornaments.shellHeight>=899,'Ornaments must not shrink the fullscreen shell');
+
   assert.equal(await page.locator('.tabletop-party-top .tabletop-hero-card').count(),3);
   assert.equal(await page.locator('.tabletop-party-bottom .tabletop-hero-card').count(),3);
   assert.equal(await page.locator('.tabletop-hero-portrait').count(),6);
