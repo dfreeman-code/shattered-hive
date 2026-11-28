@@ -75,6 +75,8 @@ body.tv-mode #tv-camera-controls{display:flex}
 #tv-camera-controls button{font-size:13px;background:#122d25e6;color:#fff6de;border:1px solid #d6ddb577}
 #tv-camera-controls button[aria-pressed="true"]{background:#d4c79b;color:#1e3529}
 #tv-camera-controls button:focus-visible{outline:3px solid #ffdc75}
+#tv-screen-report{display:none;position:fixed;right:14px;bottom:16px;z-index:33;max-width:min(460px,calc(100vw - 28px));padding:14px 18px;border:1px solid #b9ceaf;border-radius:12px;background:#0b231deb;color:#f5f4df;font:600 clamp(13px,1.2vw,18px)/1.55 system-ui;box-shadow:0 8px 24px #000a;white-space:pre-line;pointer-events:none}
+body.tv-mode #tv-screen-report[data-visible="true"]{display:block}
 .map-ambient{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .map-ambient .mote{position:absolute;width:var(--mote-size,9px);height:var(--mote-size,9px);border-radius:50%;left:var(--mote-x);top:var(--mote-y);background:radial-gradient(circle,#fffdea 0%,#e4d59999 30%,transparent 70%);filter:drop-shadow(0 0 5px #fff6c1b0);animation:map-mote-drift var(--mote-duration,7s) ease-in-out infinite alternate,map-mote-glow calc(var(--mote-duration,7s)*.65) ease-in-out infinite alternate;animation-delay:var(--mote-delay,0s)}
 .map-ambient .glint{position:absolute;width:34px;height:34px;left:var(--mote-x);top:var(--mote-y);background:radial-gradient(circle,#fff9d6 0%,#fff7d7aa 12%,transparent 48%);animation:map-mote-glow var(--mote-duration,7s) ease-in-out infinite alternate;animation-delay:var(--mote-delay,0s)}
@@ -91,7 +93,7 @@ body.ambient-off .map-ambient{display:none}
  <div class="status" id="status" role="status" aria-live="polite" data-online="false">Connecting to DM tab…</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="tv-mode">📺 TV Mode</button><button type="button" id="fullscreen">⛶ Fullscreen</button></div>
 </header>
-<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button></div>
+<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button><button type="button" id="tv-screen-button" aria-pressed="false" aria-controls="tv-screen-report">Screen info</button></div><div id="tv-screen-report" role="status" aria-live="polite" data-visible="false"></div>
 <div id="tv-hud" aria-hidden="true"><div id="tv-hud-scene"></div><div id="tv-hud-status" data-online="false">Connecting…</div></div><button type="button" id="tv-mode-exit" aria-label="Exit TV Mode" title="Exit TV Mode (Esc)">✕ Exit TV Mode</button>
 <main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
 <footer id="footer">Player-safe display · Read-only · Same-browser session</footer>
@@ -191,9 +193,26 @@ function tvSetAmbient(enabled){tvAmbient=!!enabled;document.body.classList.toggl
 document.getElementById('tv-fill').addEventListener('click',()=>tvSetFraming(true));
 document.getElementById('tv-fit').addEventListener('click',()=>tvSetFraming(false));
 document.getElementById('tv-ambient').addEventListener('click',()=>tvSetAmbient(!tvAmbient));
+// Local Screen 2 diagnostic only. No connection, campaign read, persistence or telemetry.
+const screenReport=document.getElementById('tv-screen-report'),screenButton=document.getElementById('tv-screen-button');
+function tvUpdateScreenReport(){
+ const cssW=screen.width,cssH=screen.height,dpr=window.devicePixelRatio||1;
+ const viewW=window.innerWidth,viewH=window.innerHeight;
+ screenReport.textContent='Browser-reported screen: '+cssW+' × '+cssH+' CSS px\n'+
+  'TV tab viewport: '+viewW+' × '+viewH+' CSS px\n'+
+  'Pixel ratio: '+dpr.toFixed(2)+' (OS scaling may apply)\n'+
+  'Estimated device pixels: '+Math.round(cssW*dpr)+' × '+Math.round(cssH*dpr)+'\n'+
+  'Tip: Move this tab to Screen 2, enter TV Mode, and compare with Windows Display settings.';
+}
+screenButton.addEventListener('click',()=>{
+ const visible=screenReport.dataset.visible!=='true';
+ screenReport.dataset.visible=String(visible);screenButton.setAttribute('aria-pressed',String(visible));
+ if(visible)tvUpdateScreenReport();
+});
+window.addEventListener('resize',()=>{if(screenReport.dataset.visible==='true')tvUpdateScreenReport()});
 document.addEventListener('keydown',e=>{if(!tvMode)return;if(e.key==='f'||e.key==='F')tvSetFraming(!tvFill);if(e.key==='a'||e.key==='A')tvSetAmbient(!tvAmbient)});
 function setTvMode(on){
- tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);
+ tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);if(screenReport.dataset.visible==='true')tvUpdateScreenReport();
  document.getElementById('tv-mode').setAttribute('aria-pressed',String(tvMode));
  document.getElementById('tv-hud').setAttribute('aria-hidden',String(!tvMode));
  if(tvMode){document.documentElement.requestFullscreen?.().catch(()=>{});}
