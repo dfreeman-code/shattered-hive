@@ -61,6 +61,12 @@ try{
  assert.equal(await player.locator('.party-card').count(),6);
  assert.equal(await player.locator('#party-top').evaluate(el=>getComputedStyle(el).display),'grid');
  assert((await player.locator('#party-top').boundingBox()).height>50,'Fullscreen party cards must be visibly laid out');
+ const safeTop=await player.locator('#party-top').boundingBox();
+ const safeBottom=await player.locator('#party-bottom').boundingBox();
+ const vh=await player.evaluate(()=>innerHeight);
+ assert(safeTop.y>=20,'Top TV HUD must stay inside overscan-safe inset: '+safeTop.y);
+ assert(safeBottom.y+safeBottom.height<=vh-16,'Bottom TV HUD must stay inside overscan-safe inset');
+
  await player.locator('#tv-mode-exit').click({force:true});
  await player.waitForFunction(()=>!document.body.classList.contains('tv-mode'));
  await player.waitForFunction(()=>!document.fullscreenElement);
