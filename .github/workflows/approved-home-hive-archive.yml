@@ -1,0 +1,28 @@
+name: Approved top-down Home Hive and map archive
+on:
+  push:
+    branches: [feature/approved-topdown-home-hive-archive]
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'player-display.html'
+      - 'tests/approved-home-hive-archive-smoke.cjs'
+      - 'assets/maps/home-hive-approved-top-down.webp'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protected-map-archive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Run map archive and TV isolation tests
+        run: node tests/approved-home-hive-archive-smoke.cjs
