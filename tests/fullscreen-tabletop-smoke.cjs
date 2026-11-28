@@ -37,8 +37,10 @@ async function ready(){for(let i=0;i<50;i++){try{await new Promise((resolve,reje
   assert.equal(await page.locator('.tabletop-party-bottom').evaluate(el=>getComputedStyle(el).display),'grid');
   const hudRect=await page.locator('.tabletop-party-top').boundingBox();
   assert(hudRect&&hudRect.height>40&&hudRect.y>=0,'Full-screen Tabletop HUD must be visibly on screen');
+  assert(hudRect.y>=10,'Full-screen tabletop top HUD must have an overscan-safe margin');
   const bottomRect=await page.locator('.tabletop-party-bottom').boundingBox();
   assert(bottomRect&&bottomRect.height>40&&bottomRect.y+bottomRect.height<=901,'Lower HUD must be visible');
+  assert(bottomRect.y+bottomRect.height<=890,'Bottom tabletop HUD must stay inside the safe area');
 
   assert.match(await page.locator('.tabletop-party-top .tabletop-hero-card').first().innerText(),/HP 8\/12/);
   assert.match(await page.locator('.tabletop-party-top .tabletop-hero-card').first().innerText(),/Lv1: 2 left/);
