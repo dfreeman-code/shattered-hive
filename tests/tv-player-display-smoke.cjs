@@ -44,7 +44,7 @@ try{
  const hudBefore=await dm.evaluate(()=>JSON.stringify(db));
  await dm.evaluate(()=>{db.sheets['tv-hud-0'].currentHp=4;window.SHLive.publish()});
  await until(()=>player.locator('#party-top .party-card').first().innerText().then(t=>t.includes('HP 4/20')));
- assert.equal(await dm.evaluate(()=>JSON.stringify(db)),(await dm.evaluate(()=>JSON.stringify(db))),'viewer never modifies DM data');
+ assert.equal(await player.locator('#party-top .party-card').first().count(),1);
  assert.notEqual(hudBefore,await dm.evaluate(()=>JSON.stringify(db)),'synthetic HP change should be reflected in DM test fixture');
  assert.equal(await player.locator('body.tv-mode').count(),1);
  assert.equal(await player.locator('#tv-hud-scene').innerText(),'Home Hive Gathering');
