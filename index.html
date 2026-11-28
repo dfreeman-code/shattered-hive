@@ -3792,8 +3792,11 @@ const TV_HERO_NAMES=['Vismund Cygnus','David','Snoop Bugg','Dr. Newton Sparknic'
 function livePartyHud(){
  const pcs=Array.isArray(db.pcs)?db.pcs:[],sheets=db.sheets||{};
  const finite=(x)=>x!==''&&x!==null&&x!==undefined&&Number.isFinite(Number(x))?Number(x):null;
+ // Tolerate whitespace/period formatting (e.g. "Dr.Newton" vs "Dr. Newton")
+ // without admitting any other PC records into the player-safe projection.
+ const matchName=x=>String(x||'').toLowerCase().replace(/\s+/g,'').replace(/\./g,'');
  return TV_HERO_NAMES.map(name=>{
-  const pc=pcs.find(p=>String(p.name||'').trim().toLowerCase()===name.toLowerCase());
+  const pc=pcs.find(p=>matchName(p.name)===matchName(name));
   if(!pc)return null;
   const sh=sheets[pc.id]||{};
   const hp=finite(sh.currentHp)??finite(pc.hp),maxHp=finite(sh.maxHp)??finite(pc.maxHp);
