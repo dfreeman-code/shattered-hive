@@ -1,0 +1,32 @@
+/* Phase 5 — tabletop interface only. Does not modify maps, assets, grids or fog mechanics. */
+.map-session-desk{background:linear-gradient(112deg,#173c34,#2b574a);border:1px solid #b59c65;border-radius:15px;padding:14px 17px;margin:16px 0;box-shadow:0 7px 20px #132e251c;color:#f6edd8}
+.map-session-desk .map-desk-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.map-session-desk h3{color:#fff1ce;font:700 20px Georgia,serif;margin:0}
+.map-session-desk p{font-size:12px;color:#d5e5d8;margin:3px 0 0}
+.map-desk-buttons{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.map-desk-buttons .btn{min-height:42px}
+.map-desk-buttons .map-desk-fog[aria-pressed="true"]{background:#f4deb0;color:#234237;border-color:#cfb36d;box-shadow:inset 0 0 0 2px #947743}
+.map-tv-status{display:inline-flex;align-items:center;gap:8px;padding:9px 11px;border-radius:9px;font-size:12px;font-weight:750;background:#314c43;color:#e8e4d4;border:1px solid #668275;min-height:40px}
+.map-tv-status::before{content:"";width:9px;height:9px;border-radius:50%;background:#d3b274;flex:none}
+.map-tv-status[data-connected="true"]::before{background:#84ddb0}
+.map-tv-status[data-connected="true"]{background:#295745;border-color:#5c9a78;color:#effde9}
+.map-session-desk .btn.secondary{background:#e7eedf;color:#234637}
+.map-session-desk .btn.secondary:hover{background:#fff1d0}
+.map-admin-tools{border:1px solid #d0d8cb;border-radius:12px;background:#f8f6ed;padding:0 13px;margin:10px 0}
+.map-admin-tools summary{font-weight:750;font-size:14px;cursor:pointer;padding:12px 2px;color:#294d3c;min-height:44px}
+.map-admin-tools summary:focus-visible{outline:3px solid #c4a066;outline-offset:2px}
+.map-admin-tools[open] summary{border-bottom:1px solid #d0d8cb;margin-bottom:12px}
+.map-admin-tools .map-admin-buttons{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-bottom:12px}
+.map-admin-tools .map-admin-buttons .btn{min-height:40px}
+.map-player-panel{background:#edf3e8;border:1px solid #b9ccb9;border-radius:14px}
+.map-player-panel b{color:#25473a}
+.tabletop-toolbar{gap:9px}
+.tabletop-toolbar .map-tv-status{min-height:34px;padding:7px 9px;white-space:nowrap}
+.tabletop-toolbar .tabletop-dm-fog{display:flex;align-items:center;gap:5px}
+.tabletop-toolbar .tabletop-dm-fog .btn{min-height:35px}
+.tabletop-toolbar .tabletop-dm-fog .btn[aria-pressed="true"]{background:#f1d79e;color:#253e36;border-color:#bb9862}
+.tabletop-foot{font-size:13px;line-height:1.5}
+.map-player-stage .map-adjacent-view-switch{gap:9px}
+@media(max-width:750px){.map-session-desk{padding:12px}.map-desk-buttons .btn{flex:1 1 155px}.map-tv-status{flex:1 1 170px}.map-admin-tools .map-admin-buttons .btn{flex:1 1 130px}}
+@media print{.map-session-desk,.map-admin-tools,.map-tv-status{display:none!important}}
+@media(prefers-reduced-motion:reduce){.map-session-desk .btn{transition:none}}
