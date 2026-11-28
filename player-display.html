@@ -119,6 +119,43 @@ body.tv-mode #tv-screen-report[data-visible="true"]{display:block}
 @keyframes map-mote-drift{from{transform:translate3d(-7px,5px,0)}to{transform:translate3d(10px,-13px,0)}}
 @keyframes map-mote-glow{from{opacity:.16}to{opacity:.7}}
 body.ambient-off .map-ambient{display:none}
+/* Evergarden fullscreen-only frame: fixed to the display without resizing map or HUD. */
+
+/* Evergarden storybook ornament — paint-only overlay, never affects layout or controls. */
+:where(.tabletop-shell,body.tv-mode)::before,
+:where(.tabletop-shell,body.tv-mode)::after{
+ content:"";position:absolute;inset:4px;pointer-events:none;user-select:none;
+ border-radius:10px;box-sizing:border-box;
+}
+:where(.tabletop-shell,body.tv-mode)::before{
+ z-index:80;
+ border:1px solid #bda66a85;
+ box-shadow:inset 0 0 0 3px #1b39277a,inset 0 0 0 5px #b5a36b38,0 0 0 1px #0c221388;
+ opacity:.78;
+}
+:where(.tabletop-shell,body.tv-mode)::after{
+ z-index:81;
+ /* Four hand-painted clusters of tiny leaves/petals, framed by thin golden twigs. */
+ background:
+  radial-gradient(ellipse 10px 5px at 17px 24px,#84a978d9 0 76%,transparent 80%) top left/64px 64px no-repeat,
+  radial-gradient(ellipse 5px 11px at 29px 16px,#d2ba7bca 0 74%,transparent 80%) top left/64px 64px no-repeat,
+  linear-gradient(135deg,transparent 42%,#baaa74a6 45% 47%,transparent 50%) top left/50px 50px no-repeat,
+  radial-gradient(ellipse 10px 5px at calc(100% - 17px) 24px,#84a978d9 0 76%,transparent 80%) top right/64px 64px no-repeat,
+  radial-gradient(ellipse 5px 11px at calc(100% - 29px) 16px,#d2ba7bca 0 74%,transparent 80%) top right/64px 64px no-repeat,
+  linear-gradient(225deg,transparent 42%,#baaa74a6 45% 47%,transparent 50%) top right/50px 50px no-repeat,
+  radial-gradient(ellipse 10px 5px at 17px calc(100% - 24px),#84a978d9 0 76%,transparent 80%) bottom left/64px 64px no-repeat,
+  radial-gradient(ellipse 5px 11px at 29px calc(100% - 16px),#d2ba7bca 0 74%,transparent 80%) bottom left/64px 64px no-repeat,
+  linear-gradient(45deg,transparent 42%,#baaa74a6 45% 47%,transparent 50%) bottom left/50px 50px no-repeat,
+  radial-gradient(ellipse 10px 5px at calc(100% - 17px) calc(100% - 24px),#84a978d9 0 76%,transparent 80%) bottom right/64px 64px no-repeat,
+  radial-gradient(ellipse 5px 11px at calc(100% - 29px) calc(100% - 16px),#d2ba7bca 0 74%,transparent 80%) bottom right/64px 64px no-repeat,
+  linear-gradient(315deg,transparent 42%,#baaa74a6 45% 47%,transparent 50%) bottom right/50px 50px no-repeat;
+ opacity:.6;
+}
+@media(max-height:600px){
+ :where(.tabletop-shell,body.tv-mode)::after{opacity:.4}
+}
+
+body.tv-mode::before,body.tv-mode::after{position:fixed}
 </style>
 </head>
 <body>
