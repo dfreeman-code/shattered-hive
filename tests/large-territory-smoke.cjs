@@ -9,7 +9,8 @@ async function ready(){for(let i=0;i<80;i++){try{await new Promise((ok,no)=>http
   await page.goto('http://127.0.0.1:8791/',{waitUntil:'load'});
   const result=await page.evaluate(()=>{
    const ms=mapState();ms.active='evergarden-home-hive';ms.viewMode='dm';ms.fogTool='off';
-   const a=currentMap();a.cols=46;a.rows=30;a.wideSidesV1={originalCols:30,sideCols:8};a.playerShared=true;
+   const a=currentMap();a.worldRedesignEnabled=false; // Existing art alignment regression remains covered when the new atlas is toggled off.
+   a.cols=46;a.rows=30;a.wideSidesV1={originalCols:30,sideCols:8};a.playerShared=true;
    a.tokens=[{id:'territory-pc',kind:'pc',name:'Our Hero',x:12,y:7},{id:'territory-secret',kind:'npc',name:'Secret Monster',x:16,y:9,showToPlayers:false}];
    a.dmMarkers=[{id:'secret-location',type:'S',title:'Vesper Secret',notes:'DM secret',x:20,y:10}];
    a.revealed=[7*46+12,10*46+20];a.fogWalls=[9*46+16];
