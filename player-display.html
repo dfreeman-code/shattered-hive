@@ -65,6 +65,27 @@ body.tv-mode #tv-hud{display:block}
 body.tv-mode #tv-mode-exit{display:block}
 body.tv-mode #tv-mode-exit:hover,body.tv-mode #tv-mode-exit:focus-visible{opacity:1}
 @media(prefers-reduced-motion:reduce){#tv-mode-exit{transition:none}}
+/* Player-only cards; no changes to fog/token geometry or saved campaign state. */
+.party-hud{display:none;position:fixed;left:0;right:0;z-index:23;pointer-events:none;padding:6px clamp(8px,1.4vw,24px);gap:clamp(6px,1vw,16px);grid-template-columns:repeat(3,minmax(0,1fr));}
+body.tv-mode.party-hud-on .party-hud:not(:empty){display:grid}
+#party-top{top:0}#party-bottom{bottom:0}
+.party-card{min-width:0;min-height:72px;padding:8px 13px;border:1px solid #c2b78b;border-radius:10px;background:#10271ff5;color:#fff5dc;box-shadow:0 2px 15px #000b}
+.party-card-main{display:flex;gap:9px;align-items:center;min-width:0}
+.party-portrait{width:clamp(46px,4.5vw,76px);height:clamp(46px,4.5vw,76px);flex:none;border:2px solid #d4c490;border-radius:10px;object-fit:cover;background:#29483d}
+.party-card-info{min-width:0;flex:1}
+.party-slots{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;font-size:clamp(10px,.9vw,15px);font-weight:750;color:#aadaef}
+.party-slot{border:1px solid #668b9b;border-radius:5px;padding:1px 5px;background:#173543}
+@media(max-width:900px){.party-portrait{width:40px;height:40px}.party-card-main{gap:5px}.party-slots{gap:2px}}
+.party-card strong{display:block;font:750 clamp(12px,1.12vw,19px) Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.party-card .party-meta{font-size:clamp(10px,.86vw,14px);color:#d3dfcf}
+.party-card .party-stats{display:flex;gap:clamp(7px,1.1vw,22px);flex-wrap:wrap;font-size:clamp(12px,1.12vw,20px);font-weight:800;margin-top:3px}
+.party-card .party-effect{font-size:clamp(10px,.8vw,13px);color:#ffe19a;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+body.tv-mode.party-hud-on main{padding:90px 0;min-height:0}
+body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - 180px)*var(--ratio,1)));max-height:calc(100dvh - 180px)}
+body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 180px)*var(--ratio,1)))}
+@media(max-height:650px){body.tv-mode.party-hud-on main{padding:70px 0}body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - 140px)*var(--ratio,1)));max-height:calc(100dvh - 140px)}body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - 140px)*var(--ratio,1)))}.party-card{min-height:57px;padding:4px 9px}}
+@media(max-width:700px){.party-hud{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:3px}.party-card{padding:4px;font-size:11px}.party-card .party-stats{gap:5px}.party-card .party-meta{display:none}}
+
 
 /* TV camera: immersive cover framing preserves the same full-resolution fog and token coordinate system. */
 body.tv-mode.tv-fill main{overflow:hidden}
@@ -75,8 +96,6 @@ body.tv-mode #tv-camera-controls{display:flex}
 #tv-camera-controls button{font-size:13px;background:#122d25e6;color:#fff6de;border:1px solid #d6ddb577}
 #tv-camera-controls button[aria-pressed="true"]{background:#d4c79b;color:#1e3529}
 #tv-camera-controls button:focus-visible{outline:3px solid #ffdc75}
-#tv-screen-report{display:none;position:fixed;right:14px;bottom:16px;z-index:33;max-width:min(460px,calc(100vw - 28px));padding:14px 18px;border:1px solid #b9ceaf;border-radius:12px;background:#0b231deb;color:#f5f4df;font:600 clamp(13px,1.2vw,18px)/1.55 system-ui;box-shadow:0 8px 24px #000a;white-space:pre-line;pointer-events:none}
-body.tv-mode #tv-screen-report[data-visible="true"]{display:block}
 .map-ambient{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .map-ambient .mote{position:absolute;width:var(--mote-size,9px);height:var(--mote-size,9px);border-radius:50%;left:var(--mote-x);top:var(--mote-y);background:radial-gradient(circle,#fffdea 0%,#e4d59999 30%,transparent 70%);filter:drop-shadow(0 0 5px #fff6c1b0);animation:map-mote-drift var(--mote-duration,7s) ease-in-out infinite alternate,map-mote-glow calc(var(--mote-duration,7s)*.65) ease-in-out infinite alternate;animation-delay:var(--mote-delay,0s)}
 .map-ambient .glint{position:absolute;width:34px;height:34px;left:var(--mote-x);top:var(--mote-y);background:radial-gradient(circle,#fff9d6 0%,#fff7d7aa 12%,transparent 48%);animation:map-mote-glow var(--mote-duration,7s) ease-in-out infinite alternate;animation-delay:var(--mote-delay,0s)}
@@ -85,6 +104,20 @@ body.tv-mode #tv-screen-report[data-visible="true"]{display:block}
 body.ambient-off .map-ambient{display:none}
 @media(prefers-reduced-motion:reduce){.map-ambient .mote,.map-ambient .glint{animation:none;opacity:.24}}
 @media(max-width:760px){#tv-camera-controls{top:57px;right:10px}#tv-camera-controls button{font-size:12px;padding:6px}}
+/* Height-aware HUD bands keep portraits/slot badges clear of the battle map. */
+body.tv-mode.party-hud-on{--party-band:clamp(100px,12vh,136px)}
+body.tv-mode.party-hud-on main{padding:var(--party-band) 0}
+body.tv-mode.party-hud-on.tv-fit .board{width:min(100vw,calc((100dvh - var(--party-band) - var(--party-band))*var(--ratio,1)));max-height:calc(100dvh - var(--party-band) - var(--party-band))}
+body.tv-mode.party-hud-on.tv-fill .board{width:max(100vw,calc((100dvh - var(--party-band) - var(--party-band))*var(--ratio,1)));max-height:none}
+@media(max-height:650px){body.tv-mode.party-hud-on{--party-band:85px}}
+#tv-screen-report{display:none;position:fixed;right:14px;bottom:16px;z-index:33;max-width:min(460px,calc(100vw - 28px));padding:14px 18px;border:1px solid #b9ceaf;border-radius:12px;background:#0b231deb;color:#f5f4df;font:600 clamp(13px,1.2vw,18px)/1.55 system-ui;box-shadow:0 8px 24px #000a;white-space:pre-line;pointer-events:none}
+body.tv-mode #tv-screen-report[data-visible="true"]{display:block}
+.map-ambient{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.map-ambient .mote{position:absolute;width:var(--mote-size,9px);height:var(--mote-size,9px);border-radius:50%;left:var(--mote-x);top:var(--mote-y);background:radial-gradient(circle,#fffdea 0%,#e4d59999 30%,transparent 70%);filter:drop-shadow(0 0 5px #fff6c1b0);animation:map-mote-drift var(--mote-duration,7s) ease-in-out infinite alternate,map-mote-glow calc(var(--mote-duration,7s)*.65) ease-in-out infinite alternate;animation-delay:var(--mote-delay,0s)}
+.map-ambient .glint{position:absolute;width:34px;height:34px;left:var(--mote-x);top:var(--mote-y);background:radial-gradient(circle,#fff9d6 0%,#fff7d7aa 12%,transparent 48%);animation:map-mote-glow var(--mote-duration,7s) ease-in-out infinite alternate;animation-delay:var(--mote-delay,0s)}
+@keyframes map-mote-drift{from{transform:translate3d(-7px,5px,0)}to{transform:translate3d(10px,-13px,0)}}
+@keyframes map-mote-glow{from{opacity:.16}to{opacity:.7}}
+body.ambient-off .map-ambient{display:none}
 </style>
 </head>
 <body>
@@ -93,16 +126,16 @@ body.ambient-off .map-ambient{display:none}
  <div class="status" id="status" role="status" aria-live="polite" data-online="false">Connecting to DM tab…</div>
  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="tv-mode">📺 TV Mode</button><button type="button" id="fullscreen">⛶ Fullscreen</button></div>
 </header>
-<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button><button type="button" id="tv-screen-button" aria-pressed="false" aria-controls="tv-screen-report">Screen info</button></div><div id="tv-screen-report" role="status" aria-live="polite" data-visible="false"></div>
+<div id="tv-camera-controls" role="group" aria-label="Television map presentation"><button type="button" id="tv-fit" aria-pressed="false">Fit whole map</button><button type="button" id="tv-fill" aria-pressed="true">Fill TV</button><button type="button" id="tv-ambient" aria-pressed="true">✨ Effects On</button><button type="button" id="tv-party-toggle" aria-pressed="true">Party HUD On</button><button type="button" id="tv-screen-button" aria-pressed="false" aria-controls="tv-screen-report">Screen info</button></div><div id="tv-screen-report" role="status" aria-live="polite" data-visible="false"></div>
 <div id="tv-hud" aria-hidden="true"><div id="tv-hud-scene"></div><div id="tv-hud-status" data-online="false">Connecting…</div></div><button type="button" id="tv-mode-exit" aria-label="Exit TV Mode" title="Exit TV Mode (Esc)">✕ Exit TV Mode</button>
-<main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
+<section id="party-top" class="party-hud" aria-label="Party status top row"></section><section id="party-bottom" class="party-hud" aria-label="Party status bottom row"></section><main id="stage"><div class="placeholder"><h1>🐛 Waiting for the Dungeon Master</h1><p>Keep the DM tab open on this computer. Shared maps, revealed terrain, and visible tokens will appear here automatically.</p></div></main>
 <footer id="footer">Player-safe display · Read-only · Same-browser session</footer>
 <script>
 'use strict';
 // Standalone display: never loads the campaign app, localStorage, Supabase, or DM data.
 const status=document.getElementById('status'),stage=document.getElementById('stage'),footer=document.getElementById('footer');
 const session=new URLSearchParams(location.hash.slice(1)).get('session')||'';
-let channel=null,lastUpdate=0,lastSequence=0,tvMode=false,tvFill=true,tvAmbient=true;
+let channel=null,lastUpdate=0,lastSequence=0,tvMode=false,tvFill=true,tvAmbient=true,tvParty=true;
 const tvHudScene=document.getElementById('tv-hud-scene'),tvHudStatus=document.getElementById('tv-hud-status');
 function setStatus(label,online){status.textContent=label;status.dataset.online=online?'true':'false';tvHudStatus.textContent=label;tvHudStatus.dataset.online=online?'true':'false'}
 function waiting(message){
@@ -116,10 +149,52 @@ function safeAsset(path){
  if(typeof path==='string'&&path.startsWith('assets/maps/world-redesign/'))return /^[a-z0-9-]+[.]svg$/i.test(path.slice('assets/maps/world-redesign/'.length))?path:'';
  return typeof path==='string'&&/^assets\/(?:maps\/[a-z0-9_-]+\.(?:png|svg|webp)(?:\?v=[0-9]+)?|hero-tokens\/[a-z0-9_-]+_token\.png)$/i.test(path)?path:'';
 }
+function renderPartyHud(party){
+ const top=document.getElementById('party-top'),bottom=document.getElementById('party-bottom');
+ top.replaceChildren();bottom.replaceChildren();
+ if(!Array.isArray(party))return;
+ for(const [i,p] of party.slice(0,6).entries()){
+  if(!p||typeof p.name!=='string')continue;
+  const card=document.createElement('article');card.className='party-card';
+  const info=document.createElement('div');info.className='party-card-info';
+  const name=document.createElement('strong');name.textContent=p.name.slice(0,80);
+  const meta=document.createElement('div');meta.className='party-meta';meta.textContent=String(p.className||'').slice(0,40);
+  const stats=document.createElement('div');stats.className='party-stats';
+  const num=n=>typeof n==='number'&&Number.isFinite(n)?String(n):'—';
+  const stat=[ 'HP '+num(p.hp)+'/'+num(p.maxHp),'AC '+num(p.ac)];
+  if(typeof p.tempHp==='number'&&p.tempHp>0)stat.push('Temp +'+num(p.tempHp));
+  if(typeof p.initiative==='number')stat.push('Init '+(p.initiative>=0?'+':'')+num(p.initiative));
+  for(const txt of stat){const el=document.createElement('span');el.textContent=txt;stats.append(el)}
+  const effects=document.createElement('div');effects.className='party-effect';
+  effects.textContent=(p.inspiration===true?'★ Inspiration · ':'')+(typeof p.conditions==='string'&&p.conditions.trim()?p.conditions.slice(0,160):'No active effects');
+  info.append(name,meta,stats,effects);
+  // Use only the app's preapproved miniature portrait asset directory.
+  const main=document.createElement('div');main.className='party-card-main';
+  const portrait=typeof p.portrait==='string'&&/^assets\/hero-tokens\/portraits\/[a-z0-9_-]+_miniature\.png$/i.test(p.portrait)?p.portrait:'';
+  if(portrait){
+   const img=document.createElement('img');img.className='party-portrait';img.src=portrait;
+   img.alt=String(p.name).slice(0,80)+' character portrait';img.loading='eager';
+   img.addEventListener('error',()=>img.remove());
+   main.append(img);
+  }
+  main.append(info);card.append(main);
+  if(Array.isArray(p.spellSlots)&&p.spellSlots.length){
+   const slots=document.createElement('div');slots.className='party-slots';
+   slots.setAttribute('aria-label','Remaining spell slots');
+   for(const slot of p.spellSlots.slice(0,9)){
+    if(!slot||!Number.isInteger(slot.level)||slot.level<1||slot.level>9||!Number.isInteger(slot.remaining)||slot.remaining<0)continue;
+    const el=document.createElement('span');el.className='party-slot';
+    el.textContent='Level '+slot.level+': '+slot.remaining+' left';slots.append(el);
+   }
+   if(slots.childElementCount)card.append(slots);
+  }
+  (i<3?top:bottom).append(card);
+ }
+}
 function playerRender(packet){
  const scene=packet?.scene;
- if(!scene){waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
- tvHudScene.textContent=String(scene.name||'Shared map').slice(0,100);
+ if(!scene){renderPartyHud([]);waiting(packet?.notice||'The DM has not shared a map.');footer.textContent='Player-safe display · Waiting for a shared map';return}
+ tvHudScene.textContent=String(scene.name||'Shared map').slice(0,100);renderPartyHud(packet?.party);
  const cols=Number(scene.cols),rows=Number(scene.rows);
  if(!Number.isInteger(cols)||!Number.isInteger(rows)||cols<4||cols>100||rows<4||rows>100)return;
  const reveal=new Set((Array.isArray(scene.revealed)?scene.revealed:[]).filter(x=>Number.isInteger(x)&&x>=0&&x<cols*rows));
@@ -193,6 +268,10 @@ function tvSetAmbient(enabled){tvAmbient=!!enabled;document.body.classList.toggl
 document.getElementById('tv-fill').addEventListener('click',()=>tvSetFraming(true));
 document.getElementById('tv-fit').addEventListener('click',()=>tvSetFraming(false));
 document.getElementById('tv-ambient').addEventListener('click',()=>tvSetAmbient(!tvAmbient));
+document.getElementById('tv-party-toggle').addEventListener('click',()=>{
+ tvParty=!tvParty;document.body.classList.toggle('party-hud-on',tvParty);
+ const control=document.getElementById('tv-party-toggle');control.setAttribute('aria-pressed',String(tvParty));control.textContent=tvParty?'Party HUD On':'Party HUD Off';
+});
 // Local Screen 2 diagnostic only. No connection, campaign read, persistence or telemetry.
 const screenReport=document.getElementById('tv-screen-report'),screenButton=document.getElementById('tv-screen-button');
 function tvUpdateScreenReport(){
@@ -212,7 +291,7 @@ screenButton.addEventListener('click',()=>{
 window.addEventListener('resize',()=>{if(screenReport.dataset.visible==='true')tvUpdateScreenReport()});
 document.addEventListener('keydown',e=>{if(!tvMode)return;if(e.key==='f'||e.key==='F')tvSetFraming(!tvFill);if(e.key==='a'||e.key==='A')tvSetAmbient(!tvAmbient)});
 function setTvMode(on){
- tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);if(screenReport.dataset.visible==='true')tvUpdateScreenReport();
+ tvMode=!!on;document.body.classList.toggle('tv-mode',tvMode);document.body.classList.toggle('party-hud-on',tvParty);tvSetFraming(tvFill);tvSetAmbient(tvAmbient);if(screenReport.dataset.visible==='true')tvUpdateScreenReport();
  document.getElementById('tv-mode').setAttribute('aria-pressed',String(tvMode));
  document.getElementById('tv-hud').setAttribute('aria-hidden',String(!tvMode));
  if(tvMode){document.documentElement.requestFullscreen?.().catch(()=>{});}
