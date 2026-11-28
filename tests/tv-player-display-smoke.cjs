@@ -48,7 +48,7 @@ try{
  assert.match(await player.locator('#party-top .party-card').nth(2).innerText(),/Level 1: 1 left/);
  assert.match(await player.locator('#party-bottom .party-card').first().innerText(),/Level 1: 0 left/);
  assert.equal(await player.locator('#party-bottom .party-card').last().locator('.party-slot').count(),0);
- for(const img of await player.locator('.party-portrait').all()){assert.equal(await img.evaluate(el=>el.naturalWidth>0),true,'Party portrait failed to load')}
+ await player.waitForFunction(()=>[...document.querySelectorAll('.party-portrait')].length===6&&[...document.querySelectorAll('.party-portrait')].every(img=>img.complete&&img.naturalWidth>0));
  assert(!(await player.locator('body').innerText()).includes('PRIVATE VESPER SPOILER'));
  await player.getByRole('button',{name:'Party HUD On'}).click();
  assert.equal(await player.locator('body.party-hud-on').count(),0);
