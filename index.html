@@ -3852,7 +3852,7 @@ function mapTvUpdateStatus(){
 }
 // Convenience controls call only the existing fog-tool handler. No fog data changed.
 function mapDmQuickTools(ms){
- const fog=(key,label)=>'<button type="button" class="btn secondary map-desk-fog" aria-pressed="'+(ms.fogTool===key)+'" onclick="mapSetFogTool(\\\''+key+'\\\')">'+label+'</button>';
+ const fog=(key,label)=>'<button type="button" class="btn secondary map-desk-fog" aria-pressed="'+(ms.fogTool===key)+'" onclick="mapSetFogTool(&quot;'+key+'&quot;)">'+label+'</button>';
  return '<section class="map-session-desk" aria-label="DM tabletop controls">'+
  '<div class="map-desk-top"><div><h3>✦ DM tabletop controls</h3><p>Move tokens, paint fog, or launch the player-safe TV tab.</p></div>'+mapTvStatus()+'</div>'+
  '<div class="map-desk-buttons">'+fog('off','↖ Move tokens')+fog('reveal','☀ Reveal fog')+fog('hide','☁ Cover fog')+
@@ -3873,7 +3873,7 @@ function tabletopPage(board,m,ms,player){
  const autoFog=player?'':mapAutoFogCompactControl()+mapVisionControls(m)+mapLightingControls(m);
  const selected=player?'Player-safe presentation · No DM controls':(ms.selected?esc(tokenLabel(m.tokens.find(t=>t.id===ms.selected)||{name:'Token'}))+' selected · Drag, click a square, or use arrows':'DM tabletop · Select a token to move it');
  const quickFog=player?'':'<span class="tabletop-dm-fog" role="group" aria-label="Quick fog tools">'+
-  ['off','reveal','hide'].map((key,i)=>'<button type="button" class="btn secondary small" aria-pressed="'+(ms.fogTool===key)+'" onclick="mapSetFogTool(\\\''+key+'\\\')">'+['Move','Reveal','Cover'][i]+'</button>').join('')+'</span>';
+  ['off','reveal','hide'].map((key,i)=>'<button type="button" class="btn secondary small" aria-pressed="'+(ms.fogTool===key)+'" onclick="mapSetFogTool(&quot;'+key+'&quot;)">'+['Move','Reveal','Cover'][i]+'</button>').join('')+'</span>';
  return '<section class="tabletop-shell" role="region" aria-label="Full-screen tabletop"><div class="tabletop-toolbar"><strong>✿ Tabletop · '+esc(m.name)+'</strong><label>Scene '+select+'</label>'+miniTokenSizeControl()+autoFog+quickFog+grid+toggle+(player?'':livePlayerDisplayButton()+mapTvStatus())+'<span class="tabletop-spacer"></span>'+mapInspectControls()+'<button type="button" class="btn secondary small" onclick="tabletopExit()">✕ Exit tabletop</button></div><div class="tabletop-map-stage map-inspect-viewport" style="--tabletop-ratio:'+(mapCols(m)/mapRows(m))+'">'+board+'</div><div class="tabletop-foot">'+selected+' · Esc exits tabletop</div></section>';
 }
 document.addEventListener('keydown',e=>{if(tabletopMode&&page==='maps'&&e.key==='Escape'){e.preventDefault();tabletopExit()}});
