@@ -629,6 +629,46 @@ async function check(label, fn) {
   assert.ok(dims.scroll<=dims.width+5,'Phase 4 sheet mobile overflow: '+JSON.stringify(dims));
   await page.setViewportSize({width:1365,height:900});
  });
+ await check('Phase 5 DM tabletop has compact fog controls and local TV status without changing map mechanics',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  await page.evaluate(()=>{tabletopMode=false;mapState().viewMode='dm';mapState().fogTool='off';goto('maps')});
+  const protectedBefore=await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,scenes:db.maps.scenes,history:db.maps.history,decisions:db.decisions,session:db.campaign.session}));
+  const desk=page.locator('.map-session-desk');
+  assert.equal(await desk.count(),1);
+  assert.equal(await desk.locator('.map-tv-status').count(),1);
+  assert.match(await desk.locator('.map-tv-status').innerText(),/TV tab|Player display unavailable/);
+  assert.equal(await desk.locator('.map-desk-fog').count(),3);
+  await desk.getByRole('button',{name:/Reveal fog/}).click();
+  assert.equal(await page.evaluate(()=>mapState().fogTool),'reveal');
+  assert.equal(await page.locator('.map-desk-fog[aria-pressed="true"]').count(),1);
+  assert.equal(await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,scenes:db.maps.scenes,history:db.maps.history,decisions:db.decisions,session:db.campaign.session})),protectedBefore,'Selecting paint tool must not mutate map or campaign records');
+  await page.locator('.map-desk-fog').first().click();
+  assert.equal(await page.evaluate(()=>mapState().fogTool),'off');
+  await page.evaluate(()=>{window.__qaOriginalLive=window.SHLive;window.SHLive={available:true,connected:true};mapTvUpdateStatus()});
+  assert.equal(await page.locator('.map-session-desk .map-tv-status').getAttribute('data-connected'),'true');
+  assert.match(await page.locator('.map-session-desk .map-tv-status').innerText(),/TV tab connected/);
+  await page.evaluate(()=>{window.SHLive=window.__qaOriginalLive;delete window.__qaOriginalLive;mapTvUpdateStatus()});
+ });
+ await check('Phase 5 fullscreen and player view hide DM controls and retain zoom tools',async()=>{
+  await page.setViewportSize({width:1365,height:900});
+  await page.evaluate(()=>{tabletopMode=true;mapState().viewMode='dm';mapState().fogTool='off';goto('maps');tabletopMode=true;render()});
+  assert.equal(await page.locator('.tabletop-dm-fog button').count(),3);
+  assert.equal(await page.locator('.tabletop-toolbar .map-tv-status').count(),1);
+  assert.ok(await page.getByRole('button',{name:'Zoom in'}).count()>0);
+  await page.evaluate(()=>{mapState().viewMode='player';render()});
+  assert.equal(await page.locator('.tabletop-dm-fog').count(),0);
+  assert.equal(await page.locator('.tabletop-toolbar .map-tv-status').count(),0);
+  assert.equal(await page.locator('.map-dm-marker-layer').count(),0);
+  await page.evaluate(()=>{tabletopMode=false;mapState().viewMode='dm';render()});
+ });
+ await check('Phase 5 DM toolbar remains usable on mobile without horizontal page overflow',async()=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>{tabletopMode=false;mapState().viewMode='dm';goto('maps')});
+  assert.equal(await page.locator('.map-session-desk').count(),1);
+  const dims=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
+  assert.ok(dims.scroll<=dims.width+5,'Phase 5 DM toolbar overflow: '+JSON.stringify(dims));
+  await page.setViewportSize({width:1365,height:900});
+ });
  await check('No uncaught browser JS errors',async()=>{assert.deepEqual(errors,[])});
  const failed=results.filter(r=>r.status==='FAIL');
  fs.writeFileSync('qa-smoke-results.json',JSON.stringify({results,failed:failed.length},null,2));
