@@ -644,11 +644,10 @@ async function check(label, fn) {
   assert.equal(await page.evaluate(()=>JSON.stringify({pcs:db.pcs,sheets:db.sheets,scenes:db.maps.scenes,history:db.maps.history,decisions:db.decisions,session:db.campaign.session})),protectedBefore,'Selecting paint tool must not mutate map or campaign records');
   await page.locator('.map-desk-fog').first().click();
   assert.equal(await page.evaluate(()=>mapState().fogTool),'off');
-  const original=await page.evaluate(()=>window.SHLive);
-  await page.evaluate(()=>{window.SHLive={available:true,connected:true};mapTvUpdateStatus()});
+  await page.evaluate(()=>{window.__qaOriginalLive=window.SHLive;window.SHLive={available:true,connected:true};mapTvUpdateStatus()});
   assert.equal(await page.locator('.map-session-desk .map-tv-status').getAttribute('data-connected'),'true');
   assert.match(await page.locator('.map-session-desk .map-tv-status').innerText(),/TV tab connected/);
-  await page.evaluate(live=>{window.SHLive=live;mapTvUpdateStatus()},original);
+  await page.evaluate(()=>{window.SHLive=window.__qaOriginalLive;delete window.__qaOriginalLive;mapTvUpdateStatus()});
  });
  await check('Phase 5 fullscreen and player view hide DM controls and retain zoom tools',async()=>{
   await page.setViewportSize({width:1365,height:900});
